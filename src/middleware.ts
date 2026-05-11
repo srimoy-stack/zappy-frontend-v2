@@ -33,11 +33,14 @@ const enum CanonicalUserType {
 
 /**
  * Normalizes ANY backend role string → canonical UserType.
+ * Must handle both space-format ("Super Admin") from FastAPI
+ * and underscore-format ("super_admin") from legacy.
  */
 function resolveUserType(raw: string | null | undefined): CanonicalUserType | null {
     if (!raw) return null;
-    const key = raw.toLowerCase();
+    const key = raw.toLowerCase().trim();
     const map: Record<string, CanonicalUserType> = {
+        // Underscore format (legacy)
         'platform_super_admin': CanonicalUserType.PLATFORM_SUPER_ADMIN,
         'super_admin': CanonicalUserType.PLATFORM_SUPER_ADMIN,
         'brand_admin': CanonicalUserType.BRAND_ADMIN,
@@ -45,12 +48,23 @@ function resolveUserType(raw: string | null | undefined): CanonicalUserType | nu
         'manager': CanonicalUserType.MANAGER,
         'store_manager': CanonicalUserType.MANAGER,
         'pos_user': CanonicalUserType.POS_USER,
+        'pos_cashier': CanonicalUserType.POS_USER,
         'employee': CanonicalUserType.POS_USER,
         'kds_user': CanonicalUserType.KITCHEN_USER,
         'kitchen_user': CanonicalUserType.KITCHEN_USER,
+        'kitchen_staff': CanonicalUserType.KITCHEN_USER,
         'call_center_user': CanonicalUserType.CALL_CENTER,
         'call_center': CanonicalUserType.CALL_CENTER,
+        'call_agent': CanonicalUserType.CALL_CENTER,
         'delivery': CanonicalUserType.DELIVERY,
+        'delivery_staff': CanonicalUserType.DELIVERY,
+        // Space format (FastAPI seeded roles)
+        'super admin': CanonicalUserType.PLATFORM_SUPER_ADMIN,
+        'store manager': CanonicalUserType.MANAGER,
+        'pos cashier': CanonicalUserType.POS_USER,
+        'kitchen staff': CanonicalUserType.KITCHEN_USER,
+        'call agent': CanonicalUserType.CALL_CENTER,
+        'delivery staff': CanonicalUserType.DELIVERY,
     };
     return map[key] ?? null;
 }

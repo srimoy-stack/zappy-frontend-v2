@@ -519,4 +519,42 @@ export const mockAdapter: ApiAdapter = {
         setStore('tenant_configs', configs);
         return configs[tenantId];
     },
+
+    // ─── Delete Tenant ──────────────────────────────────
+    async deleteTenant(id: string): Promise<void> {
+        await delay(200);
+        const brands = getStore('brands', MOCK_BRANDS);
+        setStore('brands', brands.filter((b: Brand) => b.id !== id));
+    },
+
+    // ─── Permissions (mock stubs) ───────────────────────
+    async getPermissions(): Promise<any[]> {
+        await delay(200);
+        return [
+            { id: 1, code: 'users.view', name: 'View Users', module: 'users', is_active: true },
+            { id: 2, code: 'users.create', name: 'Create Users', module: 'users', is_active: true },
+            { id: 3, code: 'roles.view', name: 'View Roles', module: 'roles', is_active: true },
+            { id: 4, code: 'roles.create', name: 'Create Roles', module: 'roles', is_active: true },
+            { id: 5, code: 'tenants.manage', name: 'Manage Tenants', module: 'tenants', is_active: true },
+            { id: 6, code: 'stores.manage', name: 'Manage Stores', module: 'stores', is_active: true },
+        ];
+    },
+
+    async getPermissionsByModule(): Promise<any[]> {
+        await delay(200);
+        return [
+            { module: 'users', permissions: [{ id: 1, code: 'users.view', name: 'View Users', module: 'users' }, { id: 2, code: 'users.create', name: 'Create Users', module: 'users' }] },
+            { module: 'roles', permissions: [{ id: 3, code: 'roles.view', name: 'View Roles', module: 'roles' }, { id: 4, code: 'roles.create', name: 'Create Roles', module: 'roles' }] },
+            { module: 'tenants', permissions: [{ id: 5, code: 'tenants.manage', name: 'Manage Tenants', module: 'tenants' }] },
+            { module: 'stores', permissions: [{ id: 6, code: 'stores.manage', name: 'Manage Stores', module: 'stores' }] },
+        ];
+    },
+
+    async assignPermission(_roleId: number, _permissionId: number): Promise<void> {
+        await delay(200);
+    },
+
+    async removePermission(_roleId: number, _permissionId: number): Promise<void> {
+        await delay(200);
+    },
 };

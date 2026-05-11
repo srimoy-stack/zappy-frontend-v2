@@ -35,15 +35,15 @@ export default function SignupPage() {
         }
 
         try {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-            const res = await fetch(`${apiUrl}/auth/register`, {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
+            const res = await fetch(`${apiUrl}/api/auth/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    name,
+                    full_name: name,
                     email,
                     password,
-                    password_confirmation: passwordConfirmation,
+                    confirm_password: passwordConfirmation,
                 }),
             });
 
@@ -57,8 +57,13 @@ export default function SignupPage() {
             }
 
             if (!res.ok) {
-                // Extract validation errors
-                if (data.details) {
+                // FastAPI returns { detail: "..." } or { detail: [...] }
+                if (typeof data.detail === 'string') {
+                    setError(data.detail);
+                } else if (Array.isArray(data.detail)) {
+                    const messages = data.detail.map((e: any) => e.msg || String(e));
+                    setError(messages.join('. '));
+                } else if (data.details) {
                     const messages = Object.values(data.details).flat();
                     setError((messages as string[]).join(' '));
                 } else {

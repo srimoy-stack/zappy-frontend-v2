@@ -6,7 +6,7 @@
 
 export const env = {
     /** API base URL for FastAPI backend */
-    apiBaseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1',
+    apiBaseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001',
 
     /** API mode: 'mock' uses local fixtures, 'live' calls real backend */
     apiMode: (process.env.NEXT_PUBLIC_API_MODE || 'mock') as 'mock' | 'live',

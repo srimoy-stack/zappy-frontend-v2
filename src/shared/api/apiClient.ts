@@ -21,6 +21,7 @@ import {
     isTokenExpired,
     getRefreshPromise,
     setRefreshPromise,
+    setRefreshToken,
 } from '@/shared/utils/tokenManager';
 import { refreshToken } from '@/shared/api/services/auth.service';
 import { forceLogout } from '@/shared/utils/auth';
@@ -32,7 +33,7 @@ import { handleApiError } from '@/shared/utils/errorHandler';
 const apiClient: AxiosInstance = axios.create({
     baseURL: env.apiBaseUrl,
     timeout: 30000,
-    withCredentials: true, // send httpOnly cookies for refresh
+    withCredentials: false, // FastAPI uses body-based refresh, not httpOnly cookies
     headers: {
         'Content-Type': 'application/json',
     },
@@ -72,6 +73,11 @@ apiClient.interceptors.request.use(
                     if (token) {
                         // Store in memory for future requests
                         setAccessToken(token);
+                    }
+                    // Also store refresh token from session
+                    const rt = (session.user as any)?.refreshToken;
+                    if (rt) {
+                        setRefreshToken(rt);
                     }
                 }
             } catch {

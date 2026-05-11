@@ -66,7 +66,7 @@ export interface KDSBootstrapResponse {
  * Returns the raw response for inspection, or throws on failure.
  */
 export async function executeKDSBootstrap(): Promise<KDSBootstrapResponse> {
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
     const url = `${apiBase}/kds/bootstrap`;
 
     let data: KDSBootstrapResponse;

@@ -93,25 +93,56 @@ export const OPERATIONAL_USER_TYPES = [
 
 /**
  * Maps ALL known backend role strings → canonical UserType.
+ *
+ * FastAPI returns role names with spaces (e.g. "Super Admin", "Store Manager").
+ * All keys must be lowercase. resolveUserType() normalizes input before lookup.
  */
 export const BACKEND_USER_TYPE_MAP: Record<string, UserType> = {
+    // Platform roles (underscore format)
     'platform_super_admin': UserType.PLATFORM_SUPER_ADMIN,
     'platform_admin': UserType.PLATFORM_ADMIN,
     'platform_support': UserType.PLATFORM_SUPPORT,
     'platform_operations': UserType.PLATFORM_OPERATIONS,
     'super_admin': UserType.PLATFORM_SUPER_ADMIN,
     'brand_admin': UserType.BRAND_ADMIN,
+
+    // FastAPI seeded role names (space format → must be pre-normalized)
+    'super admin': UserType.PLATFORM_SUPER_ADMIN,
     'admin': UserType.PLATFORM_SUPER_ADMIN,
+    'store manager': UserType.MANAGER,
+    'pos cashier': UserType.POS_USER,
+    'kitchen staff': UserType.KITCHEN_USER,
+    'call agent': UserType.CALL_CENTER,
+    'delivery staff': UserType.DELIVERY,
+
+    // Legacy underscore variants
     'manager': UserType.MANAGER,
     'store_manager': UserType.MANAGER,
     'pos_user': UserType.POS_USER,
+    'pos_cashier': UserType.POS_USER,
     'employee': UserType.EMPLOYEE,
     'kds_user': UserType.KITCHEN_USER,
     'kitchen_user': UserType.KITCHEN_USER,
+    'kitchen_staff': UserType.KITCHEN_USER,
     'call_center_user': UserType.CALL_CENTER,
     'call_center': UserType.CALL_CENTER,
+    'call_agent': UserType.CALL_CENTER,
     'delivery': UserType.DELIVERY,
+    'delivery_staff': UserType.DELIVERY,
 };
+
+/**
+ * Resolves a raw backend role string to the canonical UserType.
+ *
+ * Handles both space-separated ("Super Admin") and underscore-separated
+ * ("super_admin") formats from any backend.
+ */
+export function resolveUserType(backendRole: string | undefined | null): UserType | null {
+    if (!backendRole) return null;
+    const normalized = backendRole.toLowerCase().trim();
+    // Try exact match first (handles both "super admin" and "super_admin")
+    return BACKEND_USER_TYPE_MAP[normalized] ?? null;
+}
 
 /**
  * Maps ALL known backend role strings → canonical UserRole enum.
@@ -120,32 +151,33 @@ export const BACKEND_USER_TYPE_MAP: Record<string, UserType> = {
 export const BACKEND_ROLE_MAP: Record<string, UserRole> = {
     'platform_super_admin': UserRole.SUPER_ADMIN,
     'super_admin': UserRole.SUPER_ADMIN,
+    'super admin': UserRole.SUPER_ADMIN,
     'admin': UserRole.SUPER_ADMIN,
     'brand_admin': UserRole.TENANT_ADMIN,
     'tenant_admin': UserRole.TENANT_ADMIN,
     'store_manager': UserRole.STORE_MANAGER,
+    'store manager': UserRole.STORE_MANAGER,
     'pos_user': UserRole.POS_USER,
-    'employee': UserRole.POS_USER, // Keep legacy mapping to POS for now if UserRole is purely legacy
+    'pos cashier': UserRole.POS_USER,
+    'pos_cashier': UserRole.POS_USER,
+    'employee': UserRole.POS_USER,
     'kds_user': UserRole.KITCHEN_USER,
     'kitchen_user': UserRole.KITCHEN_USER,
+    'kitchen staff': UserRole.KITCHEN_USER,
+    'kitchen_staff': UserRole.KITCHEN_USER,
     'call_center_user': UserRole.CALL_CENTER_USER,
     'call_center': UserRole.CALL_CENTER_USER,
+    'call agent': UserRole.CALL_CENTER_USER,
+    'call_agent': UserRole.CALL_CENTER_USER,
 };
-
-/**
- * Resolves a raw backend role string to the canonical UserType.
- */
-export function resolveUserType(backendRole: string | undefined | null): UserType | null {
-    if (!backendRole) return null;
-    return BACKEND_USER_TYPE_MAP[backendRole.toLowerCase()] ?? null;
-}
 
 /**
  * @deprecated Use resolveUserType().
  */
 export function resolveRole(backendRole: string | undefined | null): UserRole | null {
     if (!backendRole) return null;
-    return BACKEND_ROLE_MAP[backendRole.toLowerCase()] ?? null;
+    const normalized = backendRole.toLowerCase().trim();
+    return BACKEND_ROLE_MAP[normalized] ?? null;
 }
 
 // ─── Route Base Routes ──────────────────────────────────────────────────────

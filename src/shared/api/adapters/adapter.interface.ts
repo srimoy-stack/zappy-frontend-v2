@@ -12,6 +12,7 @@ import { Store, CreateStoreDTO } from '@/shared/types/store';
 import { Role, CreateRoleDTO } from '@/shared/types/role';
 import { UserType } from '@/shared/types/auth';
 import { TenantModule } from '@/shared/types/module';
+import type { BackendPermission, BackendPermissionsByModule } from './normalizeBackend';
 
 export interface ApiAdapter {
     // ─── Auth ────────────────────────────────────────────
@@ -24,6 +25,7 @@ export interface ApiAdapter {
     updateTenant(id: string, data: Partial<Brand>): Promise<Brand>;
     suspendTenant(id: string): Promise<Brand>;
     activateTenant(id: string): Promise<Brand>;
+    deleteTenant(id: string): Promise<void>;
 
     // ─── Stores ──────────────────────────────────────────
     getStores(tenantId: string): Promise<Store[]>;
@@ -45,10 +47,17 @@ export interface ApiAdapter {
     updateRole(id: string, data: Partial<CreateRoleDTO>): Promise<Role>;
     deleteRole(id: string): Promise<void>;
 
+    // ─── Permissions ─────────────────────────────────────
+    getPermissions(): Promise<BackendPermission[]>;
+    getPermissionsByModule(): Promise<BackendPermissionsByModule[]>;
+    assignPermission(roleId: number, permissionId: number): Promise<void>;
+    removePermission(roleId: number, permissionId: number): Promise<void>;
+
     // ─── Modules ─────────────────────────────────────────
     getModules(): Promise<TenantModule[]>;
     getTenantModules(tenantId: string): Promise<TenantModule[]>;
     setTenantModules(tenantId: string, modules: Array<{ moduleId: string; purchased: boolean; enabled: boolean; startDate?: string }>): Promise<TenantModule[]>;
+
     // ─── Config ──────────────────────────────────────────
     getTenantConfig(tenantId: string): Promise<any>;
     updateTenantConfig(tenantId: string, data: Partial<any>): Promise<any>;
