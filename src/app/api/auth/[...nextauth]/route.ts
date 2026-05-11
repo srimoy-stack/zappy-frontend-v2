@@ -1,20 +1,25 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
+const getApiUrl = () => (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api').replace(/\/$/, '');
+const getAuthSecret = () => process.env.NEXTAUTH_SECRET || 'zyappy-local-dev-nextauth-secret-change-me';
+
 const handler = NextAuth({
+    secret: getAuthSecret(),
     providers: [
         CredentialsProvider({
-            name: "Credentials",
+            id: "login",
+            name: "Login",
             credentials: {
                 email: { label: "Email", type: "text" },
                 password: { label: "Password", type: "password" }
             },
             async authorize(credentials) {
                 try {
-                    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
+                    const apiUrl = getApiUrl();
 
                     // Step 1: Login → get tokens
-                    const loginRes = await fetch(`${apiUrl}/api/auth/login`, {
+                    const loginRes = await fetch(`${apiUrl}/auth/login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -37,7 +42,7 @@ const handler = NextAuth({
                     }
 
                     // Step 2: Fetch /me with the access token to get user info
-                    const meRes = await fetch(`${apiUrl}/api/auth/me`, {
+                    const meRes = await fetch(`${apiUrl}/auth/me`, {
                         headers: {
                             'Authorization': `Bearer ${tokens.access_token}`,
                             'Content-Type': 'application/json',
@@ -51,7 +56,7 @@ const handler = NextAuth({
                             id: 'unknown',
                             name: credentials?.email || 'User',
                             email: credentials?.email || '',
-                            role: 'Admin',
+                            role: null,
                             accessToken: tokens.access_token,
                             refreshToken: tokens.refresh_token,
                             permissions: [],
@@ -68,6 +73,8 @@ const handler = NextAuth({
                         accessToken: tokens.access_token,
                         refreshToken: tokens.refresh_token,
                         permissions: me.permissions || [],
+                        tenantId: me.tenant_id,
+                        storeIds: me.store_ids,
                     } as any;
                 } catch (error) {
                     console.error('[NextAuth] Login API error:', error);
@@ -80,6 +87,9 @@ const handler = NextAuth({
         async jwt({ token, user }: any) {
             // On initial sign-in, persist user fields + JWT into the token
             if (user) {
+                token.id = user.id;
+                token.name = user.name;
+                token.email = user.email;
                 token.role = user.role;
                 token.accessToken = user.accessToken;
                 token.refreshToken = user.refreshToken;
@@ -92,6 +102,9 @@ const handler = NextAuth({
         async session({ session, token }: any) {
             // Expose role, tokens, and permissions to client-side session
             if (session.user) {
+                session.user.id = token.id;
+                session.user.name = token.name;
+                session.user.email = token.email;
                 session.user.role = token.role;
                 session.user.accessToken = token.accessToken;
                 session.user.refreshToken = token.refreshToken;

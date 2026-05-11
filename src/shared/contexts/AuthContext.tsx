@@ -7,15 +7,14 @@
  * Zero hardcoded values.
  */
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useSession } from 'next-auth/react';
-import { api } from '@/shared/api';
 import { useTenant } from './TenantContext';
 import { useStore } from './StoreContext';
 import { useModules } from './ModuleContext';
 import { UserType, resolveUserType, isSuperAdmin } from '@/shared/types/auth';
 import { UserRoleRef } from '@/shared/types/user';
-import { logAction, flushAuditLogs } from '@/shared/utils/auditLogger';
+import { logAction } from '@/shared/utils/auditLogger';
 import { AUDIT_ACTIONS, AUDIT_ENTITIES } from '@/shared/types/audit';
 
 interface AuthUser {
@@ -74,6 +73,8 @@ const AuthContext = createContext<AuthContextValue>({
     accessToken: null,
 });
 
+const getApiUrl = () => (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api').replace(/\/$/, '');
+
 // Role normalization now uses the canonical resolveRole() from auth.ts.
 // All backend role strings are normalized to UserRole enum values.
 
@@ -89,6 +90,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const sessionLoading = status === 'loading';
     const isAuthenticated = status === 'authenticated' && !!session?.user;
     const sessionUser = session?.user as any;
+    const sessionIdentity = sessionUser?.id || sessionUser?.email || '';
+
+    useEffect(() => {
+        setMeData(null);
+        setMeLoaded(false);
+    }, [sessionIdentity]);
 
     // ── Fetch /me ────────────────────────────────────────────────────────────
     useEffect(() => {
@@ -97,11 +104,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let cancelled = false;
         (async () => {
             try {
-                const data = await api.getMe();
+                const accessToken = sessionUser?.accessToken;
+                if (!accessToken) {
+                    throw new Error('Missing access token for auth/me');
+                }
+
+                const meRes = await fetch(`${getApiUrl()}/auth/me`, {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (!meRes.ok) {
+                    throw new Error(`auth/me failed with ${meRes.status}`);
+                }
+
+                const data = await meRes.json();
                 if (cancelled) return;
 
                 // Canonical UserType resolution
-                const resolvedUserType = resolveUserType(data.user_type || data.role);
+                const backendRole = data.role ?? sessionUser?.role;
+                const resolvedUserType = resolveUserType(data.user_type || backendRole);
                 
                 // Normalizing backend role ref
                 const roleRef: UserRoleRef = typeof data.role === 'object' && data.role !== null
@@ -113,20 +137,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                       }
                     : {
                         id: 'legacy',
-                        name: typeof data.role === 'string' ? data.role : 'User',
-                        permissions: data.permissions || [],
+                        name: typeof backendRole === 'string' ? backendRole : 'User',
+                        permissions: data.permissions || sessionUser?.permissions || [],
                         isSystem: ['PLATFORM_SUPER_ADMIN', 'BRAND_ADMIN', 'ADMIN'].includes(resolvedUserType || '')
                       };
 
                 const user: AuthUser = {
                     id: String(data.id || sessionUser?.id || ''),
-                    name: data.name || sessionUser?.name || '',
+                    name: data.name || data.full_name || sessionUser?.name || '',
                     email: data.email || sessionUser?.email || '',
                     userType: resolvedUserType || UserType.POS_USER,
                     role: roleRef,
-                    tenantId: data.tenant?.id,
+                    tenantId: data.tenant?.id || data.tenant_id || sessionUser?.tenantId,
                     tenantName: data.tenant?.name,
-                    storeIds: data.stores?.map((s: any) => s.id) || [],
+                    storeIds: data.stores?.map((s: any) => s.id) || data.store_ids || sessionUser?.storeIds || [],
                     stores: data.stores || [],
                     enabledModules: data.enabledModules || [],
                     entitlementPaths: data.entitlementPaths || [],

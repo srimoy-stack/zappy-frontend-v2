@@ -44,7 +44,7 @@ function resolveUserType(raw: string | null | undefined): CanonicalUserType | nu
         'platform_super_admin': CanonicalUserType.PLATFORM_SUPER_ADMIN,
         'super_admin': CanonicalUserType.PLATFORM_SUPER_ADMIN,
         'brand_admin': CanonicalUserType.BRAND_ADMIN,
-        'admin': CanonicalUserType.PLATFORM_SUPER_ADMIN,
+        'admin': CanonicalUserType.ADMIN,
         'manager': CanonicalUserType.MANAGER,
         'store_manager': CanonicalUserType.MANAGER,
         'pos_user': CanonicalUserType.POS_USER,
@@ -114,6 +114,10 @@ function isPublicRoute(pathname: string): boolean {
     return PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
 }
 
+function getAuthSecret(): string {
+    return process.env.NEXTAUTH_SECRET || 'zyappy-local-dev-nextauth-secret-change-me';
+}
+
 // ─── Middleware ──────────────────────────────────────────────────────────────
 
 export async function middleware(request: NextRequest) {
@@ -136,7 +140,7 @@ export async function middleware(request: NextRequest) {
     // 3. Verify JWT via next-auth (proper server-side verification)
     const token = await getToken({
         req: request,
-        secret: process.env.NEXTAUTH_SECRET,
+        secret: getAuthSecret(),
     });
 
     if (!token) {

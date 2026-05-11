@@ -108,7 +108,7 @@ export const BACKEND_USER_TYPE_MAP: Record<string, UserType> = {
 
     // FastAPI seeded role names (space format → must be pre-normalized)
     'super admin': UserType.PLATFORM_SUPER_ADMIN,
-    'admin': UserType.PLATFORM_SUPER_ADMIN,
+    'admin': UserType.ADMIN,
     'store manager': UserType.MANAGER,
     'pos cashier': UserType.POS_USER,
     'kitchen staff': UserType.KITCHEN_USER,

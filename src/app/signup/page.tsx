@@ -35,8 +35,8 @@ export default function SignupPage() {
         }
 
         try {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
-            const res = await fetch(`${apiUrl}/api/auth/signup`, {
+            const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api').replace(/\/$/, '');
+            const res = await fetch(`${apiUrl}/auth/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -74,7 +74,7 @@ export default function SignupPage() {
             }
 
             // Auto sign-in after registration
-            const loginResult = await signIn('credentials', {
+            const loginResult = await signIn('login', {
                 email,
                 password,
                 redirect: false,

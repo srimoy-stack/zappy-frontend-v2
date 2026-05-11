@@ -9,6 +9,7 @@ import { ShopSearch } from '@/modules/shop/components/ShopSearch';
 import { ShopCartTrigger } from '@/modules/shop/components/ShopCartTrigger';
 
 import { UserType } from '@/shared/types/auth';
+import { logout } from '@/shared/utils/auth';
 
 /**
  * Header Component (Production Grade)
@@ -154,7 +155,7 @@ export const Header: React.FC = () => {
                                 </button>
                                 <div className="h-px bg-slate-100 my-1 px-1" />
                                 <button
-                                    onClick={() => alert('Logging out...')}
+                                    onClick={() => logout()}
                                     className="w-full flex items-center gap-3 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                 >
                                     Log Out

@@ -9,6 +9,7 @@ import { PermissionDeniedToast } from '@/shared/components/PermissionDeniedToast
 import { ContextErrorBoundary } from '@/shared/components/ContextErrorBoundary';
 import { ApiErrorToast } from '@/shared/components/ApiErrorToast';
 import { TokenRefreshProvider } from '@/shared/providers/TokenRefreshProvider';
+import { TenantStoreProvider } from '@/app/providers/TenantStoreProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -28,20 +29,22 @@ export default function RootLayout({
                 <ClientProviders>
                     <TenantProvider>
                         <StoreProvider>
-                            <ModuleProvider>
-                                <AuthProvider>
-                                    <EntitlementProvider>
-                                        <TokenRefreshProvider>
-                                            <ApiContextBridge />
-                                            <ContextErrorBoundary>
-                                                {children}
-                                            </ContextErrorBoundary>
-                                            <PermissionDeniedToast />
-                                            <ApiErrorToast />
-                                        </TokenRefreshProvider>
-                                    </EntitlementProvider>
-                                </AuthProvider>
-                            </ModuleProvider>
+                            <TenantStoreProvider>
+                                <ModuleProvider>
+                                    <AuthProvider>
+                                        <EntitlementProvider>
+                                            <TokenRefreshProvider>
+                                                <ApiContextBridge />
+                                                <ContextErrorBoundary>
+                                                    {children}
+                                                </ContextErrorBoundary>
+                                                <PermissionDeniedToast />
+                                                <ApiErrorToast />
+                                            </TokenRefreshProvider>
+                                        </EntitlementProvider>
+                                    </AuthProvider>
+                                </ModuleProvider>
+                            </TenantStoreProvider>
                         </StoreProvider>
                     </TenantProvider>
                 </ClientProviders>

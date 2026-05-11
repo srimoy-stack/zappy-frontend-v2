@@ -20,7 +20,7 @@ export default function LoginPage() {
         setError(null);
 
         try {
-            const result = await signIn('credentials', {
+            const result = await signIn('login', {
                 email,
                 password,
                 redirect: false,
@@ -34,7 +34,11 @@ export default function LoginPage() {
                 const userType = resolveUserType(session?.user?.role);
                 const targetPage = userType ? getDefaultPage(userType) : '/backoffice/home';
 
-                console.log(`[Login] Role: ${session?.user?.role} -> UserType: ${userType} -> Target: ${targetPage}`);
+                
+                console.log("[Login Success] Full User Session details retrieved from auth/me:");
+                console.log(session?.user);
+                console.log(`[Redirect Routing] Role: ${session?.user?.role} -> UserType: ${userType} -> Target: ${targetPage}`);
+
 
                 router.push(targetPage);
                 router.refresh();
