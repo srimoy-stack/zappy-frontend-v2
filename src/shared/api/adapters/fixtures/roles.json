@@ -1,0 +1,30 @@
+[
+    {
+        "id": "role-admin",
+        "name": "Administrator",
+        "description": "Full access to all features",
+        "permissions": ["*"],
+        "isSystem": true,
+        "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+        "id": "role-manager",
+        "name": "Store Manager",
+        "description": "Store-level management access",
+        "permissions": [
+            "users.view", "items.view", "items.edit", "items.create",
+            "inventory.view", "inventory.create",
+            "pos.access", "reports.view", "finances.view"
+        ],
+        "isSystem": true,
+        "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+        "id": "role-cashier",
+        "name": "Cashier",
+        "description": "POS operations only",
+        "permissions": ["pos.access", "items.view"],
+        "isSystem": false,
+        "createdAt": "2025-02-15T00:00:00Z"
+    }
+]

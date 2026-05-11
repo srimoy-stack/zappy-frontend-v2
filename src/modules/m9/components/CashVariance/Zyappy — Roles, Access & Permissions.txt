@@ -1,0 +1,396 @@
+Zyappy — Roles, Access & Permissions
+RBAC — Product Summary
+The system defines who can access what and where using:
+Roles (user type)
+Permissions (allowed actions)
+Modules (feature access)
+Store scope (data visibility)
+Key Highlights:
+7 roles are defined from platform-level to store-level users.
+87 granular permissions allow flexible role creation.
+Access is enforced at multiple levels (routes, modules, data scope).
+Store-based filtering ensures users only see relevant business data.
+Special capabilities like impersonation enable debugging and support.
+Executive Summary
+Zyappy employs a robust 7-role hierarchy to manage access and permissions,
+complemented by 87 granular permissions distributed across 12 operational
+categories. Access control is implemented at four distinct layers: session
+authentication, layout guards, route filtering, and inline page checks. Additionally, the
+KDS module operates a parallel permission subsystem with 11 dedicated permission
+keys, ensuring comprehensive security and operational segregation.
+1. Role Definitions
+This section outlines the seven distinct roles within the Zyappy platform, detailing
+their internal keys, scope, purpose, landing pages, and specific capabilities and
+limitations.
+1.1 Platform Super Admin
+Property Detail
+Internal Key PLATFORM_SUPER_ADMIN
+Scope Global — across all brands and stores
+Purpose
+Platform operator responsible for onboarding, brand provisioning, and
+system health.
+Landing
+Page
+/platform/brands
+Capabilities:
+Access the Platform Brands dashboard to view, create, and manage all brands.
+Impersonate any brand (2-hour session) to diagnose issues within their
+backoffice.
+Full read/write access to every backoffice and KDS route when impersonating.
+All 87 permissions are granted by default.
+Limitations:
+N/A — this role possesses the highest privilege level (“God mode”).
+Special Behavior:
+When navigating /platform/* , the sidebar exclusively displays Brands.
+When impersonating at /backoffice/* , the sidebar shows a scoped setup view:
+Items, Integrations, KDS Master, KDS Expo.
+An Impersonation Banner is prominently displayed at the top of the page during
+active sessions.
+Impersonation sessions automatically expire after 2 hours.
+1.2 Brand Admin
+Property Detail
+Internal Key BRAND_ADMIN
+Scope Brand-wide — all stores under one brand
+Purpose The brand owner or franchise operator with full control over their business.
+Landing Page /backoffice/home
+Capabilities:
+Full read/write access to all 14 backoffice routes.
+Access to KDS Master & Expo screens.
+Management of all stores without restriction ( getManagedStoreIds() → 'all' ).
+Creation, editing, and deletion of custom roles, and assignment to staff.
+Creation and management of email campaigns and audience segments.
+Viewing of AI call analytics dashboard and detail pages.
+Configuration of integrations, business settings, and inventory.
+Management of the Web Shop.
+Viewing and exporting of financial reports (payments, refunds, payouts).
+Access to the “New Sale” button in the sidebar (POS entry point).
+Limitations:
+Cannot access /platform/* routes (exclusive to Platform Super Admin).
+Cannot impersonate other brands.
+Permissions: All 87 granted (system role, non-editable).
+1.3 Admin
+Property Detail
+Internal Key ADMIN
+Scope Brand-wide — all stores
+Purpose
+Technical administrator. Functionally equivalent to Brand Admin in current
+Phase 1.
+Landing
+Page
+/backoffice/home
+Capabilities:
+Possesses all capabilities of a Brand Admin (identical access matrix in Phase 1).
+Full access to all stores without restriction.
+Limitations:
+Cannot access /platform/* routes.
+Permissions: All 87 granted (system role, non-editable).
+[!NOTE] In Phase 1, ADMIN and BRAND_ADMIN roles are functionally identical. Phase
+2 may introduce differentiation, such as Brand Admin managing
+billing/subscription while Admin does not.
+1.4 Store Manager
+Property Detail
+Internal Key STORE_MANAGER
+Scope Assigned store(s) — can be multi-store
+Purpose
+Day-to-day store operations manager, responsible for shifts, staff, and
+customer issues.
+Landing
+Page
+/backoffice/home
+Capabilities:
+Module Access Level Notes
+Home ✅ Full Dashboard overview
+Sales Activity ✅ Full View and manage sales
+Reports 📖 Read-Only Can view but not modify report configurations
+Finances ✅ Full View transactions, process refunds
+Items ✅ Full Full menu management
+Users ✅ Full Can add/edit staff within their assigned stores
+Customers ✅ Full Full CRM access
+Inventory ✅ Full Stock management (requires module)
+Web Shop ✅ Full Online store configuration (requires module)
+Integrations ✅ Full Third-party setup
+Business Settings ✅ Full Store-level configuration
+KDS Master ✅ Full Full kitchen display access
+KDS Expo ✅ Full Full expeditor access
+Limitations:
+Module Reason
+Email Campaigns Admin-only feature
+Call Analytics Admin-only feature
+Platform Brands Super Admin only
+Store Scoping:
+Can only view data for assigned stores.
+Can switch stores in the header only if assigned to multiple stores.
+Financial data, inventory, and sales are filtered according to their store scope.
+KDS Permissions:
+All KDS actions, including: delay orders, cancel orders, manage sound/station
+configuration, send customer messages, reassign stations.
+Default Seed Permissions (6): View users , Add user , Edit user , View reports ,
+Access POS screen , View inventory .
+1.5 Employee
+Property Detail
+Internal
+Key
+EMPLOYEE
+Scope Single assigned store
+Purpose
+General staff with limited visibility, primarily for browsing data without critical
+modification capabilities.
+Landing
+Page
+/backoffice/home (redirected to first allowed route)
+Capabilities:
+Module Access Level
+Sales Activity 📖 Read-Only
+Items 📖 Read-Only
+Users 📖 Read-Only
+Customers 📖 Read-Only
+Limitations:
+Module Behavior
+Home Hidden from navigation
+Reports Hidden from navigation
+Finances Explicit “Access Denied” screen with lock icon
+Inventory Hidden from navigation
+Email Campaigns Hidden from navigation
+Call Analytics Hidden from navigation
+Web Shop Hidden from navigation
+Integrations Hidden from navigation
+Business Settings Hidden from navigation
+KDS Not included in allowed roles
+Store Scoping: Locked to a single assigned store. Cannot switch stores.
+1.6 POS User
+Property Detail
+Internal Key POS_USER
+Scope Single assigned store
+Purpose Front-of-house cashier operating the Point of Sale terminal.
+Landing Page /backoffice/home (redirected to first allowed route)
+Capabilities:
+Access the POS terminal screen.
+Create and manage orders.
+View customer information.
+Limitations:
+All backoffice routes are inaccessible — POS User is not listed in allowedRoles
+for any navigation item.
+The POS terminal operates independently of the standard backoffice navigation.
+Default Seed Permissions (3): Access POS screen , Create order , View
+customers .
+Store Scoping: Locked to a single assigned store.
+1.7 KDS User
+Property Detail
+Internal Key KDS_USER
+Scope Single assigned store + specific station
+Purpose Kitchen line staff operating the Kitchen Display System.
+Landing Page /kds/master
+Capabilities:
+KDS Action Allowed?
+View orders on their station ✅
+Accept new orders ✅
+Progress items through stages (New → Preparing → Ready) ✅
+Complete orders ✅
+Print tickets ✅
+Limitations (within KDS):
+KDS Action Reason
+Cancel orders Requires KDS.CANCEL_ORDER (Manager+)
+Delay orders Requires KDS.DELAY_ORDER (Manager+)
+Override stages Requires Expo Lead+
+Reassign to another station Requires Expo Lead+
+Recall/re-fire completed orders Requires Expo Lead+
+Configure sounds Requires KDS.SOUND_CONFIG (Manager+)
+Manage station setup Requires KDS.STATION_CONFIG (Manager+)
+Send customer messages Requires KDS.CUSTOMER_MESSAGE (Manager+)
+Limitations:
+All backoffice routes are inaccessible — KDS User has no backoffice navigation
+entries.
+Store Scoping: Locked to a single assigned store and station.
+2. Access Matrix — All Roles at a Glance
+This section provides a consolidated view of access levels for various modules across
+all defined roles.
+2.1 Backoffice Modules
+Module
+Super
+Admin
+Brand
+Admin
+Admin
+Store
+Manager
+Employee
+POS
+User
+KDS
+User
+Home ✅ ✅ ✅ ✅ — — —
+Sales Activity ✅ ✅ ✅ ✅ 📖 — —
+Reports ✅ ✅ ✅ 📖 — — —
+Finances ✅ ✅ ✅ ✅ 🔒 — —
+Items ✅ ✅ ✅ ✅ 📖 — —
+Users ✅ ✅ ✅ ✅ 📖 — —
+Customers ✅ ✅ ✅ ✅ 📖 — —
+Email
+Campaigns
+✅ ✅ ✅ — — — —
+Call Analytics ✅ ✅ ✅ — — — —
+Inventory ✅ ✅ ✅ ✅ — — —
+Web Shop ✅ ✅ ✅ ✅ — — —
+Integrations ✅ ✅ ✅ ✅ — — —
+Business
+Settings ✅ ✅ ✅ ✅ — — —
+✅ = Full Access · 📖 = Read-Only · 🔒 = Explicit Denied · — = Hidden/No Access
+2.2 KDS Module
+KDS Action
+Kitchen
+Staff
+Expo
+Lead
+Store
+Manager
+Admin
+View Orders ( KDS.VIEW ) ✅ ✅ ✅ ✅
+Update Stages ( KDS.STAGE_UPDATE ) ✅ ✅ ✅ ✅
+Accept Order ( KDS.ACCEPT_ORDER ) ✅ ✅ ✅ ✅
+Print Ticket ( KDS.PRINT ) ✅ ✅ ✅ ✅
+Reassign Station
+( KDS.REASSIGN_STATION ) ❌ ✅ ✅ ✅
+Recall / Re-fire ( KDS.RECALL_REFIRE ) ❌ ✅ ✅ ✅
+Cancel Order ( KDS.CANCEL_ORDER ) ❌ ❌ ✅ ✅
+Delay Order ( KDS.DELAY_ORDER ) ❌ ❌ ✅ ✅
+Sound Config ( KDS.SOUND_CONFIG ) ❌ ❌ ✅ ✅
+Station Config ( KDS.STATION_CONFIG ) ❌ ❌ ✅ ✅
+Customer Messages
+( KDS.CUSTOMER_MESSAGE ) ❌ ❌ ✅ ✅
+2.3 Platform
+Route Super Admin All Others
+/platform/brands ✅ 🔒 403
+/platform/brands/[id]/impersonate ✅ 🔒 403
+3. Permission Categories (87 Granular Permissions)
+These permissions are assigned to custom roles created through the Role Editor UI.
+System roles (Platform Super Admin, Brand Admin, Admin) automatically receive all 87
+permissions.
+Overview
+# Category
+Permission
+Count
+Example Permissions
+1 User Roles 9
+View users, Add user, Assign roles, Create role, Delete
+role
+2 Customers 7
+View customers, Add customer, Block/blacklist
+customer
+3 Items 8
+View items, Add product, Manage variants, Update
+pricing
+4 Inventory 8
+View inventory, Stock adjustment, Recipe
+management, Low stock alerts
+5 Finances 10
+View transactions, Process refunds, View payouts,
+Manage payment methods
+6 Reports 10
+View reports, Export reports, Configure report
+settings, Access analytics dashboard
+7 POS 10
+Access POS screen, Create order, Apply discount,
+Open cash drawer, Split payment
+8
+Online
+Ordering
+6
+View online orders, Accept/reject orders, Pause
+online ordering
+9
+Kitchen
+(KDS)
+8
+Access KDS screen, Change item status, Recall order,
+Route orders to stations
+10 Taxes 5 View tax rules, Add tax, Assign tax to items/locations
+11 Settings 6
+View settings, Manage payment settings, Access
+audit logs
+12 Kiosk 6
+Enable/disable kiosk, Configure kiosk menu, Reset
+kiosk session
+Total
+85 + 2 implicit
+= 87
+4. Pre-Built Roles (Seed Data)
+These roles are shipped with every new brand. System roles cannot be modified or
+deleted through the user interface.
+Role Type Permissions Granted Editable? Deletable?
+Platform
+Super Admin
+System All 87 ❌ ❌
+Brand Admin System All 87 ❌ ❌
+Admin System All 87 ❌ ❌
+Store
+Manager
+Custom
+6 (View users, Add user, Edit user, View
+reports, Access POS screen, View
+inventory)
+✅ ✅
+POS Cashier Custom
+3 (Access POS screen, Create order,
+View customers)
+✅ ✅
+Kitchen Staff Custom
+3 (Access KDS screen, View incoming
+orders, Change item status)
+✅ ✅
+Call Agent Custom
+3 (Create order, View customers, View
+items)
+✅ ✅
+[!IMPORTANT] Custom roles assigned to active users cannot be deleted until those
+users are reassigned to a different role.
+5. Store Scoping Rules
+This section details how store visibility and access are managed for each role.
+Role Store Visibility
+Can Switch
+Stores?
+Data Filtering
+Super
+Admin
+All (via
+impersonation)
+N/A Impersonated brand context
+Brand
+Admin
+All stores ✅ Always No filter — sees everything
+Admin All stores ✅ Always No filter — sees everything
+Store
+Manager
+Assigned stores
+only
+✅ Only if
+multi-store
+Finances, inventory, sales filtered to
+assigned stores
+Employee Single store ❌ All data scoped to assigned store
+POS User Single store ❌ POS terminal locked to store
+KDS User Single store ❌ KDS station locked to store
+6. Special Features by Role
+6.1 Impersonation (Super Admin Only)
+Property Value
+Who can initiate Platform Super Admin only
+Duration 2 hours (auto-expiry)
+Visual indicator Yellow warning banner at top of backoffice
+Audit trail IMPERSONATION_STARTED and IMPERSONATION_ENDED events logged
+Access granted Full read/write to the impersonated brand’s backoffice
+6.2 “New Sale” Button (Sidebar)
+Visible to: Brand Admin, Admin, Store Manager only. Hidden for: Platform Super
+Admin (when not impersonating), Employee, POS User, KDS User.
+6.3 Email Campaign Segments
+Only Platform Super Admin, Brand Admin, and Admin can create, edit, duplicate,
+toggle, or delete audience segments. Store Managers and below either see segments
+as read-only or have no access to the module.
+6.4 KDS Station Mode
+For shared kitchen screens, a device can be paired to a station by a Manager/Admin.
+Once paired:
+Viewing orders works with the station token alone (no individual login required).
+Sensitive actions (cancel, delay, re-fire) require a 4-digit PIN re-authentication
+that creates a 10-minute action session.
+The audit log records both the station identity and the individual user who
+entered the PIN.
+7. Module Gating
+Some feat

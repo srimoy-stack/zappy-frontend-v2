@@ -1,0 +1,88 @@
+/**
+ * Audit Log Types
+ */
+
+export interface AuditLogPayload {
+    action: string;
+    entity: string;
+    entityId?: string;
+    metadata?: Record<string, any>;
+    timestamp?: string;
+}
+
+/** Known audit actions */
+export const AUDIT_ACTIONS = {
+    // Auth
+    LOGIN: 'LOGIN',
+    LOGOUT: 'LOGOUT',
+    PASSWORD_CHANGED: 'PASSWORD_CHANGED',
+
+    // Impersonation
+    IMPERSONATION_STARTED: 'IMPERSONATION_STARTED',
+    IMPERSONATION_ENDED: 'IMPERSONATION_ENDED',
+
+    // Tenant / Brand
+    TENANT_CREATED: 'TENANT_CREATED',
+    TENANT_UPDATED: 'TENANT_UPDATED',
+    TENANT_FINALIZED: 'TENANT_FINALIZED',
+
+    // User
+    USER_CREATED: 'USER_CREATED',
+    USER_UPDATED: 'USER_UPDATED',
+    USER_DELETED: 'USER_DELETED',
+    USER_INVITED: 'USER_INVITED',
+
+    // Role
+    ROLE_CREATED: 'ROLE_CREATED',
+    ROLE_UPDATED: 'ROLE_UPDATED',
+    ROLE_DELETED: 'ROLE_DELETED',
+    ROLE_ASSIGNED: 'ROLE_ASSIGNED',
+
+    // Store
+    STORE_CREATED: 'STORE_CREATED',
+    STORE_UPDATED: 'STORE_UPDATED',
+    STORE_DELETED: 'STORE_DELETED',
+
+    // Module
+    MODULE_ENABLED: 'MODULE_ENABLED',
+    MODULE_DISABLED: 'MODULE_DISABLED',
+
+    // Onboarding
+    ONBOARDING_STARTED: 'ONBOARDING_STARTED',
+    ONBOARDING_COMPLETED: 'ONBOARDING_COMPLETED',
+    ONBOARDING_FAILED: 'ONBOARDING_FAILED',
+
+    // Gateway / Config
+    ENTITLEMENT_CONFIGURED: 'ENTITLEMENT_CONFIGURED',
+    GATEWAY_CONFIG_UPDATED: 'GATEWAY_CONFIG_UPDATED',
+
+    // Tenant Lifecycle
+    TENANT_GO_LIVE: 'TENANT_GO_LIVE',
+
+
+    // Items
+    ITEM_CREATED: 'ITEM_CREATED',
+    ITEM_UPDATED: 'ITEM_UPDATED',
+    ITEM_DELETED: 'ITEM_DELETED',
+
+    // Orders
+    ORDER_CREATED: 'ORDER_CREATED',
+    ORDER_UPDATED: 'ORDER_UPDATED',
+    ORDER_CANCELLED: 'ORDER_CANCELLED',
+    ORDER_REFUNDED: 'ORDER_REFUNDED',
+
+    // Settings
+    SETTINGS_UPDATED: 'SETTINGS_UPDATED',
+} as const;
+
+export const AUDIT_ENTITIES = {
+    USER: 'USER',
+    TENANT: 'TENANT',
+    STORE: 'STORE',
+    ROLE: 'ROLE',
+    MODULE: 'MODULE',
+    ITEM: 'ITEM',
+    ORDER: 'ORDER',
+    SETTINGS: 'SETTINGS',
+    SESSION: 'SESSION',
+} as const;

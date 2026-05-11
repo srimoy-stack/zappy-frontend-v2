@@ -1,0 +1,47 @@
+[
+    {
+        "id": "user-001",
+        "name": "Platform Admin",
+        "fullName": "Platform Admin",
+        "email": "admin@zyappy.com",
+        "userType": "ADMIN_USER",
+        "role": "PLATFORM_SUPER_ADMIN",
+        "roleId": "role-admin",
+        "roleName": "Administrator",
+        "storeIds": [],
+        "tenantId": "",
+        "status": "Active",
+        "lastLogin": "2025-12-01T10:00:00Z",
+        "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+        "id": "user-002",
+        "name": "Sarah Chen",
+        "fullName": "Sarah Chen",
+        "email": "sarah@acmepizza.com",
+        "userType": "BACKEND_USER",
+        "role": "BRAND_ADMIN",
+        "roleId": "role-admin",
+        "roleName": "Administrator",
+        "storeIds": ["store-001", "store-002"],
+        "tenantId": "brand-001",
+        "status": "Active",
+        "lastLogin": "2025-11-28T14:30:00Z",
+        "createdAt": "2025-06-15T00:00:00Z"
+    },
+    {
+        "id": "user-003",
+        "name": "Mike Johnson",
+        "fullName": "Mike Johnson",
+        "email": "mike@acmepizza.com",
+        "userType": "POS_USER",
+        "role": "EMPLOYEE",
+        "roleId": "role-cashier",
+        "roleName": "Cashier",
+        "storeIds": ["store-001"],
+        "tenantId": "brand-001",
+        "status": "Active",
+        "lastLogin": "2025-12-01T08:00:00Z",
+        "createdAt": "2025-08-01T00:00:00Z"
+    }
+]
