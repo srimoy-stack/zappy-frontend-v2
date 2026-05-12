@@ -39,12 +39,7 @@ export const Header: React.FC = () => {
         <header className="h-14 border-b border-slate-200 bg-white flex items-center justify-between px-6 sticky top-0 z-40">
             {/* Left: Context & Role Badge */}
             <div className="flex items-center gap-4">
-                {isPlatformRoot ? (
-                    <div className="flex items-center gap-2 px-3 py-1.5 border border-slate-900 bg-slate-900 rounded-full text-white shadow-sm">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] leading-none">System Root</span>
-                    </div>
-                ) : (
+                {isPlatformRoot ? null : (
                     <StoreSelector />
                 )}
 

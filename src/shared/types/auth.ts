@@ -201,7 +201,7 @@ export const USER_TYPE_BASE_ROUTE: Record<UserType, string> = {
 
 /** Default landing page for each user type */
 export const USER_TYPE_DEFAULT_PAGE: Record<UserType, string> = {
-    [UserType.PLATFORM_SUPER_ADMIN]: '/platform/brands',
+    [UserType.PLATFORM_SUPER_ADMIN]: '/platform/dashboard',
     [UserType.PLATFORM_ADMIN]: '/platform/tenants',
     [UserType.PLATFORM_SUPPORT]: '/platform/tenants',
     [UserType.PLATFORM_OPERATIONS]: '/platform/dashboard',
@@ -227,7 +227,7 @@ export const ROLE_BASE_ROUTE: Record<UserRole, string> = {
 
 /** @deprecated Use USER_TYPE_DEFAULT_PAGE */
 export const ROLE_DEFAULT_PAGE: Record<UserRole, string> = {
-    [UserRole.SUPER_ADMIN]: '/platform/brands',
+    [UserRole.SUPER_ADMIN]: '/platform/dashboard',
     [UserRole.TENANT_ADMIN]: '/backoffice/home',
     [UserRole.STORE_MANAGER]: '/backoffice/home',
     [UserRole.POS_USER]: '/pos',
