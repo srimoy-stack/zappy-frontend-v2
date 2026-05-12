@@ -60,6 +60,7 @@ function resolveUserType(raw: string | null | undefined): CanonicalUserType | nu
         'delivery_staff': CanonicalUserType.DELIVERY,
         // Space format (FastAPI seeded roles)
         'super admin': CanonicalUserType.PLATFORM_SUPER_ADMIN,
+        'brand admin': CanonicalUserType.BRAND_ADMIN,
         'store manager': CanonicalUserType.MANAGER,
         'pos cashier': CanonicalUserType.POS_USER,
         'kitchen staff': CanonicalUserType.KITCHEN_USER,

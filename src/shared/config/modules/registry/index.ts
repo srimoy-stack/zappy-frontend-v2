@@ -7,6 +7,7 @@
 
 import type { RegistryNode } from '../types';
 
+import { HOME_REGISTRY } from './home.registry';
 import { POS_REGISTRY } from './pos.registry';
 import { SALES_ACTIVITY_REGISTRY } from './salesActivity.registry';
 import { REPORTS_REGISTRY } from './reports.registry';
@@ -27,6 +28,7 @@ import { INTEGRATIONS_REGISTRY } from './integrations.registry';
  * Consumed by lookups.ts for precomputed maps.
  */
 export const MODULE_REGISTRY: RegistryNode[] = [
+    ...HOME_REGISTRY,
     ...POS_REGISTRY,
     ...SALES_ACTIVITY_REGISTRY,
     ...REPORTS_REGISTRY,
@@ -45,6 +47,7 @@ export const MODULE_REGISTRY: RegistryNode[] = [
 
 // Re-export individual registries for direct access
 export {
+    HOME_REGISTRY,
     POS_REGISTRY,
     SALES_ACTIVITY_REGISTRY,
     REPORTS_REGISTRY,
