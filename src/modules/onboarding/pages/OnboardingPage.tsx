@@ -2,13 +2,14 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Check, ChevronRight, Loader2, Rocket, CheckCircle2, Mail, Smartphone } from 'lucide-react';
+import { ArrowLeft, Check, ChevronRight, Loader2, Rocket, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useOnboardingFlow } from '../hooks/useOnboardingFlow';
 import { STEP_CONFIG } from '../types/onboarding.types';
 import { BrandStep } from '../components/BrandStep';
 import { ModuleStep } from '../components/ModuleStep';
 import { EmailConfigStep } from '../components/EmailConfigStep';
 import { SmsConfigStep } from '../components/SmsConfigStep';
+import { VapiConfigStep } from '../components/VapiConfigStep';
 import { AdminStep } from '../components/AdminStep';
 import { ReviewStep } from '../components/ReviewStep';
 
@@ -17,20 +18,14 @@ import { ReviewStep } from '../components/ReviewStep';
  *   1. Brand Identity (always)
  *   2. Entitlements (always)
  *   3. Email Config (only if email-campaigns enabled)
- *   4. SMS Config (only if communication modules enabled)
- *   5. Tenant Admin (always)
- *   6. Review (always)
+ *   4. SMS Config (only if email-campaigns enabled — optional)
+ *   5. AI Call Config (only if ai-call-analytics enabled)
+ *   6. Tenant Admin (always)
+ *   7. Review (always)
  *
- * Steps 3 & 4 auto-skip if the brand doesn't need them.
+ * Steps 3–5 auto-skip if the brand doesn't need them.
+ * Validation is enforced before advancing to the next step.
  */
-
-const NEXT_LABELS: Record<number, string> = {
-    1: 'Configure Entitlements',
-    2: 'Next',
-    3: 'Next',
-    4: 'Next',
-    5: 'Review & Submit',
-};
 
 export function OnboardingPage() {
     const router = useRouter();
@@ -51,7 +46,8 @@ export function OnboardingPage() {
     const isLastStep = flow.currentStepIndex === flow.activeSteps.length - 1;
 
     // ── Submission Overlay ───────────────────────────────────────────────────
-    if (flow.submitting || flow.submitted) {
+    // Show overlay while submitting, after success, OR when there's an error to display
+    if (flow.submitting || flow.submitted || flow.submitError) {
         return (
             <div className="min-h-screen bg-slate-50/50 flex items-center justify-center p-6">
                 <div className="max-w-lg w-full bg-white p-12 rounded-[2rem] border border-slate-200 shadow-2xl shadow-slate-100">
@@ -93,14 +89,24 @@ export function OnboardingPage() {
                                 ))}
                             </div>
                             {flow.submitError && (
-                                <div className="p-4 bg-red-50 border border-red-200 rounded-2xl">
-                                    <p className="text-xs font-bold text-red-700">{flow.submitError}</p>
-                                    <button
-                                        onClick={flow.handleSubmit}
-                                        className="mt-3 px-6 py-2 bg-red-600 text-white rounded-xl text-xs font-black hover:bg-red-700 transition-colors"
-                                    >
-                                        Retry
-                                    </button>
+                                <div className="p-5 bg-red-50 border border-red-200 rounded-2xl space-y-3">
+                                    <p className="text-[10px] font-black text-red-500 uppercase tracking-widest">Provisioning Failed</p>
+                                    <p className="text-xs font-bold text-red-700 leading-relaxed break-words">{flow.submitError}</p>
+                                    <div className="flex gap-3 pt-1">
+                                        <button
+                                            onClick={flow.handleSubmit}
+                                            disabled={flow.submitting}
+                                            className="px-6 py-2.5 bg-red-600 text-white rounded-xl text-xs font-black hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            Retry from Failed Step
+                                        </button>
+                                        <button
+                                            onClick={flow.resetDraft}
+                                            className="px-6 py-2.5 bg-white text-slate-600 rounded-xl text-xs font-black border border-slate-200 hover:bg-slate-50 transition-colors"
+                                        >
+                                            Start Over
+                                        </button>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -210,8 +216,42 @@ export function OnboardingPage() {
                             onUpdate={flow.updateSms}
                         />
                     )}
-                    {flow.currentStep === 5 && <AdminStep data={flow.formData.admin} onChange={flow.updateAdmin} />}
-                    {flow.currentStep === 6 && <ReviewStep data={flow.formData} onGoToStep={flow.goToStep} needsEmail={flow.needsEmail} needsSms={flow.needsSms} />}
+                    {flow.currentStep === 5 && flow.needsVapi && (
+                        <VapiConfigStep
+                            vapi={flow.formData.vapi}
+                            onUpdate={flow.updateVapi}
+                        />
+                    )}
+                    {flow.currentStep === 6 && <AdminStep data={flow.formData.admin} onChange={flow.updateAdmin} />}
+                    {flow.currentStep === 7 && (
+                        <ReviewStep
+                            data={flow.formData}
+                            onGoToStep={flow.goToStep}
+                            needsEmail={flow.needsEmail}
+                            needsSms={flow.needsSms}
+                            needsVapi={flow.needsVapi}
+                        />
+                    )}
+
+                    {/* Validation Errors */}
+                    {flow.stepErrors.length > 0 && (
+                        <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-2xl animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            <div className="flex items-start gap-3">
+                                <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+                                <div className="space-y-1">
+                                    <p className="text-xs font-black text-red-800">Please fix the following before continuing:</p>
+                                    <ul className="space-y-0.5">
+                                        {flow.stepErrors.map((err, i) => (
+                                            <li key={i} className="text-[11px] text-red-600 font-medium flex items-center gap-1.5">
+                                                <span className="w-1 h-1 rounded-full bg-red-400 shrink-0" />
+                                                {err}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Footer */}
                     <div className="pt-8 mt-12 flex items-center justify-end gap-4 border-t border-slate-200">

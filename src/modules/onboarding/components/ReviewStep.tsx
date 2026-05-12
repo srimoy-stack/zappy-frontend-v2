@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Building2, UserCircle, LayoutGrid, Mail, Smartphone, CheckCircle2 } from 'lucide-react';
+import { Building2, UserCircle, LayoutGrid, Mail, Smartphone, CheckCircle2, Bot } from 'lucide-react';
 import { FormSectionTitle, ReviewField } from './ui';
 import type { OnboardingFormData, OnboardingStep } from '../types/onboarding.types';
 import { getNode } from '@/shared/config/modules';
@@ -11,9 +11,10 @@ interface ReviewStepProps {
     onGoToStep: (step: OnboardingStep) => void;
     needsEmail?: boolean;
     needsSms?: boolean;
+    needsVapi?: boolean;
 }
 
-export function ReviewStep({ data, onGoToStep, needsEmail = false, needsSms = false }: ReviewStepProps) {
+export function ReviewStep({ data, onGoToStep, needsEmail = false, needsSms = false, needsVapi = false }: ReviewStepProps) {
     return (
         <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Brand Summary */}
@@ -83,7 +84,14 @@ export function ReviewStep({ data, onGoToStep, needsEmail = false, needsSms = fa
                             <>
                                 <ReviewField label="Sender Name" value={data.email.senderName} />
                                 <ReviewField label="Sender Email" value={data.email.senderEmail} />
-                                {data.email.provider === 'smtp' && <ReviewField label="SMTP Host" value={data.email.host || '—'} />}
+                                {data.email.replyTo && <ReviewField label="Reply-To" value={data.email.replyTo} />}
+                                {data.email.provider === 'smtp' && (
+                                    <>
+                                        <ReviewField label="SMTP Host" value={data.email.host || '—'} />
+                                        <ReviewField label="Port" value={String(data.email.port || 587)} />
+                                        <ReviewField label="Encryption" value={(data.email.encryption || 'tls').toUpperCase()} />
+                                    </>
+                                )}
                             </>
                         )}
                     </div>
@@ -98,10 +106,24 @@ export function ReviewStep({ data, onGoToStep, needsEmail = false, needsSms = fa
                         <button onClick={() => onGoToStep(4)} className="text-[10px] font-black text-slate-400 hover:text-slate-900 uppercase tracking-widest transition-colors">Edit</button>
                     </div>
                     <div className="grid grid-cols-2 gap-6">
-                        <ReviewField label="Provider" value={data.sms.provider === 'inherit' ? 'Platform Default (Inherited)' : data.sms.provider.toUpperCase()} />
+                        <ReviewField label="Provider" value={data.sms.provider === 'inherit' ? 'Skipped (Not Configured)' : data.sms.provider.toUpperCase()} />
                         {data.sms.provider !== 'inherit' && (
                             <ReviewField label="Sender ID" value={data.sms.senderId} />
                         )}
+                    </div>
+                </section>
+            )}
+
+            {/* Vapi / AI Call Analytics — only if enabled */}
+            {needsVapi && (
+                <section className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+                    <div className="flex items-center justify-between">
+                        <FormSectionTitle icon={Bot} title="AI Call Analytics" />
+                        <button onClick={() => onGoToStep(5)} className="text-[10px] font-black text-slate-400 hover:text-slate-900 uppercase tracking-widest transition-colors">Edit</button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-6">
+                        <ReviewField label="Assistant ID" value={data.vapi.assistantId || '—'} />
+                        <ReviewField label="Phone Number" value={data.vapi.phoneNumber || '—'} />
                     </div>
                 </section>
             )}
@@ -110,7 +132,7 @@ export function ReviewStep({ data, onGoToStep, needsEmail = false, needsSms = fa
             <section className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
                 <div className="flex items-center justify-between">
                     <FormSectionTitle icon={UserCircle} title="Tenant Admin" />
-                    <button onClick={() => onGoToStep(5)} className="text-[10px] font-black text-slate-400 hover:text-slate-900 uppercase tracking-widest transition-colors">Edit</button>
+                    <button onClick={() => onGoToStep(6)} className="text-[10px] font-black text-slate-400 hover:text-slate-900 uppercase tracking-widest transition-colors">Edit</button>
                 </div>
                 <div className="grid grid-cols-2 gap-6">
                     <ReviewField label="Name" value={data.admin.adminName} />

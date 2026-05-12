@@ -44,9 +44,11 @@ export interface OnboardingEmailConfig {
     port?: number;
     username?: string;
     password?: string;
+    encryption?: 'tls' | 'ssl' | 'none';
     apiKey?: string;
     senderEmail: string;
     senderName: string;
+    replyTo?: string;
 }
 
 // ─── SMS Configuration ──────────────────────────────────────────────────────
@@ -57,6 +59,15 @@ export interface OnboardingSmsConfig {
     apiKey?: string;
     apiSecret?: string;
     senderId: string;
+}
+
+// ─── Vapi / AI Call Analytics Configuration ──────────────────────────────────
+
+export interface OnboardingVapiConfig {
+    /** Vapi Assistant ID — used by webhook to resolve tenant */
+    assistantId: string;
+    /** Phone number assigned to this assistant in Vapi */
+    phoneNumber: string;
 }
 
 // ─── Module Entitlement (used by ModuleStep for display only) ───────────────
@@ -100,15 +111,16 @@ export interface OnboardingFormData {
     admin: OnboardingAdminData;
     email: OnboardingEmailConfig;
     sms: OnboardingSmsConfig;
-    /** IDs of enabled modules (e.g. ['tm-pos', 'tm-email']) */
+    vapi: OnboardingVapiConfig;
+    /** IDs of enabled modules (e.g. ['email-campaigns', 'ai-call-analytics']) */
     enabledModuleIds: string[];
-    /** Hierarchical dot-notated paths (e.g. ['tm-email.campaigns.analytics']) */
+    /** Hierarchical dot-notated paths (e.g. ['email-campaigns.campaigns.analytics']) */
     selectedEntitlementPaths: string[];
 }
 
 // ─── Step Configuration ─────────────────────────────────────────────────────
 
-export type OnboardingStep = 1 | 2 | 3 | 4 | 5 | 6;
+export type OnboardingStep = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 export interface OrchestrationStepStatus {
     label: string;
@@ -117,22 +129,24 @@ export interface OrchestrationStepStatus {
 }
 
 /**
- * 6-step wizard (was 7 — Modules & Entitlements merged into one tree view)
+ * 7-step wizard (dynamic — steps 3-5 conditionally shown)
  *
- * 1. Brand Identity
- * 2. Entitlements (unified module + submodule + page tree)
- * 3. Email Config
- * 4. SMS Config
- * 5. Tenant Admin
- * 6. Review & Deploy
+ * 1. Brand Identity (always)
+ * 2. Entitlements (always)
+ * 3. Email Config (if email-campaigns enabled)
+ * 4. SMS Config (if email-campaigns enabled — optional, can skip)
+ * 5. AI Call Config (if ai-call-analytics enabled)
+ * 6. Tenant Admin (always)
+ * 7. Review & Deploy (always)
  */
 export const STEP_CONFIG = [
     { id: 1 as OnboardingStep, title: 'Brand Identity', description: 'Core identity & localization' },
     { id: 2 as OnboardingStep, title: 'Entitlements', description: 'Module & page access' },
     { id: 3 as OnboardingStep, title: 'Email', description: 'Email service configuration' },
-    { id: 4 as OnboardingStep, title: 'SMS', description: 'SMS gateway configuration' },
-    { id: 5 as OnboardingStep, title: 'Tenant Admin', description: 'Brand administrator' },
-    { id: 6 as OnboardingStep, title: 'Review', description: 'Final verification' },
+    { id: 4 as OnboardingStep, title: 'SMS', description: 'SMS gateway (optional)' },
+    { id: 5 as OnboardingStep, title: 'AI Calls', description: 'Vapi assistant config' },
+    { id: 6 as OnboardingStep, title: 'Tenant Admin', description: 'Brand administrator' },
+    { id: 7 as OnboardingStep, title: 'Review', description: 'Final verification' },
 ];
 
 // ─── Factory Functions ──────────────────────────────────────────────────────
@@ -187,15 +201,26 @@ export function createInitialFormData(): OnboardingFormData {
             inviteMethod: 'MAGIC_LINK',
         },
         email: {
-            provider: 'inherit',
+            provider: 'smtp',
+            host: '',
+            port: 587,
+            username: '',
+            password: '',
+            encryption: 'tls',
             senderEmail: '',
             senderName: '',
+            replyTo: '',
         },
         sms: {
             provider: 'inherit',
             senderId: '',
         },
+        vapi: {
+            assistantId: '',
+            phoneNumber: '',
+        },
         enabledModuleIds: ['pos'],
         selectedEntitlementPaths: ['pos'],
     };
 }
+

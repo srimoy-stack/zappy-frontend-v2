@@ -26,6 +26,8 @@ import { resolveIcon } from '@/shared/config/modules/iconMap';
 interface ModuleTreeSelectorProps {
     /** Root module nodes from the registry */
     modules: RegistryNode[];
+    /** Module IDs that are not yet available — rendered as "Coming Soon" */
+    comingSoonIds?: Set<string>;
     /** Currently selected entitlement paths */
     selectedPaths: string[];
     /** Called with updated paths */
@@ -38,6 +40,7 @@ export const ModuleTreeSelector: React.FC<ModuleTreeSelectorProps> = ({
     selectedPaths,
     onChange,
     isLoading,
+    comingSoonIds,
 }) => {
     const [expandedModules, setExpandedModules] = React.useState<string[]>([]);
     const pathSet = React.useMemo(() => new Set(selectedPaths || []), [selectedPaths]);
@@ -111,24 +114,40 @@ export const ModuleTreeSelector: React.FC<ModuleTreeSelectorProps> = ({
                 const isExpanded = expandedModules.includes(module.id);
                 const moduleSelected = isSelected(module.id);
                 const partial = hasPartialSelection(module.id);
+                const isComingSoon = comingSoonIds?.has(module.id) ?? false;
 
                 return (
-                    <div key={module.id} className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-sm transition-all">
+                    <div key={module.id} className={cn(
+                        "border rounded-2xl overflow-hidden shadow-sm transition-all",
+                        isComingSoon
+                            ? "border-slate-100 bg-slate-50/60 opacity-60"
+                            : "border-slate-200 bg-white"
+                    )}>
                         {/* Module Header */}
                         <div className={cn(
-                            "flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 transition-colors",
-                            moduleSelected ? "bg-emerald-50/30" : ""
+                            "flex items-center justify-between p-4 transition-colors",
+                            isComingSoon
+                                ? "cursor-not-allowed"
+                                : "cursor-pointer hover:bg-slate-50",
+                            moduleSelected && !isComingSoon ? "bg-emerald-50/30" : ""
                         )}>
-                            <div className="flex items-center gap-4" onClick={() => hasChildren && toggleExpand(module.id)}>
+                            <div className="flex items-center gap-4" onClick={() => !isComingSoon && hasChildren && toggleExpand(module.id)}>
                                 <div className={cn(
                                     "p-2 rounded-lg transition-colors",
+                                    isComingSoon ? "bg-slate-100" :
                                     moduleSelected ? "bg-emerald-100" : "bg-slate-100"
                                 )}>
-                                    <Icon size={16} className={moduleSelected ? "text-emerald-600" : "text-slate-600"} />
+                                    <Icon size={16} className={cn(
+                                        isComingSoon ? "text-slate-300" :
+                                        moduleSelected ? "text-emerald-600" : "text-slate-600"
+                                    )} />
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <h4 className="text-sm font-bold text-slate-900">{module.label}</h4>
+                                        <h4 className={cn(
+                                            "text-sm font-bold",
+                                            isComingSoon ? "text-slate-400" : "text-slate-900"
+                                        )}>{module.label}</h4>
                                         {module.isCore && (
                                             <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 text-[8px] font-black uppercase tracking-wider rounded-full">
                                                 <Lock size={8} /> Core
@@ -139,12 +158,20 @@ export const ModuleTreeSelector: React.FC<ModuleTreeSelectorProps> = ({
                                                 Beta
                                             </span>
                                         )}
+                                        {isComingSoon && (
+                                            <span className="flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-400 text-[8px] font-black uppercase tracking-wider rounded-full border border-slate-200">
+                                                <Lock size={8} /> Coming Soon
+                                            </span>
+                                        )}
                                     </div>
                                     {module.description && (
-                                        <p className="text-[10px] font-medium text-slate-400 mt-0.5">{module.description}</p>
+                                        <p className={cn(
+                                            "text-[10px] font-medium mt-0.5",
+                                            isComingSoon ? "text-slate-300" : "text-slate-400"
+                                        )}>{module.description}</p>
                                     )}
                                 </div>
-                                {hasChildren && (
+                                {hasChildren && !isComingSoon && (
                                     <div className="ml-2">
                                         {isExpanded ? (
                                             <ChevronDown size={14} className="text-slate-400" />
@@ -155,26 +182,33 @@ export const ModuleTreeSelector: React.FC<ModuleTreeSelectorProps> = ({
                                 )}
                             </div>
 
-                            <button
-                                onClick={() => togglePath(module.id)}
-                                disabled={module.isCore && moduleSelected}
-                                className={cn(
-                                    "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all",
-                                    module.isCore && moduleSelected ? "bg-emerald-600 text-white opacity-80 cursor-not-allowed" :
-                                    moduleSelected 
-                                        ? "bg-emerald-600 text-white shadow-lg shadow-emerald-200" 
-                                        : partial
-                                        ? "bg-emerald-100 text-emerald-700"
-                                        : "bg-slate-100 text-slate-400 hover:bg-slate-200"
-                                )}
-                            >
-                                {module.isCore ? <Lock size={14} /> : moduleSelected ? <CheckCircle2 size={14} /> : <Circle size={14} />}
-                                {module.isCore ? 'Required' : moduleSelected ? 'Enabled' : 'Disabled'}
-                            </button>
+                            {isComingSoon ? (
+                                <div className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-300 cursor-not-allowed">
+                                    <Circle size={14} />
+                                    Disabled
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={() => togglePath(module.id)}
+                                    disabled={module.isCore && moduleSelected}
+                                    className={cn(
+                                        "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all",
+                                        module.isCore && moduleSelected ? "bg-emerald-600 text-white opacity-80 cursor-not-allowed" :
+                                        moduleSelected 
+                                            ? "bg-emerald-600 text-white shadow-lg shadow-emerald-200" 
+                                            : partial
+                                            ? "bg-emerald-100 text-emerald-700"
+                                            : "bg-slate-100 text-slate-400 hover:bg-slate-200"
+                                    )}
+                                >
+                                    {module.isCore ? <Lock size={14} /> : moduleSelected ? <CheckCircle2 size={14} /> : <Circle size={14} />}
+                                    {module.isCore ? 'Required' : moduleSelected ? 'Enabled' : 'Disabled'}
+                                </button>
+                            )}
                         </div>
 
                         {/* Submodules & Pages */}
-                        {isExpanded && hasChildren && (
+                        {isExpanded && hasChildren && !isComingSoon && (
                             <div className="border-t border-slate-100 bg-slate-50/50 p-4 space-y-4">
                                 {childIds.map((childId) => {
                                     const sub = getNode(childId);

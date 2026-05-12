@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Smartphone, Key, Send, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Smartphone, Key, Send, CheckCircle2, AlertCircle, SkipForward } from 'lucide-react';
 import { FormSectionTitle, InputWrapper, INPUT_CLASS } from './ui';
 import type { OnboardingSmsConfig } from '../types/onboarding.types';
 
@@ -27,33 +27,43 @@ export function SmsConfigStep({ sms, onUpdate }: SmsConfigStepProps) {
             <section className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
                 <FormSectionTitle icon={Smartphone} title="SMS Gateway Configuration" />
                 <p className="text-xs text-slate-500 font-medium leading-relaxed -mt-4">
-                    Configure dedicated SMS routing for POS alerts, OTP verification, and customer notifications.
+                    Configure dedicated SMS routing for OTP verification and customer notifications. <span className="font-black text-slate-700">This step is optional</span> — you can skip it and configure later.
                 </p>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <InputWrapper label="SMS Provider">
-                        <select
-                            value={sms.provider}
-                            onChange={(e) => onUpdate({ provider: e.target.value as any })}
-                            className={INPUT_CLASS}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {([
+                        { id: 'inherit' as const, label: 'Skip / Default', desc: 'Configure later', icon: SkipForward },
+                        { id: 'twilio' as const, label: 'Twilio', desc: 'Twilio API', icon: Smartphone },
+                        { id: 'vonage' as const, label: 'Vonage', desc: 'Vonage SMS', icon: Smartphone },
+                        { id: 'aws-sns' as const, label: 'AWS SNS', desc: 'Amazon SNS', icon: Smartphone },
+                    ]).map((opt) => (
+                        <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => onUpdate({ provider: opt.id })}
+                            className={`flex flex-col items-center gap-2 p-5 rounded-2xl border text-center transition-all ${
+                                sms.provider === opt.id
+                                    ? opt.id === 'inherit'
+                                        ? 'bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-100 scale-[1.02]'
+                                        : 'bg-slate-900 border-slate-900 text-white shadow-xl shadow-slate-200 scale-[1.02]'
+                                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                            }`}
                         >
-                            <option value="inherit">Inherit Platform Default</option>
-                            <option value="twilio">Twilio</option>
-                            <option value="vonage">Vonage</option>
-                            <option value="aws-sns">AWS SNS</option>
-                        </select>
-                    </InputWrapper>
-
-                    {sms.provider === 'inherit' && (
-                        <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-2xl col-span-full">
-                            <CheckCircle2 className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
-                            <div>
-                                <p className="text-xs font-bold text-blue-800">Using Platform Defaults</p>
-                                <p className="text-[10px] text-blue-600 mt-1">This brand will use the platform's global SMS infrastructure. No additional configuration needed.</p>
-                            </div>
-                        </div>
-                    )}
+                            <span className="text-xs font-black uppercase tracking-wider">{opt.label}</span>
+                            <span className={`text-[9px] font-medium ${sms.provider === opt.id ? 'text-white/60' : 'text-slate-400'}`}>{opt.desc}</span>
+                        </button>
+                    ))}
                 </div>
+
+                {sms.provider === 'inherit' && (
+                    <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-2xl">
+                        <CheckCircle2 className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+                        <div>
+                            <p className="text-xs font-bold text-blue-800">SMS Skipped</p>
+                            <p className="text-[10px] text-blue-600 mt-1">No SMS gateway will be configured for this brand. You can set this up later from the brand settings.</p>
+                        </div>
+                    </div>
+                )}
             </section>
 
             {/* API Credentials */}
@@ -63,7 +73,7 @@ export function SmsConfigStep({ sms, onUpdate }: SmsConfigStepProps) {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {sms.provider === 'twilio' && (
-                            <InputWrapper label="Account SID">
+                            <InputWrapper label="Account SID" required>
                                 <input
                                     type="text"
                                     value={sms.accountSid || ''}
@@ -74,7 +84,7 @@ export function SmsConfigStep({ sms, onUpdate }: SmsConfigStepProps) {
                             </InputWrapper>
                         )}
 
-                        <InputWrapper label="API Key">
+                        <InputWrapper label="API Key" required>
                             <input
                                 type="password"
                                 value={sms.apiKey || ''}
@@ -84,7 +94,7 @@ export function SmsConfigStep({ sms, onUpdate }: SmsConfigStepProps) {
                             />
                         </InputWrapper>
 
-                        <InputWrapper label="API Secret">
+                        <InputWrapper label="API Secret" required>
                             <input
                                 type="password"
                                 value={sms.apiSecret || ''}
@@ -106,7 +116,7 @@ export function SmsConfigStep({ sms, onUpdate }: SmsConfigStepProps) {
                     </p>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <InputWrapper label="Sender ID / From Number">
+                        <InputWrapper label="Sender ID / From Number" required>
                             <input
                                 type="text"
                                 value={sms.senderId}
