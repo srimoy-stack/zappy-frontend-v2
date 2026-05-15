@@ -1,0 +1,141 @@
+:root {
+  --kds-bg-main: #F3F4F6;
+  --kds-bg-surface: #FFFFFF;
+  --kds-border: #E5E7EB;
+  --kds-text-primary: #111827;
+  --kds-text-secondary: #4B5563;
+  --kds-text-muted: #9CA3AF;
+  
+  --kds-status-delayed: #E74C3C;
+  --kds-status-cooking: #E67E22;
+  --kds-status-queue: #374151;
+  
+  --kds-font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.kds-root {
+  background-color: var(--kds-bg-main);
+  color: var(--kds-text-primary);
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  font-family: var(--kds-font-main);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Custom Premium Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+/* Scrollbar Hide Utility */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  display: block;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Ticket Styling */
+.kds-ticket {
+  border-radius: 8px; /* Slightly smoother */
+  overflow: hidden;
+}
+
+.kds-ticket:hover {
+  border-color: #D1D5DB;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-ticket {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Utility for layout stabilization */
+.universal-kds-layout {
+  contain: size layout paint;
+}
+
+/* Horizontal scroll layout for KDS touch screens */
+.kds-horizontal-scroll {
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+}
+
+/* Make the horizontal scrollbar clearly visible */
+.kds-horizontal-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.kds-horizontal-scroll::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 10px;
+  margin: 0 12px;
+}
+
+.kds-horizontal-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.30);
+  border-radius: 10px;
+}
+
+.kds-horizontal-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.50);
+}
+
+/* Inner row: Line view is a single horizontal row */
+.kds-ticket-row {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  width: max-content;
+  min-width: 100%;
+  gap: 16px;
+}
+
+/* Each ticket cell has a fixed width */
+.kds-ticket-cell {
+  width: 300px;
+  flex-shrink: 0;
+}
