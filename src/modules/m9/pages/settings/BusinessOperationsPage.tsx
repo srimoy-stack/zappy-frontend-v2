@@ -22,6 +22,7 @@ import {
     ArrowLeft
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { UserType } from '@/shared/types/auth';
 ;
 import { useAuth } from '@/app/providers/AuthProvider';
 import { businessOperationsService } from '../../services/businessOperationsService';
@@ -39,14 +40,14 @@ import {
 
 export const BusinessOperationsPage: React.FC = () => {
     const router = useRouter();
-    const { role } = useAuth();
+    const { userType, isSuperAdmin } = useAuth();
     const [settings, setSettings] = useState<BusinessOperationsSettings | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState<string | null>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
     // Permissions logic
-    const canEdit = role === 'ADMIN' || role === 'STORE_MANAGER';
+    const canEdit = isSuperAdmin || userType === UserType.BRAND_ADMIN || userType === UserType.ADMIN || userType === UserType.MANAGER;
 
     useEffect(() => {
         loadSettings();

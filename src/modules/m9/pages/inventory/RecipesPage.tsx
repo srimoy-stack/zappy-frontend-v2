@@ -17,6 +17,9 @@ import {
 import { RecipeStatus } from '../../types/inventory';
 import { mockRecipes } from '../../mock/inventory';
 
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
+import { UserType } from '@/shared/types/auth';
+
 /**
  * Recipes (BOM & Costing) Page
  * 
@@ -30,6 +33,9 @@ import { mockRecipes } from '../../mock/inventory';
  */
 export const RecipesPage: React.FC = () => {
     const router = useRouter();
+    const { userType, isSuperAdmin } = useRouteAccess();
+
+    const canEdit = isSuperAdmin || userType === UserType.BRAND_ADMIN || userType === UserType.ADMIN || userType === UserType.MANAGER;
 
     // Filters
     const [searchQuery, setSearchQuery] = useState('');
@@ -61,13 +67,15 @@ export const RecipesPage: React.FC = () => {
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight">Recipes (BOM & Costing)</h1>
                     <p className="text-sm text-slate-500 font-medium">Bill of Materials and automatic cost calculation</p>
                 </div>
-                <button
-                    onClick={() => router.push('/backoffice/inventory/recipes/create')}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-orange-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-orange-200 hover:bg-orange-700 transition-all active:scale-95"
-                >
-                    <Plus size={16} strokeWidth={3} />
-                    Create Recipe
-                </button>
+                {canEdit && (
+                    <button
+                        onClick={() => router.push('/backoffice/inventory/recipes/create')}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-orange-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-orange-200 hover:bg-orange-700 transition-all active:scale-95"
+                    >
+                        <Plus size={16} strokeWidth={3} />
+                        Create Recipe
+                    </button>
+                )}
             </div>
 
             {/* Quick Stats */}
@@ -231,30 +239,35 @@ export const RecipesPage: React.FC = () => {
                                                 >
                                                     <Eye size={16} />
                                                 </button>
-                                                <button
-                                                    onClick={() => router.push(`/backoffice/inventory/recipes/${recipe.id}/edit`)}
-                                                    className="p-2 text-slate-400 hover:text-emerald-600 transition-colors"
-                                                    title="Edit"
-                                                >
-                                                    <Edit3 size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={() => {/* TODO: Duplicate recipe */ }}
-                                                    className="p-2 text-slate-400 hover:text-violet-600 transition-colors"
-                                                    title="Duplicate"
-                                                >
-                                                    <Copy size={16} />
-                                                </button>
-                                                <button
-                                                    disabled={recipe.usedByProductCount > 0}
-                                                    className={`p-2 transition-colors ${recipe.usedByProductCount > 0
-                                                        ? 'text-slate-300 cursor-not-allowed'
-                                                        : 'text-slate-400 hover:text-rose-600'
-                                                        }`}
-                                                    title={recipe.usedByProductCount > 0 ? 'Cannot delete - attached to products' : 'Delete'}
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
+                                                {canEdit && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => router.push(`/backoffice/inventory/recipes/${recipe.id}/edit`)}
+                                                            className="p-2 text-slate-400 hover:text-emerald-600 transition-colors"
+                                                            title="Edit"
+                                                        >
+                                                            <Edit3 size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {/* TODO: Duplicate recipe */ }}
+                                                            className="p-2 text-slate-400 hover:text-violet-600 transition-colors"
+                                                            title="Duplicate"
+                                                        >
+                                                            <Copy size={16} />
+                                                        </button>
+                                                        <button
+                                                            disabled={recipe.usedByProductCount > 0}
+                                                            className={`p-2 transition-colors ${recipe.usedByProductCount > 0
+                                                                ? 'text-slate-300 cursor-not-allowed'
+                                                                : 'text-slate-400 hover:text-rose-600'
+                                                                }`}
+                                                            onClick={() => {/* TODO: Delete recipe */ }}
+                                                            title={recipe.usedByProductCount > 0 ? 'Cannot delete - attached to products' : 'Delete'}
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>

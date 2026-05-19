@@ -299,7 +299,7 @@ export default function KDSMasterPage() {
                                             {formatTimeOnly(order.updatedAt)}
                                         </span>
                                     </div>
-                                    <KDSPermissionGuard permission="KDS.RECALL_REFIRE">
+                                    <KDSPermissionGuard permission="KDS_RECALL">
                                         <button
                                             onClick={() => handleRecall(order.id)}
                                             className="p-2 hover:bg-black hover:text-white rounded-md transition-all text-gray-400"

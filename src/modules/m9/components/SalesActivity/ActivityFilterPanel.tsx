@@ -1,7 +1,8 @@
 import React from 'react';
-import { useRouteAccess } from '@/hooks/useRouteAccess';
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
 import { ActivityFilters, PaymentStatus, SalesChannel } from '../../types/sales-activity';
 import { Calendar, Filter, RotateCcw } from 'lucide-react';
+import { UserType } from '@/shared/types/auth';
 
 interface ActivityFilterPanelProps {
     filters: ActivityFilters;
@@ -14,8 +15,8 @@ export const ActivityFilterPanel: React.FC<ActivityFilterPanelProps> = ({
     onFilterChange,
     onClear
 }) => {
-    const { role } = useRouteAccess();
-    const isAdmin = role === 'ADMIN';
+    const { userType, isSuperAdmin } = useRouteAccess();
+    const isAdmin = isSuperAdmin || userType === UserType.BRAND_ADMIN;
 
     return (
         <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6">

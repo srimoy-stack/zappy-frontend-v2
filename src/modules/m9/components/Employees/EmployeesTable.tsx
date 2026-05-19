@@ -75,28 +75,36 @@ export const EmployeesTable: React.FC<EmployeesTableProps> = ({
                                 <span className="text-[13px] font-bold text-slate-900">{employee.name}</span>
                             </td>
                             <td className="py-4 px-4">
-                                <span className="text-[13px] text-slate-500 font-medium uppercase tracking-wider">
-                                    {employee.role.replace('_', ' ')}
-                                </span>
+                                <div className="flex flex-col">
+                                    <span className="text-[13px] font-bold text-slate-700">
+                                        {employee.role?.name || 'User'}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">
+                                        {employee.userType?.replace('_', ' ')}
+                                    </span>
+                                </div>
                             </td>
                             <td className="py-4 px-4">
                                 <span className="text-[13px] text-slate-500">
-                                    {employee.stores.length > 1
-                                        ? `${employee.stores.length} Stores`
-                                        : employee.stores[0]}
+                                    {employee.storeIds.length > 1
+                                        ? `${employee.storeIds.length} Stores`
+                                        : employee.storeIds[0]}
                                 </span>
                             </td>
                             <td className="py-4 px-4">
-                                <span className={`inline-flex items-center gap-1.5 text-[12px] font-bold ${employee.status === 'ACTIVE' ? 'text-emerald-600' : 'text-slate-400'
+                                <span className={`inline-flex items-center gap-1.5 text-[12px] font-bold ${employee.status === 'Active' ? 'text-emerald-600' : 'text-slate-400'
                                     }`}>
-                                    <span className={`w-1.5 h-1.5 rounded-full ${employee.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-300'
+                                    <span className={`w-1.5 h-1.5 rounded-full ${employee.status === 'Active' ? 'bg-emerald-500' : 'bg-slate-300'
                                         }`} />
                                     {employee.status}
                                 </span>
                             </td>
                             <td className="py-4 px-4">
                                 <span className="text-[13px] text-slate-400 font-medium tabular-nums">
-                                    {format(new Date(employee.lastLogin), 'MMM d, HH:mm')}
+                                    {employee.lastLogin 
+                                        ? format(new Date(employee.lastLogin), 'MMM d, HH:mm')
+                                        : '---'
+                                    }
                                 </span>
                             </td>
                             <td className="py-4 px-6 text-right" onClick={(e) => e.stopPropagation()}>
@@ -104,11 +112,11 @@ export const EmployeesTable: React.FC<EmployeesTableProps> = ({
                                     {isAdmin && (
                                         <button
                                             onClick={() => onStatusToggle?.(employee)}
-                                            className={`p-1.5 rounded-md transition-all ${employee.status === 'ACTIVE'
+                                            className={`p-1.5 rounded-md transition-all ${employee.status === 'Active'
                                                     ? 'text-emerald-500 hover:bg-emerald-50'
                                                     : 'text-slate-400 hover:bg-slate-100'
                                                 }`}
-                                            title={employee.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                                            title={employee.status === 'Active' ? 'Deactivate' : 'Activate'}
                                         >
                                             <Power className="w-4 h-4" />
                                         </button>

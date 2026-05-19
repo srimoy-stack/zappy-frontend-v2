@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouteAccess } from '@/hooks/useRouteAccess';
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
 import { useRouter } from 'next/navigation';
 ;
 import {
@@ -13,18 +13,15 @@ import {
 import { CashVarianceRecord, CashVarianceFilters } from '../types/cash-variance';
 import { mockCashVarianceData } from '../mock/cash-variance';
 import { Banknote, ShieldCheck } from 'lucide-react';
+import { UserType } from '@/shared/types/auth';
 
-/**
- * M9-T7: Cash Variance (Reconciliation & Exceptions)
- * Financial control and audit screen.
- */
 export const CashVariancePage: React.FC = () => {
-    const { role, user } = useRouteAccess();
+    const { userType, user, isSuperAdmin } = useRouteAccess();
     const router = useRouter();
 
     // Role-Based Access Control (Strict)
-    // EMPLOYEE: NO access - Direct URL access redirects away
-    if (role === 'EMPLOYEE') {
+    // Non-management roles: NO access - Direct URL access redirects away
+    if (userType === UserType.POS_USER || userType === UserType.KITCHEN_USER) {
         useEffect(() => { router.replace('/backoffice/home'); }, [router]); return null;
     }
 
@@ -58,8 +55,9 @@ export const CashVariancePage: React.FC = () => {
                 let scopedData = [...mockCashVarianceData];
 
                 // Role restrictions (STORE_MANAGER: View ONLY own store)
-                if (role === 'STORE_MANAGER' && user?.storeIds) {
-                    scopedData = scopedData.filter(d => user.storeIds.includes(d.storeId));
+                if (userType === UserType.MANAGER && user?.storeIds) {
+                    const storeIds = user.storeIds;
+                    scopedData = scopedData.filter(d => storeIds.includes(d.storeId));
                 }
 
                 setData(scopedData);
@@ -71,7 +69,7 @@ export const CashVariancePage: React.FC = () => {
         };
 
         fetchData();
-    }, [role, user]);
+    }, [userType, user]);
 
     // -- Filtering Logic --
     useEffect(() => {
@@ -86,7 +84,7 @@ export const CashVariancePage: React.FC = () => {
         }
 
         // Store Filter (Admin only)
-        if (role === 'ADMIN' && filters.storeId) {
+        if (isSuperAdmin && filters.storeId) {
             result = result.filter(d => d.storeId === filters.storeId);
         }
 
@@ -111,7 +109,7 @@ export const CashVariancePage: React.FC = () => {
 
         setFilteredData(result);
         setCurrentPage(1);
-    }, [filters, data, role]);
+    }, [filters, data, userType]);
 
     const paginatedData = filteredData.slice(
         (currentPage - 1) * itemsPerPage,

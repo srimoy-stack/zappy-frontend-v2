@@ -16,7 +16,8 @@ import {
     TrendingUp
 } from 'lucide-react';
 import { mockVendors } from '../../mock/inventory';
-import { useRouteAccess } from '@/hooks/useRouteAccess';
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
+import { UserType } from '@/shared/types/auth';
 
 /**
  * Vendors Page
@@ -29,15 +30,15 @@ import { useRouteAccess } from '@/hooks/useRouteAccess';
  */
 export const VendorsPage: React.FC = () => {
     const router = useRouter();
-    const { role } = useRouteAccess();
+    const { userType, isSuperAdmin } = useRouteAccess();
 
     // Filters
     const [searchQuery, setSearchQuery] = useState('');
 
     // Permission checks
-    const canAddVendor = role === 'ADMIN';
-    const canEditVendor = role === 'ADMIN';
-    const canDeleteVendor = role === 'ADMIN';
+    const canAddVendor = isSuperAdmin;
+    const canEditVendor = isSuperAdmin;
+    const canDeleteVendor = isSuperAdmin;
 
     // Filter vendors
     const filteredVendors = mockVendors.filter(vendor => {

@@ -1,4 +1,4 @@
-import apiClient from '@/api/axios';
+import { apiClient } from '@/shared/api/apiClient';
 import {
     SuppressionEntry,
     ConsentEntry,

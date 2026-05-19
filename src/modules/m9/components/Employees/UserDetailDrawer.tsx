@@ -47,13 +47,13 @@ export const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({ employee, on
                                 <DetailItem
                                     icon={<Shield className="w-4 h-4" />}
                                     label="Role"
-                                    value={employee.role.replace('_', ' ')}
-                                    subValue={`Type: ${employee.type.replace('_', ' ')}`}
+                                    value={employee.role?.name || 'User'}
+                                    subValue={`Type: ${employee.userType?.replace('_', ' ')}`}
                                 />
                                 <DetailItem
                                     icon={<MapPin className="w-4 h-4" />}
                                     label="Assigned Stores"
-                                    value={employee.stores.join(', ')}
+                                    value={employee.storeIds.join(', ')}
                                 />
                                 <DetailItem
                                     icon={<Activity className="w-4 h-4" />}
@@ -64,7 +64,10 @@ export const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({ employee, on
                                 <DetailItem
                                     icon={<Clock className="w-4 h-4" />}
                                     label="Last Session"
-                                    value={format(new Date(employee.lastLogin), 'MMMM d, yyyy HH:mm')}
+                                    value={employee.lastLogin 
+                                        ? format(new Date(employee.lastLogin), 'MMMM d, yyyy HH:mm')
+                                        : 'Never'
+                                    }
                                 />
                             </div>
 
@@ -98,7 +101,7 @@ const DetailItem: React.FC<DetailItemProps> = ({ icon, label, value, subValue, i
             {label}
         </div>
         <p className={`text-sm font-semibold ${isStatus
-                ? value === 'ACTIVE' ? 'text-emerald-600' : 'text-slate-400'
+                ? value === 'Active' ? 'text-emerald-600' : 'text-slate-400'
                 : 'text-slate-700'
             }`}>
             {value}

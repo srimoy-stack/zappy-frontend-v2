@@ -3,13 +3,13 @@
 import React, { ReactNode, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/app/providers/AuthProvider';
-import { useRouteAccess } from '@/hooks/useRouteAccess';
-import { UserRole } from '@/types';
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
+import { UserType } from '@/shared/types/auth';
 import { Lock, ArrowLeft } from 'lucide-react';
 
 interface RoleGuardProps {
     children: ReactNode;
-    allowedRoles?: UserRole[];
+    allowedUserTypes?: UserType[];
     mode?: 'redirect' | '403';
 }
 
@@ -37,25 +37,25 @@ function hasValidImpersonationSession(): boolean {
  */
 export const RoleGuard: React.FC<RoleGuardProps> = ({
     children,
-    allowedRoles,
+    allowedUserTypes,
     mode = 'redirect'
 }) => {
-    const { isAuthenticated, isLoading, role } = useAuth();
+    const { isAuthenticated, isLoading, userType } = useAuth();
     const { isAuthorized, getVisibleMenuItems } = useRouteAccess();
     const pathname = usePathname();
     const router = useRouter();
 
     // Super Admin impersonating a brand → grant full backoffice access
     const isImpersonating =
-        role === 'PLATFORM_SUPER_ADMIN' &&
+        userType === UserType.PLATFORM_SUPER_ADMIN &&
         (pathname?.startsWith('/backoffice') ?? false) &&
         hasValidImpersonationSession();
 
     // Check if user has permission
     const isUserAuthorized = isImpersonating
         ? true
-        : allowedRoles
-            ? (role && allowedRoles.includes(role))
+        : allowedUserTypes
+            ? (!!userType && allowedUserTypes.includes(userType))
             : isAuthorized(pathname || '');
 
     useEffect(() => {
@@ -63,7 +63,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
             if (!isUserAuthorized && mode === 'redirect') {
                 const allowedItems = getVisibleMenuItems();
                 const firstAllowed = allowedItems[0];
-                const fallback = firstAllowed ? firstAllowed.route : '/backoffice/home';
+                const fallback = firstAllowed ? firstAllowed.href : '/backoffice/home';
 
                 console.warn(`Access denied to ${pathname}. Redirecting to ${fallback}`);
                 router.replace(fallback);

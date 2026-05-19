@@ -14,7 +14,8 @@ import {
 } from 'lucide-react';
 import { InventoryEntry, InventoryStatus, PaymentStatus } from '../../types/inventory';
 import { inventoryService } from '../../services/inventoryService';
-import { useRouteAccess } from '@/hooks/useRouteAccess';
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
+import { UserType } from '@/shared/types/auth';
 
 /**
  * Inventory Entry Detail Page
@@ -29,8 +30,12 @@ import { useRouteAccess } from '@/hooks/useRouteAccess';
  */
 export const InventoryEntryDetailPage: React.FC = () => {
     const router = useRouter();
-    const { id } = useParams<{ id: string }>();
-    const { role } = useRouteAccess();
+    const params = useParams();
+    const id = params.id as string;
+    const { userType, isSuperAdmin } = useRouteAccess();
+
+    // Permissions
+    const canModify = isSuperAdmin || userType === UserType.BRAND_ADMIN || userType === UserType.ADMIN || userType === UserType.MANAGER;
 
     const [entry, setEntry] = useState<InventoryEntry | null>(null);
     const [loading, setLoading] = useState(true);
@@ -72,7 +77,7 @@ export const InventoryEntryDetailPage: React.FC = () => {
         if (!id) return;
         setActionLoading(true);
         try {
-            await inventoryService.deleteEntry(id as string, role || '');
+            await inventoryService.deleteEntry(id as string, userType || '');
             alert('Entry deleted successfully');
             router.push('/backoffice/inventory/entries');
         } catch (error: any) {
@@ -84,7 +89,7 @@ export const InventoryEntryDetailPage: React.FC = () => {
     };
 
     const canEdit = entry && (entry.inventoryStatus === 'Draft' || entry.inventoryStatus === 'Ordered');
-    const canDelete = role === 'ADMIN' && entry && entry.inventoryStatus !== 'Received' && entry.inventoryStatus !== 'Partial';
+    const canDelete = isSuperAdmin && entry && entry.inventoryStatus !== 'Received' && entry.inventoryStatus !== 'Partial';
     const canReceive = entry && entry.inventoryStatus !== 'Received' && entry.inventoryStatus !== 'Cancelled';
 
     const getStatusColor = (status: InventoryStatus) => {

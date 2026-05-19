@@ -51,7 +51,7 @@ export const ImpersonationBanner: React.FC = () => {
 
     const handleReturn = () => {
         endImpersonation();
-        router.push('/platform/brands');
+        router.push('/platform/tenants');
     };
 
     return (

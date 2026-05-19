@@ -223,7 +223,7 @@ export const OrderTicket = memo(({ orderId, onViewDetail, compact }: Props) => {
                 ) : (
                     <>
                         {order.stage === 'NEW' ? (
-                            <KDSPermissionGuard permission="KDS.ACCEPT_ORDER">
+                            <KDSPermissionGuard permission="KDS_BUMP_ITEM">
                                 <button
                                     onClick={handleAdvance}
                                     disabled={isProcessing}
@@ -235,7 +235,7 @@ export const OrderTicket = memo(({ orderId, onViewDetail, compact }: Props) => {
                             </KDSPermissionGuard>
                         ) : (
                             (order.stage !== 'READY' ? (
-                                <KDSPermissionGuard permission="KDS.STAGE_UPDATE">
+                                <KDSPermissionGuard permission="KDS_BUMP_ITEM">
                                     <button
                                         onClick={handleAdvance}
                                         disabled={isProcessing}
@@ -254,7 +254,7 @@ export const OrderTicket = memo(({ orderId, onViewDetail, compact }: Props) => {
                                     </button>
                                 </KDSPermissionGuard>
                             ) : (
-                                <KDSPermissionGuard permission="KDS.STAGE_UPDATE">
+                                <KDSPermissionGuard permission="KDS_BUMP_ITEM">
                                     <button
                                         onClick={handleAdvance}
                                         disabled={isProcessing}
@@ -268,7 +268,7 @@ export const OrderTicket = memo(({ orderId, onViewDetail, compact }: Props) => {
                         )}
                     </>
                 )}
-                <KDSPermissionGuard permission="KDS.PRINT">
+                <KDSPermissionGuard permission="KDS_ORDER_VIEW">
                     <button
                         onClick={handlePrint}
                         className="w-14 h-12 bg-white border border-gray-200 rounded-2xl flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-all active:scale-90 shadow-sm"

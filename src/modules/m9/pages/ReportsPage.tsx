@@ -16,6 +16,8 @@ import { ReportConfig } from '../types/reports';
 import { mockItems } from '../mock/items';
 import { mockPayments } from '../mock/finances';
 import { formatCurrency, cn } from '@/utils';
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
+import { UserType } from '@/shared/types/auth';
 
 const REPORTS: (ReportConfig & { icon: any })[] = [
     {
@@ -71,6 +73,9 @@ const REPORTS: (ReportConfig & { icon: any })[] = [
 
 export const ReportsPage: React.FC = () => {
     const router = useRouter();
+    const { isSuperAdmin, userType } = useRouteAccess();
+
+    const isAdmin = isSuperAdmin || userType === UserType.BRAND_ADMIN || userType === UserType.ADMIN;
 
     return (
         <div className="max-w-[1600px] mx-auto space-y-8 pb-20 px-4">
@@ -166,7 +171,7 @@ export const ReportsPage: React.FC = () => {
 
             {/* Reports Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {REPORTS.map((report) => (
+                {REPORTS.filter(r => isAdmin || (r.id !== 'TAXES' && r.id !== 'CASH_VARIANCE')).map((report) => (
                     <div
                         key={report.id}
                         className="group bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer flex flex-col justify-between"

@@ -1,4 +1,4 @@
-import apiClient from '@/api/axios';
+import { apiClient } from '@/shared/api/apiClient';
 import { Campaign, CreateCampaignPayload, EmailTemplate, AudienceEligibility } from '../types/campaign.types';
 import { isDemoMode } from '../utils/demoMode';
 import { DEV_SEED_CAMPAIGNS } from '../utils/campaignSeeds';

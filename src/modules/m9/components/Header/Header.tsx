@@ -2,32 +2,35 @@ import React from 'react';
 import { StoreSelector } from './StoreSelector';
 import { DateRangePicker } from './DateRangePicker';
 import { Search, Bell } from 'lucide-react';
-import { useRouteAccess } from '@/hooks/useRouteAccess';
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
 import { cn } from '@/utils';
 import { usePathname } from 'next/navigation';
 import { ShopSearch } from '@/modules/shop/components/ShopSearch';
 import { ShopCartTrigger } from '@/modules/shop/components/ShopCartTrigger';
+
+import { UserType } from '@/shared/types/auth';
+import { logout } from '@/shared/utils/auth';
 
 /**
  * Header Component (Production Grade)
  * Adapts to user role, shows user profile, and removes dev-only controls.
  */
 export const Header: React.FC = () => {
-    const { user, role } = useRouteAccess();
+    const { user, userType, isSuperAdmin } = useRouteAccess();
     const pathname = usePathname();
     const isShop = pathname?.startsWith('/backoffice/shop');
 
     const [showNotifications, setShowNotifications] = React.useState(false);
     const [showUserMenu, setShowUserMenu] = React.useState(false);
-    const isPlatformRoot = role === 'PLATFORM_SUPER_ADMIN' || pathname?.startsWith('/platform');
+    const isPlatformRoot = isSuperAdmin || pathname?.startsWith('/platform');
 
     const getRoleBadgeColor = () => {
-        switch (role) {
-            case 'PLATFORM_SUPER_ADMIN': return 'bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-200';
-            case 'BRAND_ADMIN': return 'bg-indigo-100 text-indigo-800 border-indigo-200';
-            case 'ADMIN': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-            case 'STORE_MANAGER': return 'bg-blue-100 text-blue-800 border-blue-200';
-            case 'EMPLOYEE': return 'bg-slate-100 text-slate-800 border-slate-200';
+        switch (userType) {
+            case UserType.PLATFORM_SUPER_ADMIN: return 'bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-200';
+            case UserType.BRAND_ADMIN: return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+            case UserType.ADMIN: return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+            case UserType.MANAGER: return 'bg-blue-100 text-blue-800 border-blue-200';
+            case UserType.POS_USER: return 'bg-slate-100 text-slate-800 border-slate-200';
             default: return 'bg-slate-100 text-slate-600 border-slate-200';
         }
     };
@@ -36,12 +39,7 @@ export const Header: React.FC = () => {
         <header className="h-14 border-b border-slate-200 bg-white flex items-center justify-between px-6 sticky top-0 z-40">
             {/* Left: Context & Role Badge */}
             <div className="flex items-center gap-4">
-                {isPlatformRoot ? (
-                    <div className="flex items-center gap-2 px-3 py-1.5 border border-slate-900 bg-slate-900 rounded-full text-white shadow-sm">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] leading-none">System Root</span>
-                    </div>
-                ) : (
+                {isPlatformRoot ? null : (
                     <StoreSelector />
                 )}
 
@@ -50,7 +48,7 @@ export const Header: React.FC = () => {
                     "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border transition-all",
                     getRoleBadgeColor()
                 )}>
-                    {role?.replace('_', ' ')}
+                    {userType?.replace('_', ' ')}
                 </span>
             </div>
 
@@ -130,7 +128,7 @@ export const Header: React.FC = () => {
                         <div className="flex flex-col items-end hidden md:flex">
                             <span className="text-xs font-bold text-slate-900 leading-none">{user?.name}</span>
                             <span className="text-[10px] text-slate-400 font-medium uppercase tracking-tight mt-0.5">
-                                {role === 'PLATFORM_SUPER_ADMIN' ? 'Zyappy Global' : `Tenant: ${user?.tenantId}`}
+                                {isSuperAdmin ? 'Zyappy Global' : `Tenant: ${user?.tenantId}`}
                             </span>
                         </div>
                         <div className="h-8 w-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 uppercase">
@@ -152,7 +150,7 @@ export const Header: React.FC = () => {
                                 </button>
                                 <div className="h-px bg-slate-100 my-1 px-1" />
                                 <button
-                                    onClick={() => alert('Logging out...')}
+                                    onClick={() => logout()}
                                     className="w-full flex items-center gap-3 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                 >
                                     Log Out

@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { InventoryItem, InventoryLedgerEntry } from '../../types/inventory';
 import { inventoryItemService } from '../../services/inventoryService';
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
+import { UserType } from '@/shared/types/auth';
 import { SelfAdjustModal } from './SelfAdjustModal';
 
 /**
@@ -32,6 +34,9 @@ import { SelfAdjustModal } from './SelfAdjustModal';
 export const InventoryItemDetailPage: React.FC = () => {
     const router = useRouter();
     const { id } = useParams<{ id: string }>();
+    const { userType, isSuperAdmin } = useRouteAccess();
+
+    const isAdmin = isSuperAdmin || userType === UserType.BRAND_ADMIN || userType === UserType.ADMIN || userType === UserType.MANAGER;
 
     const [item, setItem] = useState<InventoryItem | null>(null);
     const [ledger, setLedger] = useState<InventoryLedgerEntry[]>([]);
@@ -120,29 +125,31 @@ export const InventoryItemDetailPage: React.FC = () => {
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight">{item.name}</h1>
                     <p className="text-sm text-slate-500 font-medium">SKU: {item.sku}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setShowAdjustModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-xl text-xs font-bold hover:bg-violet-700 transition-all text-nowrap"
-                    >
-                        <TrendingUp size={14} />
-                        Adjust Stock
-                    </button>
-                    <button
-                        onClick={() => setShowSelfAdjustModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-all text-nowrap"
-                    >
-                        <Scale size={14} />
-                        Self Adjust
-                    </button>
-                    <button
-                        onClick={() => router.push(`/backoffice/inventory/items/${id}/edit`)}
-                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-all text-nowrap"
-                    >
-                        <Edit3 size={14} />
-                        Edit Item
-                    </button>
-                </div>
+                {isAdmin && (
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setShowAdjustModal(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-xl text-xs font-bold hover:bg-violet-700 transition-all text-nowrap"
+                        >
+                            <TrendingUp size={14} />
+                            Adjust Stock
+                        </button>
+                        <button
+                            onClick={() => setShowSelfAdjustModal(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-all text-nowrap"
+                        >
+                            <Scale size={14} />
+                            Self Adjust
+                        </button>
+                        <button
+                            onClick={() => router.push(`/backoffice/inventory/items/${id}/edit`)}
+                            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-all text-nowrap"
+                        >
+                            <Edit3 size={14} />
+                            Edit Item
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Stats Cards */}

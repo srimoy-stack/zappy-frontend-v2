@@ -17,7 +17,8 @@ import {
     Layout,
     X
 } from 'lucide-react';
-import { Store as StoreType, Brand } from '@/types';
+import { Store as StoreType } from '@/shared/types/store';
+import { Brand } from '@/shared/types/tenant';
 
 // ─── Mock Data Helpers ──────────────────────────────────────────────────────────
 
@@ -120,9 +121,9 @@ export default function StoreDetailPage() {
             {/* ── Breadcrumbs & Navigation ─────────────────────────────────────── */}
             <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                    <button onClick={() => router.push('/platform/brands')} className="hover:text-slate-900 transition-colors">Platform</button>
+                    <button onClick={() => router.push('/platform/tenants')} className="hover:text-slate-900 transition-colors">Platform</button>
                     <ChevronRight className="w-3 h-3" />
-                    <button onClick={() => router.push(`/platform/brands/${brand.id}`)} className="hover:text-slate-900 transition-colors">Acme Pizza Co.</button>
+                    <button onClick={() => router.push(`/platform/tenants/${brand.id}`)} className="hover:text-slate-900 transition-colors">Acme Pizza Co.</button>
                     <ChevronRight className="w-3 h-3" />
                     <span className="text-slate-900">Store Node</span>
                 </div>

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouteAccess } from '@/hooks/useRouteAccess';
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
+import { UserType } from '@/shared/types/auth';
 import {
     ActivityActionBar,
     ActivityFilterPanel,
@@ -18,7 +19,7 @@ import { History } from 'lucide-react';
  * Enhanced to match Functional Overview (PDF)
  */
 export const SalesActivityPage: React.FC = () => {
-    const { role, user } = useRouteAccess();
+    const { userType, isSuperAdmin, user } = useRouteAccess();
 
     // -- State --
     const [data, setData] = useState<TransactionEvent[]>([]);
@@ -129,12 +130,12 @@ export const SalesActivityPage: React.FC = () => {
                     }
                 ];
 
-                // Filter based on role scope (Mock)
+                // Filter based on userType scope (Mock)
                 let scopedData = mockEvents;
-                if (role === 'EMPLOYEE' && user) {
+                if (userType === UserType.POS_USER && user) {
                     scopedData = mockEvents.filter(e => e.userId === user.id);
-                } else if (role === 'STORE_MANAGER' && user) {
-                    scopedData = mockEvents.filter(e => user.storeIds.includes(e.storeId));
+                } else if (userType === UserType.MANAGER && user) {
+                    scopedData = mockEvents.filter(e => user.storeIds?.includes(e.storeId));
                 }
 
                 setData(scopedData);
@@ -147,7 +148,7 @@ export const SalesActivityPage: React.FC = () => {
         };
 
         fetchData();
-    }, [role, user]);
+    }, [userType, user]);
 
     // -- Side Effects: Filtering --
     useEffect(() => {

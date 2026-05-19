@@ -7,11 +7,12 @@ import { TransactionDetailModal } from '../components/Finances/TransactionDetail
 import { mockPayments, mockRefunds, mockPayouts } from '../mock/finances';
 import { ShieldCheck, Info, Lock } from 'lucide-react';
 import { formatCurrency } from '@/utils';
-import { useRouteAccess } from '@/hooks/useRouteAccess';
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
+import { UserType } from '@/shared/types/auth';
 import { PaymentRecord, RefundRecord } from '../types/finances';
 
 export const FinancesPage: React.FC = () => {
-    const { role, getManagedStoreIds } = useRouteAccess();
+    const { userType, isSuperAdmin, getManagedStoreIds } = useRouteAccess();
     const [activeTab, setActiveTab] = useState<'payments' | 'refunds' | 'payouts'>('payments');
     const [isLoading] = useState(false);
 
@@ -28,8 +29,9 @@ export const FinancesPage: React.FC = () => {
 
     const managedStoreIds = getManagedStoreIds();
 
-    // Access Control: Employee has no access to Finances
-    if (role === 'EMPLOYEE') {
+    // Access Control: Non-management roles have no access to Finances
+    const isManagement = isSuperAdmin || userType === UserType.BRAND_ADMIN || userType === UserType.ADMIN || userType === UserType.MANAGER;
+    if (!isManagement) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
                 <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center">
@@ -50,16 +52,16 @@ export const FinancesPage: React.FC = () => {
     const availableStores = useMemo(() => {
         const stores = new Set([...mockPayments.map(p => p.store), ...mockRefunds.map(r => r.store)]);
         // Filter available stores based on permissions
-        if (role === 'ADMIN' || managedStoreIds === 'all') return Array.from(stores);
+        if (isSuperAdmin || managedStoreIds === 'all') return Array.from(stores);
         return Array.from(stores).filter(s => (managedStoreIds as string[]).includes(s));
-    }, [role, managedStoreIds]);
+    }, [userType, isSuperAdmin, managedStoreIds]);
 
     // Filter data based on managed stores and UI filters
     const payments = useMemo(() => {
         let data = mockPayments;
 
         // Permission Filter
-        if (role !== 'ADMIN' && managedStoreIds !== 'all') {
+        if (!isSuperAdmin && managedStoreIds !== 'all') {
             data = data.filter(p => (managedStoreIds as string[]).includes(p.store));
         }
 
@@ -77,13 +79,13 @@ export const FinancesPage: React.FC = () => {
         // In real app: filter by dateRangeFilter using date-fns isWithinInterval
 
         return data;
-    }, [role, managedStoreIds, paymentMethodFilter, statusFilter, storeFilter]);
+    }, [isSuperAdmin, managedStoreIds, paymentMethodFilter, statusFilter, storeFilter]);
 
     const refunds = useMemo(() => {
         let data = mockRefunds;
 
         // Permission Filter
-        if (role !== 'ADMIN' && managedStoreIds !== 'all') {
+        if (!isSuperAdmin && managedStoreIds !== 'all') {
             data = data.filter(r => (managedStoreIds as string[]).includes(r.store));
         }
 
@@ -97,7 +99,7 @@ export const FinancesPage: React.FC = () => {
         }
 
         return data;
-    }, [role, managedStoreIds, statusFilter, storeFilter]);
+    }, [isSuperAdmin, managedStoreIds, statusFilter, storeFilter]);
 
     const handleExport = (format: string) => {
         alert(`Exporting ${activeTab} data as ${format.toUpperCase()}...`);

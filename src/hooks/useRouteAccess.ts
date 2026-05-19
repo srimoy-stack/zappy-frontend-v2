@@ -1,108 +1,95 @@
-import { useAuth } from '@/app/providers/AuthProvider';
-import { navigationConfig, MenuConfig, AccessMode } from '@/config/navigation';
+import { useAuth } from '@/shared/contexts/AuthContext';
+import { useEntitlements } from '@/shared/entitlements';
+import { findNodeByRoute, isProtectedPath } from '@/shared/config/modules';
+import { getNavigationByUserType, type NavItem } from '@/shared/config/navigation';
 import { useImpersonation } from '@/app/providers/ImpersonationProvider';
 import { usePathname } from 'next/navigation';
+import type { AccessLevel } from '@/shared/config/accessMatrix';
 
 
 /**
- * useRouteAccess Hook
- * Centralized, declarative role-based UI protection.
- * Drives visibility and behavior based on the production-grade session.
+ * useRouteAccess Hook — Registry-Driven
+ *
+ * Centralized, declarative UI protection.
+ * Now uses the Module Registry + EntitlementContext instead of hardcoded arrays.
  */
 export const useRouteAccess = () => {
-    const { role, storeIds, user, enabledModules } = useAuth();
+    const { role, storeIds, user, userType, permissions, isSuperAdmin: isSA } = useAuth();
+    const { isEntitled, entitlementPaths, getAccessLevel } = useEntitlements();
     const { isImpersonating } = useImpersonation();
     const pathname = usePathname();
 
     /**
-     * Gets visible menu items for the current role and active modules
+     * Gets visible menu items for the current user.
+     * Items are pre-filtered by entitlement + RBAC via the registry resolver.
      */
-    const getVisibleMenuItems = (): MenuConfig[] => {
-        if (!role) return [];
+    const getVisibleMenuItems = (): NavItem[] => {
+        if (!userType) return [];
 
-        const isSuperAdmin = role === 'PLATFORM_SUPER_ADMIN';
-
-        // Filter items based on role and module
-        const filteredItems = navigationConfig.filter(item => {
-            // Role check
-            const roleAllowed = isSuperAdmin || (item.allowedRoles.includes(role) && item.accessMode[role] !== 'hidden');
-            if (!roleAllowed) return false;
-
-            // Module check
-            if (item.requiredModule && !enabledModules.includes(item.requiredModule)) {
-                return false;
-            }
-
-            return true;
-        });
-
-        // SPECIAL CASE: Super Admin Contextual Navigation
-        if (isSuperAdmin) {
+        // Super Admin contextual navigation
+        if (isSA) {
             const isPlatform = pathname?.startsWith('/platform');
             const isBackofficeOrKDS = pathname?.startsWith('/backoffice') || pathname?.startsWith('/kds');
 
             if (isPlatform) {
-                // In Platform view, ONLY show Brands
-                const allowedPlatformIds = ['platform-brands'];
-                return filteredItems.filter(item => allowedPlatformIds.includes(item.id));
+                return getNavigationByUserType(userType, { entitlementPaths, permissions });
             }
 
             if (isBackofficeOrKDS || isImpersonating) {
-                // In Backoffice view, ONLY show requested setup items
-                const allowedBackofficeIds = ['items', 'integrations', 'kds-master', 'kds-expo'];
-                return filteredItems.filter(item => allowedBackofficeIds.includes(item.id));
+                return getNavigationByUserType(userType, {
+                    entitlementPaths,
+                    permissions,
+                    isSuperAdmin: true,
+                });
             }
         }
 
-        return filteredItems;
+        return getNavigationByUserType(userType, {
+            entitlementPaths,
+            permissions,
+        });
     };
 
     /**
-     * Checks if a path is authorized
+     * Checks if a path is authorized for the current user.
      */
     const isAuthorized = (path: string): boolean => {
-        if (!role) return false;
+        if (!userType) return false;
 
-        // Platform routes → only PLATFORM_SUPER_ADMIN
+        // Platform routes → only Super Admin
         if (path.startsWith('/platform')) {
-            return role === 'PLATFORM_SUPER_ADMIN';
+            return isSA;
         }
 
-        // Global pass-through for Super Admin to all backoffice routes
-        if (role === 'PLATFORM_SUPER_ADMIN') return true;
+        // Super Admin has full access
+        if (isSA) return true;
 
-        // If it's a direct backoffice subpath, check config
-        const item = navigationConfig.find(m => m.route === path);
-        if (!item) {
-            // Check for index or parent paths
-            if (path === '/backoffice' || path === '/backoffice/') return true;
-            return true;
-        }
+        // Find the registry node for this route
+        const node = findNodeByRoute(path);
+        if (!node) return true; // Unknown routes pass through
 
-        // Role check
-        if (!item.allowedRoles.includes(role)) return false;
+        // Protected paths always authorized
+        if (isProtectedPath(node.entitlementKey)) return true;
 
-        // Module check
-        if (item.requiredModule && !enabledModules.includes(item.requiredModule)) return false;
-
-        return true;
+        // Check entitlement
+        return isEntitled(node.entitlementKey);
     };
 
     /**
-     * Gets access mode for a specific page
+     * Gets access mode for a specific page.
      */
-    const getAccessMode = (path: string): AccessMode => {
-        if (!role) return 'hidden';
-        const item = navigationConfig.find(m => m.route === path);
-        if (!item) return 'full';
+    const getAccessMode = (path: string): AccessLevel => {
+        if (!userType) return 'hidden';
 
-        // Module check for access mode
-        if (item.requiredModule && !enabledModules.includes(item.requiredModule)) {
-            return 'hidden';
-        }
+        const node = findNodeByRoute(path);
+        if (!node) return 'full';
 
-        if (role === 'PLATFORM_SUPER_ADMIN') return 'full';
-        return item.accessMode[role] || 'hidden';
+        // Protected paths always full access
+        if (isProtectedPath(node.entitlementKey)) return 'full';
+
+        if (isSA) return 'full';
+
+        return getAccessLevel(node.entitlementKey);
     };
 
     /**

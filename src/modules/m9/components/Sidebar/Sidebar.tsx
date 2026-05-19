@@ -3,37 +3,35 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import Link from 'next/link';
-import { iconMap } from '@/config/navigation';
-import { SidebarItem } from './SidebarItem';
 import { cn } from '@/utils';
-import { useRouteAccess } from '@/hooks/useRouteAccess';
+import { SidebarItem } from './SidebarItem';
+import type { NavItem } from '@/shared/config/navigation';
+
+interface SidebarProps {
+    /** Navigation items to render — pre-filtered by layout resolver */
+    navItems: NavItem[];
+    /** Visual mode */
+    variant?: 'platform' | 'backoffice';
+    /** Show the "New sale" CTA */
+    showNewSale?: boolean;
+    /** Logo link target */
+    logoHref?: string;
+}
 
 /**
- * Sidebar Component (Production Grade)
- * Renders dynamically from navigationConfig and current user permissions.
+ * Sidebar — Pure rendering component.
+ *
+ * Receives pre-filtered navItems from the layout.
+ * Zero authorization logic here — all filtering happens upstream.
  */
-export const Sidebar: React.FC = () => {
+export const Sidebar: React.FC<SidebarProps> = ({
+    navItems,
+    variant = 'backoffice',
+    showNewSale = false,
+    logoHref = '/backoffice/home',
+}) => {
     const [isCollapsed, setIsCollapsed] = useState(false);
-    const { role, getVisibleMenuItems } = useRouteAccess();
-    const menuItems = getVisibleMenuItems();
-
-    const isPlatform = role === 'PLATFORM_SUPER_ADMIN';
-    const { isImpersonating, pathname } = useRouteAccess();
-
-    // Determine brand logo link
-    const getLogoLink = () => {
-        if (isPlatform) {
-            // If in backoffice/KDS or impersonating, clicking logo goes to items setup (requested focal point)
-            if (isImpersonating || pathname?.startsWith('/backoffice') || pathname?.startsWith('/kds')) {
-                return "/backoffice/items";
-            }
-            return "/platform/brands";
-        }
-        return "/backoffice";
-    };
-
-    // Primary action button allowed for BRAND_ADMIN, ADMIN and STORE_MANAGER roles (hidden for Platform)
-    const showNewSale = (role === 'BRAND_ADMIN' || role === 'ADMIN' || role === 'STORE_MANAGER') && !isPlatform;
+    const isPlatform = variant === 'platform';
 
     return (
         <div
@@ -42,15 +40,12 @@ export const Sidebar: React.FC = () => {
                 isCollapsed ? 'w-20' : 'w-64'
             )}
         >
-            {/* Brand / Logo Area */}
+            {/* Brand / Logo */}
             <div className={cn(
                 'flex h-14 shrink-0 items-center px-4',
                 isCollapsed ? 'justify-center border-b border-slate-50' : 'justify-start mb-2'
             )}>
-                <Link
-                    href={getLogoLink()}
-                    className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-                >
+                <Link href={logoHref} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                     <div className={cn(
                         "w-7 h-7 rounded-md flex items-center justify-center shadow transition-all",
                         isPlatform ? "bg-slate-900 shadow-slate-200" : "bg-emerald-600 shadow-emerald-100"
@@ -86,20 +81,17 @@ export const Sidebar: React.FC = () => {
                 </div>
             )}
 
-            {/* Navigation (Filtered by Role) */}
+            {/* Navigation */}
             <nav className="flex flex-1 flex-col px-3 gap-y-1 overflow-y-auto">
-                {menuItems.map((item) => {
-                    const IconComponent = iconMap[item.icon as keyof typeof iconMap];
-                    return (
-                        <SidebarItem
-                            key={item.id}
-                            label={item.label}
-                            icon={IconComponent}
-                            path={item.route}
-                            isCollapsed={isCollapsed}
-                        />
-                    );
-                })}
+                {navItems.map((item) => (
+                    <SidebarItem
+                        key={item.id}
+                        label={item.label}
+                        icon={item.icon}
+                        path={item.href}
+                        isCollapsed={isCollapsed}
+                    />
+                ))}
             </nav>
 
             {/* Collapse Toggle */}

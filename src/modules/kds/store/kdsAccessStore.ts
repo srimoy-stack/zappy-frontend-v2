@@ -81,15 +81,14 @@ const INITIAL_STATE = {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { resolveUserType, UserType, ADMIN_USER_TYPES } from '@/shared/types/auth';
+
 /**
- * Safely cast the roleId string to a KDSRole for the kdsAccess.ts helpers.
- * Returns undefined if the roleId is not a recognised KDSRole.
+ * Safely cast the roleId string to a UserRole.
+ * Now uses the canonical resolveRole helper.
  */
-function toKDSRole(roleId?: string): KDSRole | undefined {
-    if (roleId === 'KDS_USER' || roleId === 'KITCHEN_STAFF' || roleId === 'EXPO_LEAD' || roleId === 'STORE_MANAGER' || roleId === 'ADMIN') {
-        return roleId as KDSRole;
-    }
-    return undefined;
+function toKDSRole(roleId?: string): UserType | undefined {
+    return resolveUserType(roleId as string) || undefined;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -123,8 +122,8 @@ export const useKDSAccessStore = create<KDSAccessState>()((set, get) => ({
         const { permissions, roleId } = get();
         const role = toKDSRole(roleId);
 
-        // ADMIN and STORE_MANAGER inherit all permissions via the existing RBAC model
-        if (role === 'STORE_MANAGER' || role === 'ADMIN') {
+        // ADMIN and MANAGER inherit all permissions via the existing RBAC model
+        if (role && (ADMIN_USER_TYPES.includes(role) || role === UserType.MANAGER)) {
             return true;
         }
 
@@ -140,8 +139,8 @@ export const useKDSAccessStore = create<KDSAccessState>()((set, get) => ({
 
     isKitchenStaff: () => {
         const role = toKDSRole(get().roleId);
-        // KDS_USER can start and complete stages but cannot delay/cancel
-        return role === 'KDS_USER' && canStartStage(role) && !canDelayOrder(role);
+        // KITCHEN_USER can start and complete stages but cannot delay/cancel
+        return role === UserType.KITCHEN_USER && canStartStage(role) && !canDelayOrder(role);
     },
 }));
 

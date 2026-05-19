@@ -21,7 +21,8 @@ import {
 } from '../types/items';
 import { mockItems, mockCategories } from '../mock/items';
 import { ItemEditScreen } from '../components/Items/ItemEditScreen';
-import { useRouteAccess } from '@/hooks/useRouteAccess';
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
+import { UserType } from '@/shared/types/auth';
 import { cn } from '@/utils';
 
 type SubView = 'LIST' | 'CATEGORIES' | 'MODIFIERS' | 'EDIT';
@@ -29,9 +30,9 @@ type SubView = 'LIST' | 'CATEGORIES' | 'MODIFIERS' | 'EDIT';
 export const ItemsPage: React.FC = () => {
     const [currentView, setCurrentView] = useState<SubView>('LIST');
     const [selectedItem, setSelectedItem] = useState<Item | null>(null);
-    const { role } = useRouteAccess();
+    const { userType, isSuperAdmin } = useRouteAccess();
 
-    const isAdmin = role === 'ADMIN' || role === 'PLATFORM_SUPER_ADMIN' || role === 'BRAND_ADMIN';
+    const isAdmin = isSuperAdmin || userType === UserType.BRAND_ADMIN || userType === UserType.ADMIN;
 
     const handleEditItem = (item: Item) => {
         setSelectedItem(item);

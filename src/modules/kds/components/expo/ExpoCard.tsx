@@ -192,7 +192,7 @@ export const ExpoCard: React.FC<ExpoCardProps> = ({
             {/* ── Actions ────────────────────────────────────────────────── */}
             {/* Editing is NOT allowed. Only Hand Over and Print Receipt. */}
             <div className="px-5 pb-5 pt-3 flex items-center gap-3 border-t border-slate-100 bg-slate-50/60">
-                <KDSPermissionGuard permission="KDS.PRINT">
+                <KDSPermissionGuard permission="KDS_ORDER_VIEW">
                     <button
                         onClick={() => onPrint(order.id)}
                         className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-600 text-[12px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all active:scale-95 shadow-sm"
@@ -203,7 +203,7 @@ export const ExpoCard: React.FC<ExpoCardProps> = ({
                     </button>
                 </KDSPermissionGuard>
 
-                <KDSPermissionGuard permission="KDS.STAGE_UPDATE">
+                <KDSPermissionGuard permission="KDS_BUMP_ITEM">
                     <button
                         onClick={() => onHandOver(order.id)}
                         disabled={isHandingOver}

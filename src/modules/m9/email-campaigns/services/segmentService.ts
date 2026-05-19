@@ -1,4 +1,4 @@
-import apiClient from '@/api/axios';
+import { apiClient } from '@/shared/api/apiClient';
 import { Segment, SegmentRulesPayload, EstimateCountResponse, StoreOption } from '../types/campaign.types';
 import { DEV_SEED_SEGMENTS } from '../utils/segmentSeeds';
 import { isDemoMode } from '../utils/demoMode';

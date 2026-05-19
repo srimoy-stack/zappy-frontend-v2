@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
-import { useRouteAccess } from '@/hooks/useRouteAccess';
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
 import { useRouter } from 'next/navigation';
-;
+import { UserType } from '@/shared/types/auth';
 import {
     ProfileSettings,
     EmployeeSettings,
@@ -19,21 +19,27 @@ import { Settings as SettingsIcon, ShieldCheck } from 'lucide-react';
  * Sectioned dashboard for brand and store management.
  */
 export const SettingsPage: React.FC = () => {
-    const { role, user } = useRouteAccess();
+    const { userType, isSuperAdmin, user } = useRouteAccess();
     const router = useRouter();
 
     // Access Control: Brand Admin Full, Store Manager Store-level, POS/KDS No access
-    if (role === 'POS_USER' || role === 'KDS_USER' || role === 'EMPLOYEE') {
-        useEffect(() => { router.replace('/backoffice/home'); }, [router]); return null;
-    }
+    const isOperational = userType === UserType.POS_USER || userType === UserType.KITCHEN_USER || userType === UserType.CALL_CENTER;
+    
+    useEffect(() => {
+        if (isOperational) {
+            router.replace('/backoffice/home');
+        }
+    }, [isOperational, router]);
 
-    const isAdmin = role === 'ADMIN';
+    if (isOperational) return null;
+
+    const isAdmin = isSuperAdmin || userType === UserType.BRAND_ADMIN || userType === UserType.ADMIN;
 
     const mockProfile: UserProfile = {
         name: user?.name || 'John Doe',
         email: 'admin@zyappy.com',
         phone: '+1 (555) 123-4567',
-        role: role || 'ADMIN',
+        role: userType || 'ADMIN',
         twoFactorEnabled: true
     };
 

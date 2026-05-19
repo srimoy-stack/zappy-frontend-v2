@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/app/providers/AuthProvider';
+import { useAuth } from '@/shared/contexts/AuthContext';
+import { UserType, isSuperAdmin as checkIsSuperAdmin } from '@/shared/types/auth';
 import { useTenantStore } from '@/app/providers/TenantStoreProvider';
 import { Plus, Search, ChevronDown, Calendar, Download } from 'lucide-react';
 import { EmployeesTabs } from '../components/Employees/EmployeesTabs';
@@ -17,20 +18,20 @@ import { MOCK_EMPLOYEES, MOCK_SHIFTS } from '../mock/employeesData';
 import { Employee, Shift } from '../types/employees';
 
 export const EmployeesPage: React.FC = () => {
-    const { role } = useAuth();
+    const { userType, isSuperAdmin } = useAuth();
     const { store, tenant } = useTenantStore();
 
     // Data State (Management for demo)
     const [employees, setEmployees] = useState<Employee[]>(MOCK_EMPLOYEES);
     const [shifts, setShifts] = useState<Shift[]>(MOCK_SHIFTS);
 
-    // Role-based logic
-    const isAdmin = role === 'ADMIN';
-    const isManager = role === 'STORE_MANAGER';
-    const isEmployee = role === 'EMPLOYEE';
+    // Role-based logic (Decoupled UserType != Role)
+    const isAdmin = isSuperAdmin || userType === UserType.BRAND_ADMIN || userType === UserType.ADMIN;
+    const isManager = userType === UserType.MANAGER;
+    const isEmployee = [UserType.POS_USER, UserType.KITCHEN_USER, UserType.CALL_CENTER, UserType.DELIVERY].includes(userType as UserType);
     const canSeeEmployees = isAdmin || isManager;
 
-    // Default tab logic - Spec: EMPLOYEE maps to Shifts (My Schedule)
+    // Default tab logic - Spec: Operational types map to Shifts (My Schedule)
     const [activeTab, setActiveTab] = useState<'employees' | 'shifts'>(
         isEmployee ? 'shifts' : 'employees'
     );
@@ -98,7 +99,7 @@ export const EmployeesPage: React.FC = () => {
         if (!isAdmin) return; // Spec: Only Admin can activate/deactivate
         setEmployees(employees.map(e =>
             e.id === employee.id
-                ? { ...e, status: e.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' } as Employee
+                ? { ...e, status: e.status === 'Active' ? 'Inactive' : 'Active' } as Employee
                 : e
         ));
     };
@@ -118,9 +119,13 @@ export const EmployeesPage: React.FC = () => {
             const newUser: Employee = {
                 ...data,
                 id: Math.random().toString(36).substr(2, 9),
-                status: 'ACTIVE',
+                status: 'Active',
                 lastLogin: new Date().toISOString(),
-                type: data.type || 'POS_USER',
+                userType: data.userType || UserType.POS_USER,
+                createdAt: new Date().toISOString(),
+                tenantId: tenant?.id || 'tenant-1',
+                role: data.role || { id: 'default', name: 'User', permissions: [], isSystem: false },
+                storeIds: data.storeIds || (store ? [store.id] : []),
             } as Employee;
             setEmployees([...employees, newUser]);
         }
@@ -146,13 +151,13 @@ export const EmployeesPage: React.FC = () => {
     // Data Filtering logic - Employees
     const filteredEmployees = employees.filter(e => {
         const matchesSearch = e.name.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesRole = roleFilter === 'all' || e.role === roleFilter;
+        const matchesType = roleFilter === 'all' || e.userType === roleFilter;
         const matchesStatus = statusFilter === 'all' || e.status === statusFilter;
-        const matchesStore = storeFilter === 'all' || e.stores.includes(storeFilter);
-        const matchesFilters = matchesSearch && matchesRole && matchesStatus && matchesStore;
+        const matchesStore = storeFilter === 'all' || e.storeIds.includes(storeFilter);
+        const matchesFilters = matchesSearch && matchesType && matchesStatus && matchesStore;
 
         if (isManager && store) {
-            return matchesFilters && e.stores.includes(store.name);
+            return matchesFilters && e.storeIds.includes(store.id);
         }
         return matchesFilters;
     });
@@ -256,10 +261,11 @@ export const EmployeesPage: React.FC = () => {
                                             value={roleFilter}
                                             onChange={setRoleFilter}
                                             options={[
-                                                { value: 'all', label: 'All Roles' },
-                                                { value: 'ADMIN', label: 'Admin' },
-                                                { value: 'STORE_MANAGER', label: 'Manager' },
-                                                { value: 'EMPLOYEE', label: 'Employee' }
+                                                { value: 'all', label: 'All Types' },
+                                                { value: UserType.BRAND_ADMIN, label: 'Brand Admin' },
+                                                { value: UserType.ADMIN, label: 'Admin' },
+                                                { value: UserType.MANAGER, label: 'Manager' },
+                                                { value: UserType.POS_USER, label: 'POS User' }
                                             ]}
                                         />
 
@@ -268,8 +274,8 @@ export const EmployeesPage: React.FC = () => {
                                             onChange={setStatusFilter}
                                             options={[
                                                 { value: 'all', label: 'Any Status' },
-                                                { value: 'ACTIVE', label: 'Active' },
-                                                { value: 'INACTIVE', label: 'Inactive' }
+                                                { value: 'Active', label: 'Active' },
+                                                { value: 'Inactive', label: 'Inactive' }
                                             ]}
                                         />
 
@@ -279,7 +285,7 @@ export const EmployeesPage: React.FC = () => {
                                                 onChange={setStoreFilter}
                                                 options={[
                                                     { value: 'all', label: 'All Stores' },
-                                                    ...Array.from(new Set(employees.flatMap(e => e.stores))).map(s => ({ value: s, label: s }))
+                                                    ...Array.from(new Set(employees.flatMap(e => e.storeIds))).map(s => ({ value: s, label: s }))
                                                 ]}
                                             />
                                         )}
@@ -369,7 +375,7 @@ export const EmployeesPage: React.FC = () => {
                                                 onChange={setStoreFilter}
                                                 options={[
                                                     { value: 'all', label: 'All Stores' },
-                                                    ...Array.from(new Set(employees.flatMap(e => e.stores))).map(s => ({ value: s, label: s }))
+                                                    ...Array.from(new Set(employees.flatMap(e => e.storeIds))).map(s => ({ value: s, label: s }))
                                                 ]}
                                             />
                                         )}

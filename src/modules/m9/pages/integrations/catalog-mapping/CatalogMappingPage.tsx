@@ -20,7 +20,8 @@ import {
     ShieldCheck
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useRouteAccess } from '@/hooks/useRouteAccess';
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
+import { UserType } from '@/shared/types/auth';
 import {
     CatalogItemMapping,
     CatalogVariantMapping,
@@ -36,8 +37,8 @@ import { cn } from '@/utils';
  */
 export const CatalogMappingPage: React.FC = () => {
     const router = useRouter();
-    const { role } = useRouteAccess();
-    const canEdit = role === 'ADMIN' || role === 'STORE_MANAGER' || role === 'BRAND_ADMIN' || role === 'PLATFORM_SUPER_ADMIN';
+    const { userType, isSuperAdmin } = useRouteAccess();
+    const canEdit = isSuperAdmin || userType === UserType.BRAND_ADMIN || userType === UserType.ADMIN || userType === UserType.MANAGER;
 
     const [activeTab, setActiveTab] = useState<'items' | 'variants' | 'groups' | 'options'>('items');
     const [isLoading, setIsLoading] = useState(true);
@@ -158,7 +159,7 @@ export const CatalogMappingPage: React.FC = () => {
         totalValid: number;
     } | null>(null);
 
-    const canPublish = role === 'ADMIN' || role === 'STORE_MANAGER' || role === 'BRAND_ADMIN' || role === 'PLATFORM_SUPER_ADMIN';
+    const canPublish = isSuperAdmin || userType === UserType.MANAGER;
 
     const handlePublish = () => {
         if (!canPublish) return;

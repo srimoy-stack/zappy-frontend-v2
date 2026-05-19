@@ -19,13 +19,14 @@ import {
     Search,
     ShieldCheck
 } from 'lucide-react';
-import { useRouteAccess } from '@/hooks/useRouteAccess';
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
+import { UserType } from '@/shared/types/auth';
 import { mockInventoryItems, mockInventoryEntries } from '../mock/inventory';
 import { cn, formatCurrency } from '@/utils';
 
 export const InventoryPage: React.FC = () => {
     const router = useRouter();
-    const { role } = useRouteAccess();
+    const { userType, isSuperAdmin } = useRouteAccess();
 
     // Calculate quick stats
     const lowStockItems = mockInventoryItems.filter(item => item.currentStock <= item.lowStockThreshold);
@@ -33,7 +34,7 @@ export const InventoryPage: React.FC = () => {
     const pendingEntries = mockInventoryEntries.filter(entry => entry.inventoryStatus === 'Draft' || entry.inventoryStatus === 'Ordered');
 
     // Permission checks
-    const canAddInventory = role === 'ADMIN' || role === 'STORE_MANAGER';
+    const canAddInventory = isSuperAdmin || userType === UserType.BRAND_ADMIN || userType === UserType.ADMIN || userType === UserType.MANAGER;
 
     return (
         <div className="max-w-[1700px] mx-auto space-y-8 pb-32 px-4 pt-4">

@@ -1,6 +1,8 @@
 import React from 'react';
 import { Search, FileSpreadsheet, FileText, FileCode, Printer, Columns, Plus } from 'lucide-react';
-import { useRouteAccess } from '@/hooks/useRouteAccess';
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
+
+import { UserType } from '@/shared/types/auth';
 
 interface ActivityActionBarProps {
     onSearch: (query: string) => void;
@@ -13,8 +15,8 @@ export const ActivityActionBar: React.FC<ActivityActionBarProps> = ({
     onExport,
     onAdd
 }) => {
-    const { role } = useRouteAccess();
-    const canExport = role === 'ADMIN' || role === 'STORE_MANAGER';
+    const { userType, isSuperAdmin } = useRouteAccess();
+    const canExport = isSuperAdmin || userType === UserType.BRAND_ADMIN || userType === UserType.ADMIN || userType === UserType.MANAGER;
 
     return (
         <div className="flex flex-col lg:flex-row items-center justify-between gap-4 mb-3">

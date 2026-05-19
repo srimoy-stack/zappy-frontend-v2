@@ -42,7 +42,7 @@ export default function UnsubscribePage() {
 
         const processUnsubscribe = async () => {
             try {
-                const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+                const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
                 const res = await fetch(`${apiBase}/unsubscribe/t/${encodeURIComponent(token)}`, {
                     headers: { 'Accept': 'application/json' },
                 });

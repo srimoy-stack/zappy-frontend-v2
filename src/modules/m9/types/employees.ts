@@ -1,22 +1,20 @@
-import { UserRole } from '@/types';
+/**
+ * m9/types/employees.ts — Compatibility Shim
+ *
+ * Re-exports shared canonical types. DO NOT define new types here.
+ * Shift is kept as a legacy-only type until migrated.
+ */
 
-export type UserStatus = 'ACTIVE' | 'INACTIVE';
-export type UserType = 'BACKEND_USER' | 'POS_USER' | 'KDS_USER';
+export { UserRole } from '@/shared/types/user';
+export type { UserStatus, UserType } from '@/shared/types/user';
 
-export interface Employee {
-    id: string;
-    name: string;
-    email: string;
-    role: UserRole;
-    stores: string[]; // Store names or IDs
-    status: UserStatus;
-    lastLogin: string; // ISO string
-    type: UserType;
-}
+// Employee is an alias for User in the new architecture
+export type { User as Employee } from '@/shared/types/user';
 
+// ─── Legacy-only types ──────────────────────────────────────────────────────
 export interface Shift {
     id: string;
-    date: string; // ISO string
+    date: string;
     userId: string;
     userName: string;
     storeId: string;

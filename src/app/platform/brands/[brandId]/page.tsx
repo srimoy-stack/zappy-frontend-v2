@@ -40,12 +40,10 @@ import {
     LogIn,
 } from 'lucide-react';
 
-import {
-    Brand,
-    ModuleEntitlement,
-    Store as StoreType,
-    User as UserType
-} from '@/types';
+import { TenantModule as ModuleEntitlement } from '@/shared/types/module';
+import { Store as StoreType } from '@/shared/types/store';
+import { Brand } from '@/shared/types/tenant';
+import { User as UserType, UserRole } from '@/shared/types/user';
 import { cn } from '@/utils';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
@@ -109,11 +107,11 @@ const MOCK_STORES: StoreType[] = [
 ];
 
 const MOCK_USERS: (UserType & { storeAccess: string })[] = [
-    { id: 'u-1', name: 'John Doe', email: 'john@acmepizza.com', userType: 'Staff', role: 'ADMIN', storeAccess: 'All Locations', storeIds: [], tenantId: 'tenant-demo', status: 'Active', lastLogin: '2026-02-23' },
-    { id: 'u-2', name: 'Sarah Chen', email: 'sarah@acmepizza.com', userType: 'Manager', role: 'STORE_MANAGER', storeAccess: 'Downtown Toronto', storeIds: ['store-01'], tenantId: 'tenant-demo', status: 'Active', lastLogin: '2026-02-23' },
-    { id: 'u-3', name: 'Mike Patel', email: 'mike@acmepizza.com', userType: 'Manager', role: 'STORE_MANAGER', storeAccess: 'Midtown', storeIds: ['store-02'], tenantId: 'tenant-demo', status: 'Active', lastLogin: '2026-02-22' },
-    { id: 'u-4', name: 'Lisa Wong', email: 'lisa@acmepizza.com', userType: 'Staff', role: 'EMPLOYEE', storeAccess: 'Scarborough', storeIds: ['store-03'], tenantId: 'tenant-demo', status: 'Active', lastLogin: '2026-02-21' },
-    { id: 'u-5', name: 'Carlos Rivera', email: 'carlos@acmepizza.com', userType: 'Driver', role: 'POS_USER', storeAccess: 'North York', storeIds: ['store-05'], tenantId: 'tenant-demo', status: 'Inactive', lastLogin: '2026-01-15' },
+    { id: 'u-1', name: 'John Doe', email: 'john@acmepizza.com', userType: 'Staff', role: UserRole.TENANT_ADMIN, storeAccess: 'All Locations', storeIds: [], tenantId: 'tenant-demo', status: 'Active', lastLogin: '2026-02-23', createdAt: '2025-01-01' },
+    { id: 'u-2', name: 'Sarah Chen', email: 'sarah@acmepizza.com', userType: 'Manager', role: UserRole.STORE_MANAGER, storeAccess: 'Downtown Toronto', storeIds: ['store-01'], tenantId: 'tenant-demo', status: 'Active', lastLogin: '2026-02-23', createdAt: '2025-01-01' },
+    { id: 'u-3', name: 'Mike Patel', email: 'mike@acmepizza.com', userType: 'Manager', role: UserRole.STORE_MANAGER, storeAccess: 'Midtown', storeIds: ['store-02'], tenantId: 'tenant-demo', status: 'Active', lastLogin: '2026-02-22', createdAt: '2025-01-01' },
+    { id: 'u-4', name: 'Lisa Wong', email: 'lisa@acmepizza.com', userType: 'Staff', role: UserRole.POS_USER, storeAccess: 'Scarborough', storeIds: ['store-03'], tenantId: 'tenant-demo', status: 'Active', lastLogin: '2026-02-21', createdAt: '2025-01-01' },
+    { id: 'u-5', name: 'Carlos Rivera', email: 'carlos@acmepizza.com', userType: 'Driver', role: UserRole.POS_USER, storeAccess: 'North York', storeIds: ['store-05'], tenantId: 'tenant-demo', status: 'Inactive', lastLogin: '2026-01-15', createdAt: '2025-01-01' },
 ];
 
 const MOCK_AUDIT_LOG = [
@@ -632,6 +630,24 @@ function OverviewSection({
                                         <Zap size={16} className="text-emerald-400 group-hover:scale-110 transition-transform" />
                                     </button>
                                 )}
+
+                                {/* Communication Orchestration — SMTP/SMS config */}
+                                <button
+                                    id={`overwatch-config-comm-${brandId}`}
+                                    onClick={() => router.push(`/platform/brands/${brandId}/config`)}
+                                    className="w-full flex items-center justify-between p-5 bg-blue-500/10 border border-blue-500/20 rounded-2xl hover:bg-blue-500/20 transition-all group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-blue-500/20 rounded-lg">
+                                            <Mail size={14} className="text-blue-400" />
+                                        </div>
+                                        <div>
+                                            <span className="text-xs font-black uppercase tracking-widest text-blue-100 block">Communication Orchestration</span>
+                                            <span className="text-[10px] text-slate-500 font-medium mt-0.5 block">Isolated SMTP & SMS Gateway</span>
+                                        </div>
+                                    </div>
+                                    <ArrowUpRight size={16} className="text-blue-600 group-hover:text-blue-400 transition-colors" />
+                                </button>
                             </div>
 
                         </div>

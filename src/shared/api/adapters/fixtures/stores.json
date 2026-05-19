@@ -1,0 +1,41 @@
+[
+    {
+        "id": "store-001",
+        "name": "Downtown Toronto",
+        "code": "DT-001",
+        "tenantId": "brand-001",
+        "timezone": "America/Toronto",
+        "city": "Toronto",
+        "province": "Ontario",
+        "status": "Active",
+        "paymentTerms": "Net 30",
+        "taxProfile": "Inherit",
+        "logoStatus": "Default"
+    },
+    {
+        "id": "store-002",
+        "name": "Midtown Branch",
+        "code": "MT-002",
+        "tenantId": "brand-001",
+        "timezone": "America/Toronto",
+        "city": "Toronto",
+        "province": "Ontario",
+        "status": "Active",
+        "paymentTerms": "Net 30",
+        "taxProfile": "Inherit",
+        "logoStatus": "Default"
+    },
+    {
+        "id": "store-003",
+        "name": "Vancouver Main",
+        "code": "VM-001",
+        "tenantId": "brand-002",
+        "timezone": "America/Vancouver",
+        "city": "Vancouver",
+        "province": "British Columbia",
+        "status": "Active",
+        "paymentTerms": "Net 15",
+        "taxProfile": "Inherit",
+        "logoStatus": "Default"
+    }
+]

@@ -21,7 +21,8 @@ import {
     Inbox
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useRouteAccess } from '@/hooks/useRouteAccess';
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
+import { UserType } from '@/shared/types/auth';
 import { ExternalOrder, ExternalOrderStatus, ExternalOrderProvider } from '../../../types/external-orders';
 import { externalOrdersService } from '../../../services/externalOrdersService';
 import { cn } from '@/utils';
@@ -258,10 +259,12 @@ const DetailModal: React.FC<DetailModalProps> = ({ order, onClose, onRetry, onAr
 //  Main Page
 // ─────────────────────────────────────────────
 
+
+
 export const ExternalOrdersAuditPage: React.FC = () => {
     const router = useRouter();
-    const { role } = useRouteAccess();
-    const canEdit = role === 'ADMIN' || role === 'STORE_MANAGER' || role === 'BRAND_ADMIN' || role === 'PLATFORM_SUPER_ADMIN';
+    const { userType, isSuperAdmin } = useRouteAccess();
+    const canEdit = isSuperAdmin || userType === UserType.BRAND_ADMIN || userType === UserType.ADMIN || userType === UserType.MANAGER;
 
     const [orders, setOrders] = useState<ExternalOrder[]>([]);
     const [isLoading, setIsLoading] = useState(true);

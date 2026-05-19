@@ -19,6 +19,9 @@ import {
 import { InventoryStatus, PaymentStatus, InventoryEntry, Vendor } from '../../types/inventory';
 import { inventoryService, vendorService } from '../../services/inventoryService';
 
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
+import { UserType } from '@/shared/types/auth';
+
 /**
  * Inventory Entries (Transactions) Page
  * View all stock inward transactions with filters
@@ -29,6 +32,7 @@ import { inventoryService, vendorService } from '../../services/inventoryService
  */
 export const InventoryEntriesPage: React.FC = () => {
     const router = useRouter();
+    const { userType, isSuperAdmin } = useRouteAccess();
 
     // Data State
     const [entries, setEntries] = useState<InventoryEntry[]>([]);
@@ -103,7 +107,8 @@ export const InventoryEntriesPage: React.FC = () => {
 
     const canDelete = (entry: InventoryEntry) => {
         // Admin only, before stock is received
-        return entry.inventoryStatus !== 'Received' && entry.inventoryStatus !== 'Partial';
+        const isAdmin = isSuperAdmin || userType === UserType.BRAND_ADMIN || userType === UserType.ADMIN;
+        return isAdmin && entry.inventoryStatus !== 'Received' && entry.inventoryStatus !== 'Partial';
     };
 
     return (

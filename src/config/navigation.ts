@@ -231,11 +231,12 @@ export const navigationConfig: MenuConfig[] = [
     {
         id: 'platform-brands',
         label: 'Brands',
-        route: '/platform/brands',
+        route: '/platform/tenants',
         icon: 'Building2',
-        allowedRoles: ['PLATFORM_SUPER_ADMIN'],
+        allowedRoles: ['PLATFORM_SUPER_ADMIN', 'ADMIN'],
         accessMode: {
-            PLATFORM_SUPER_ADMIN: 'full'
+            PLATFORM_SUPER_ADMIN: 'full',
+            ADMIN: 'full'
         },
         requiresStoreScope: false
     },

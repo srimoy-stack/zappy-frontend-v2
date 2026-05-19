@@ -1,9 +1,9 @@
-export type KDSRole =
-    | 'KITCHEN_STAFF'
-    | 'EXPO_LEAD'
-    | 'STORE_MANAGER'
-    | 'ADMIN'
-    | 'KDS_USER'; // Deprecated alias for KITCHEN_STAFF
+import { UserType, isSuperAdmin } from '@/shared/types/auth';
+
+/**
+ * KDSRole — Legacy alias for canonical UserType.
+ */
+export type KDSRole = UserType | string;
 
 export function canStartStage(_role: KDSRole) {
     return true; // All KDS roles can progress orders
@@ -14,45 +14,45 @@ export function canCompleteStage(_role: KDSRole) {
 }
 
 export function canDelayOrder(role: KDSRole) {
-    return role === 'STORE_MANAGER' || role === 'ADMIN';
+    return role === UserType.MANAGER || isSuperAdmin(role as UserType);
 }
 
 export function canCancelOrder(role: KDSRole) {
-    return role === 'STORE_MANAGER' || role === 'ADMIN';
+    return role === UserType.MANAGER || isSuperAdmin(role as UserType);
 }
 
 export function canOverrideStage(role: KDSRole) {
-    return role === 'STORE_MANAGER' || role === 'EXPO_LEAD' || role === 'ADMIN';
+    // Expo leads (KITCHEN_USER in canonical) were previously allowed to override.
+    // We maintain this by allowing KITCHEN_USER + management roles.
+    return role === UserType.MANAGER || role === UserType.KITCHEN_USER || isSuperAdmin(role as UserType);
 }
 
 export function canSendCustomMessage(role: KDSRole) {
-    return role === 'STORE_MANAGER' || role === 'ADMIN';
+    return role === UserType.MANAGER || isSuperAdmin(role as UserType);
 }
 
 export function canReopenOrder(role: KDSRole) {
-    return role === 'STORE_MANAGER' || role === 'EXPO_LEAD' || role === 'ADMIN'; // KDS.RECALL_REFIRE
+    return role === UserType.MANAGER || role === UserType.KITCHEN_USER || isSuperAdmin(role as UserType);
 }
 
 export function canReassignStation(role: KDSRole) {
-    return role === 'STORE_MANAGER' || role === 'EXPO_LEAD' || role === 'ADMIN'; // KDS.REASSIGN_STATION
+    return role === UserType.MANAGER || role === UserType.KITCHEN_USER || isSuperAdmin(role as UserType);
 }
 
 export function canManageConfig(role: KDSRole) {
-    return role === 'STORE_MANAGER' || role === 'ADMIN'; // KDS.SOUND_CONFIG, KDS.STATION_CONFIG
+    return role === UserType.MANAGER || isSuperAdmin(role as UserType);
 }
 
 /**
- * Requirement 8.2: Permission gating for customer status updates.
- * Only users with KDS.CUSTOMER_MESSAGE can trigger status messages.
+ * Permission gating for customer status updates.
  */
 export function canSendCustomerStatus(role: KDSRole) {
-    return role === 'STORE_MANAGER' || role === 'EXPO_LEAD' || role === 'ADMIN'; // KDS.CUSTOMER_MESSAGE
+    return role === UserType.MANAGER || role === UserType.KITCHEN_USER || isSuperAdmin(role as UserType);
 }
 
 /**
- * Requirement 8.2: Permission gating for delay adjustments.
- * Only users with KDS.DELAY_ORDER can adjust delay increments.
+ * Permission gating for delay adjustments.
  */
 export function canAdjustDelay(role: KDSRole) {
-    return role === 'STORE_MANAGER' || role === 'ADMIN'; // KDS.DELAY_ORDER
+    return role === UserType.MANAGER || isSuperAdmin(role as UserType);
 }

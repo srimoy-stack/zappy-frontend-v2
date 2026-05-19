@@ -3,7 +3,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { RoleGuard } from '@/modules/m9/components/Auth/RoleGuard';
+import { RouteGuard } from '@/shared/guards/RouteGuard';
+// Role enforcement handled by RouteGuard + canAccessPrefix
 import { KDSWebSocketProvider } from '@/modules/kds/context/KDSWebSocketContext';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { isKDSModuleActive } from '@/modules/kds/utils/kdsModuleFlags';
@@ -216,14 +217,14 @@ export default function KDSLayout({ children }: { children: React.ReactNode }) {
 
     // ── All gates passed — render KDS ─────────────────────────────────────────
     return (
-        <RoleGuard allowedRoles={['KDS_USER', 'STORE_MANAGER', 'PLATFORM_SUPER_ADMIN']} mode="403">
-            <KDSPermissionGuard permission="KDS.VIEW">
+        <RouteGuard allowedPrefix="/kds">
+            <KDSPermissionGuard permission="KDS_ORDER_VIEW">
                 <KDSWebSocketProvider>
                     <div className="kds-root">
                         {children}
                     </div>
                 </KDSWebSocketProvider>
             </KDSPermissionGuard>
-        </RoleGuard>
+        </RouteGuard>
     );
 }

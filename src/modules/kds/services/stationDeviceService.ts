@@ -110,14 +110,13 @@ export async function unpairStation(): Promise<void> {
  * (delay, cancel, routing, sound management) require PIN verification.
  */
 export const STATION_PERMISSIONS: readonly string[] = [
-    'KDS.VIEW',
-    'KDS.STAGE_UPDATE',
-    'KDS.ACCEPT_ORDER',
-    'KDS.PRINT',
-    // Sensitive — these are granted but gated behind PIN via useKDSActionAuth:
-    'KDS.DELAY_ORDER',
-    'KDS.CANCEL_ORDER',
-    'KDS.CUSTOMER_MESSAGE',
+    'KDS_ORDER_VIEW',
+    'KDS_BUMP_ITEM',
+    'KDS_MARK_READY',
+    // Gated behind PIN:
+    'KDS_RECALL',
+    'KDS_REFIRE',
+    'KDS_STATION_MANAGEMENT',
 ] as const;
 
 /**

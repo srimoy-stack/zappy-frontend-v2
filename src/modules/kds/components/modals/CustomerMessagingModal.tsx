@@ -4,20 +4,21 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { KDSOrder } from '../../types/kds';
 import { Mail, MessageSquare, Send, X } from 'lucide-react';
-
+import { UserRole } from '@/shared/types/auth';
+;
 interface Props {
     isOpen: boolean;
     order: KDSOrder;
     onClose: () => void;
     onSend: (channel: 'SMS' | 'EMAIL' | 'BOTH', message: string) => void;
-    role?: 'KDS_USER' | 'STORE_MANAGER';
+    role?: UserRole;
     initialTemplate?: TemplateKey;
     isEmbedded?: boolean;
 }
 
 type TemplateKey = 'ACCEPTED' | 'PREPARING' | 'DELAYED' | 'READY' | 'COMPLETED' | 'CANCELLED' | 'CUSTOM';
 
-export const CustomerMessagingModal: React.FC<Props> = ({ isOpen, order, onClose, onSend, role = 'KDS_USER', initialTemplate, isEmbedded = false }) => {
+export const CustomerMessagingModal: React.FC<Props> = ({ isOpen, order, onClose, onSend, role = UserRole.KITCHEN_USER, initialTemplate, isEmbedded = false }) => {
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -48,7 +49,7 @@ export const CustomerMessagingModal: React.FC<Props> = ({ isOpen, order, onClose
 
     if (!isOpen || !mounted) return null;
 
-    const canEditCustom = role === 'STORE_MANAGER';
+    const canEditCustom = role === UserRole.STORE_MANAGER || role === UserRole.TENANT_ADMIN || role === UserRole.SUPER_ADMIN;
 
     const handleSend = () => {
         if (!message.trim()) {

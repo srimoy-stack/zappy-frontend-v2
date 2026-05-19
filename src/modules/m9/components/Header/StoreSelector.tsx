@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { ChevronDown, Store as StoreIcon } from 'lucide-react';
 import { useTenantStore } from '@/app/providers/TenantStoreProvider';
-import { useRouteAccess } from '@/hooks/useRouteAccess';
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
 import { cn } from '@/utils';
 
 /**

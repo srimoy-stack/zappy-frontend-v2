@@ -16,6 +16,7 @@ import {
     ChevronRight,
     LogIn,
 } from 'lucide-react';
+import { UserRole } from '@/shared/types/auth';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -296,7 +297,7 @@ export default function BrandsPage() {
             brandId: suspendTarget.id,
             brandName: suspendTarget.brandName,
             timestamp: new Date().toISOString(),
-            actor: 'PLATFORM_SUPER_ADMIN',
+            actor: UserRole.SUPER_ADMIN,
         });
 
         setSuspendTarget(null);

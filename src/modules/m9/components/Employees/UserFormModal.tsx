@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { UserRole } from '@/types';
-import { Employee, UserType } from '../../types/employees';
+import { UserType } from '@/shared/types/auth';
+import { Employee } from '../../types/employees';
 
 interface UserFormModalProps {
     isOpen: boolean;
@@ -21,10 +21,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     const [formData, setFormData] = useState<Partial<Employee>>({
         name: '',
         email: '',
-        role: 'EMPLOYEE',
-        type: 'POS_USER',
-        status: 'ACTIVE',
-        stores: [],
+        userType: UserType.POS_USER,
+        role: { id: 'default', name: 'User', permissions: [], isSystem: false },
+        status: 'Active',
+        storeIds: [],
     });
 
     useEffect(() => {
@@ -34,10 +34,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
             setFormData({
                 name: '',
                 email: '',
-                role: 'EMPLOYEE',
-                type: 'POS_USER',
-                status: 'ACTIVE',
-                stores: [],
+                userType: UserType.POS_USER,
+                role: { id: 'default', name: 'User', permissions: [], isSystem: false },
+                status: 'Active',
+                storeIds: [],
             });
         }
     }, [initialData, isOpen]);
@@ -91,30 +91,42 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Role</label>
+                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">System Access</label>
                             <select
-                                value={formData.role}
-                                onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
+                                value={formData.userType}
+                                onChange={(e) => setFormData({ ...formData, userType: e.target.value as UserType })}
                                 className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-all appearance-none"
                             >
-                                <option value="ADMIN">Admin</option>
-                                <option value="STORE_MANAGER">Manager</option>
-                                <option value="EMPLOYEE">Employee</option>
-                                <option value="POS_USER">POS User</option>
-                                <option value="KDS_USER">KDS User</option>
+                                <option value={UserType.ADMIN}>Admin (Sub-Brand)</option>
+                                <option value={UserType.MANAGER}>Store Manager</option>
+                                <option value={UserType.POS_USER}>POS Operator</option>
+                                <option value={UserType.KITCHEN_USER}>Kitchen Display</option>
+                                <option value={UserType.CALL_CENTER}>Call Center</option>
+                                <option value={UserType.DELIVERY}>Delivery Driver</option>
                             </select>
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Type</label>
+                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Permission Role</label>
                             <select
-                                value={formData.type}
-                                onChange={(e) => setFormData({ ...formData, type: e.target.value as UserType })}
+                                value={formData.role?.id}
+                                onChange={(e) => {
+                                    const selectedOption = e.target.selectedOptions[0];
+                                    setFormData({ 
+                                        ...formData, 
+                                        role: { 
+                                            id: e.target.value, 
+                                            name: selectedOption?.text || 'User', 
+                                            permissions: [], 
+                                            isSystem: false 
+                                        } 
+                                    });
+                                }}
                                 className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-all appearance-none"
                             >
-                                <option value="BACKEND_USER">Backend User</option>
-                                <option value="POS_USER">POS User</option>
-                                <option value="KDS_USER">KDS User</option>
+                                <option value="default">Default User</option>
+                                <option value="elevated">Elevated Access</option>
+                                <option value="restricted">Restricted Access</option>
                             </select>
                         </div>
                     </div>
@@ -123,8 +135,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                         <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Assigned Stores (Comma separated)</label>
                         <input
                             type="text"
-                            value={formData.stores?.join(', ')}
-                            onChange={(e) => setFormData({ ...formData, stores: e.target.value.split(',').map(s => s.trim()) })}
+                            value={formData.storeIds?.join(', ')}
+                            onChange={(e) => setFormData({ ...formData, storeIds: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
                             className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-all"
                             placeholder="Main Street Store, Downtown"
                         />

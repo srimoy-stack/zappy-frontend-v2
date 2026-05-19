@@ -32,7 +32,7 @@ export async function bootstrapKDS(stationId?: string) {
         roleId: data.user_claims?.role_id || "KITCHEN_STAFF",
         brandId: data.station.brand_id || "brand-demo",
         storeId: data.station.store_id || "store-demo",
-        permissions: data.user_claims?.permissions || ["KDS.VIEW"],
+        permissions: data.user_claims?.permissions || ["KDS_ORDER_VIEW"],
     });
 
     accessStore.setStationContext({
@@ -116,7 +116,7 @@ async function getMockBootstrapData(): Promise<KDSBootstrapResponse> {
         user_claims: {
             user_id: "mock-user-1",
             role_id: "STORE_MANAGER",
-            permissions: ["KDS.VIEW", "KDS.STAGE_UPDATE", "KDS.ACCEPT_ORDER", "KDS.PRINT", "KDS.STATION_CONFIG"]
+            permissions: ["KDS_ORDER_VIEW", "KDS_BUMP_ITEM", "KDS_REFIRE", "KDS_RECALL", "KDS_MARK_READY", "KDS_STATION_MANAGEMENT", "KDS_MASTER_VIEW", "KDS_SETTING_EDIT"]
         }
     };
 }

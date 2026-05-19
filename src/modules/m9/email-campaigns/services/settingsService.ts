@@ -1,4 +1,4 @@
-import apiClient from '@/api/axios';
+import { apiClient } from '@/shared/api/apiClient';
 import { EmailSettings } from '../types/settings.types';
 import { isDemoMode } from '../utils/demoMode';
 

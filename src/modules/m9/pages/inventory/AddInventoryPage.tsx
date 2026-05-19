@@ -14,6 +14,9 @@ import {
 import { InventoryStatus, InventoryEntryProduct, Vendor } from '../../types/inventory';
 import { inventoryService, inventoryItemService, vendorService } from '../../services/inventoryService';
 
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
+import { UserType } from '@/shared/types/auth';
+
 /**
  * Add Inventory (Stock Inward) Page
  * 
@@ -21,8 +24,20 @@ import { inventoryService, inventoryItemService, vendorService } from '../../ser
  */
 export const AddInventoryPage: React.FC = () => {
     const router = useRouter();
+    const { userType, isSuperAdmin } = useRouteAccess();
+
+    const canCreate = isSuperAdmin || userType === UserType.BRAND_ADMIN || userType === UserType.ADMIN || userType === UserType.MANAGER;
+
+    useEffect(() => {
+        if (!canCreate) {
+            router.replace('/backoffice/inventory');
+        }
+    }, [canCreate, router]);
+
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+
+    if (!canCreate) return null;
 
     // Data lists
     const [vendors, setVendors] = useState<Vendor[]>([]);

@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { signIn, getSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { resolveUserType, getDefaultPage } from '@/shared/types/auth';
 import { Lock, Mail, User, Loader2, AlertCircle, ArrowRight, LogIn, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -34,15 +35,15 @@ export default function SignupPage() {
         }
 
         try {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-            const res = await fetch(`${apiUrl}/auth/register`, {
+            const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api').replace(/\/$/, '');
+            const res = await fetch(`${apiUrl}/auth/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    name,
+                    full_name: name,
                     email,
                     password,
-                    password_confirmation: passwordConfirmation,
+                    confirm_password: passwordConfirmation,
                 }),
             });
 
@@ -56,8 +57,13 @@ export default function SignupPage() {
             }
 
             if (!res.ok) {
-                // Extract validation errors
-                if (data.details) {
+                // FastAPI returns { detail: "..." } or { detail: [...] }
+                if (typeof data.detail === 'string') {
+                    setError(data.detail);
+                } else if (Array.isArray(data.detail)) {
+                    const messages = data.detail.map((e: any) => e.msg || String(e));
+                    setError(messages.join('. '));
+                } else if (data.details) {
                     const messages = Object.values(data.details).flat();
                     setError((messages as string[]).join(' '));
                 } else {
@@ -68,7 +74,7 @@ export default function SignupPage() {
             }
 
             // Auto sign-in after registration
-            const loginResult = await signIn('credentials', {
+            const loginResult = await signIn('login', {
                 email,
                 password,
                 redirect: false,
@@ -78,7 +84,14 @@ export default function SignupPage() {
                 // Registration succeeded but auto-login failed — redirect to login
                 router.push('/login');
             } else {
-                router.push('/backoffice/home');
+                // Fetch the session to get the user's role/type
+                const session = await getSession();
+                const userType = resolveUserType(session?.user?.role);
+                const targetPage = userType ? getDefaultPage(userType) : '/backoffice/home';
+
+                console.log(`[Signup] Role: ${session?.user?.role} -> UserType: ${userType} -> Target: ${targetPage}`);
+
+                router.push(targetPage);
                 router.refresh();
             }
         } catch (err) {

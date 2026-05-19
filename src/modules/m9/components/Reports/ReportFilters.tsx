@@ -1,6 +1,7 @@
 import React from 'react';
 import { Calendar, Store, Tag, Filter, RotateCcw } from 'lucide-react';
-import { useRouteAccess } from '@/hooks/useRouteAccess';
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
+
 
 interface ReportFiltersProps {
     onFilterChange: (filters: any) => void;
@@ -16,8 +17,8 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
     showStoreFilter = true,
     showChannelFilter = true
 }) => {
-    const { role } = useRouteAccess();
-    const isAdmin = role === 'ADMIN';
+    const { userType, isSuperAdmin } = useRouteAccess();
+    const isAdmin = isSuperAdmin;
 
     return (
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm mb-6">

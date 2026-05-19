@@ -1,7 +1,25 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Tenant, Store, TenantStoreContextType } from '@/types';
+/**
+ * TenantStoreProvider — Legacy Compatibility Shim
+ *
+ * Maps useTenantStore() → useTenant() + useStore() from shared contexts.
+ * Components still importing useTenantStore get the correct data.
+ *
+ * TODO: Migrate consumers to use useTenant()/useStore() directly, then delete this file.
+ */
+
+import React, { createContext, useContext, ReactNode } from 'react';
+import { useTenant } from '@/shared/contexts/TenantContext';
+import { useStore } from '@/shared/contexts/StoreContext';
+
+interface TenantStoreContextType {
+    tenant: { id: string; name: string } | null;
+    store: { id: string; name: string } | null;
+    allStores: Array<{ id: string; name: string }>;
+    setStore: (store: { id: string; name: string }) => void;
+    isLoading: boolean;
+}
 
 const TenantStoreContext = createContext<TenantStoreContextType | undefined>(undefined);
 
@@ -13,76 +31,20 @@ export const useTenantStore = () => {
     return context;
 };
 
-interface TenantStoreProviderProps {
-    children: ReactNode;
-}
+export const TenantStoreProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+    const { tenantId, tenantName, isResolved } = useTenant();
+    const { stores, activeStore, setActiveStore } = useStore();
 
-/**
- * TenantStoreProvider
- * Manages store context (scoping) independently of authentication.
- */
-export const TenantStoreProvider: React.FC<TenantStoreProviderProps> = ({ children }) => {
-    // Mock data for development bootstrapping
-    const [tenant, setTenant] = useState<Tenant | null>({
-        id: 'tenant-demo',
-        name: 'Zyappy Demo',
-        slug: 'zyappy-demo'
-    });
-
-    const [store, setStore] = useState<Store | null>({
-        id: 'store-01',
-        name: 'Flagship Store',
-        code: 'FS-01',
-        tenantId: 'tenant-demo',
-        timezone: 'America/New_York',
-        city: 'New York',
-        province: 'New York',
-        status: 'Active',
-        paymentTerms: 'Net 30',
-        taxProfile: 'Inherit',
-        logoStatus: 'Default'
-    });
-
-    const [allStores] = useState<Store[]>([
-        {
-            id: 'store-01',
-            name: 'Flagship Store',
-            code: 'FS-01',
-            tenantId: 'tenant-demo',
-            timezone: 'America/New_York',
-            city: 'New York',
-            province: 'New York',
-            status: 'Active',
-            paymentTerms: 'Net 30',
-            taxProfile: 'Inherit',
-            logoStatus: 'Default'
-        },
-        {
-            id: 'store-02',
-            name: 'Warehouse Ops',
-            code: 'WH-02',
-            tenantId: 'tenant-demo',
-            timezone: 'America/New_York',
-            city: 'Jersey City',
-            province: 'New Jersey',
-            status: 'Active',
-            paymentTerms: 'Net 15',
-            taxProfile: 'Inherit',
-            logoStatus: 'Default'
-        }
-    ]);
-
-    const [isLoading] = useState(false);
+    const value: TenantStoreContextType = {
+        tenant: tenantId ? { id: tenantId, name: tenantName || '' } : null,
+        store: activeStore ? { id: activeStore.id, name: activeStore.name } : null,
+        allStores: stores.map((s) => ({ id: s.id, name: s.name })),
+        setStore: (s) => setActiveStore({ id: s.id, name: s.name }),
+        isLoading: !isResolved,
+    };
 
     return (
-        <TenantStoreContext.Provider value={{
-            tenant,
-            store,
-            allStores,
-            setTenant,
-            setStore,
-            isLoading
-        }}>
+        <TenantStoreContext.Provider value={value}>
             {children}
         </TenantStoreContext.Provider>
     );

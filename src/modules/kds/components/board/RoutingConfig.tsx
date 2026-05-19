@@ -120,7 +120,7 @@ export const RoutingConfig: React.FC = () => {
 
             {/* Main Content */}
             <div className="flex-1 overflow-hidden flex flex-col p-6 lg:p-8 space-y-8">
-                <KDSPermissionGuard permission="KDS.STATION_CONFIG">
+                <KDSPermissionGuard permission="KDS_STATION_MANAGEMENT">
                     {/* Mode Toggles */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
                         <div className="bg-white p-6 rounded-2xl border border-gray-200 flex items-center justify-between shadow-sm group hover:border-black transition-all">

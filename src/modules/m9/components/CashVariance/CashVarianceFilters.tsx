@@ -1,7 +1,7 @@
 import React from 'react';
 import { Calendar, Store, Filter, RotateCcw } from 'lucide-react';
 import { CashVarianceFilters as Filters } from '../../types/cash-variance';
-import { useRouteAccess } from '@/hooks/useRouteAccess';
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
 
 interface CashVarianceFiltersProps {
     filters: Filters;
@@ -14,8 +14,8 @@ export const CashVarianceFilters: React.FC<CashVarianceFiltersProps> = ({
     onFilterChange,
     onClear
 }) => {
-    const { role } = useRouteAccess();
-    const isAdmin = role === 'ADMIN';
+    const { userType, isSuperAdmin } = useRouteAccess();
+    const isAdmin = isSuperAdmin;
 
     return (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">

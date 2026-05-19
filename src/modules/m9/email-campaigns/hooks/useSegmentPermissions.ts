@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useAuth } from '@/app/providers/AuthProvider';
-import { UserRole } from '@/types';
+import { UserType } from '@/shared/types/auth';
 
 // ============================================================================
 // PERMISSION MAP
@@ -12,20 +12,19 @@ import { UserRole } from '@/types';
  * Roles that have "manage segments" permission (edit, duplicate, toggle status).
  * Derived from the RBAC matrix in the PRD.
  */
-const MANAGE_SEGMENTS_ROLES: UserRole[] = [
-    'PLATFORM_SUPER_ADMIN',
-    'BRAND_ADMIN',
-    'ADMIN',
+const MANAGE_SEGMENTS_TYPES: UserType[] = [
+    UserType.PLATFORM_SUPER_ADMIN,
+    UserType.BRAND_ADMIN,
+    UserType.ADMIN,
 ];
 
 /**
  * Roles that can delete segments.
  * Typically only admin-level roles.
  */
-const DELETE_SEGMENTS_ROLES: UserRole[] = [
-    'PLATFORM_SUPER_ADMIN',
-    'BRAND_ADMIN',
-    'ADMIN',
+const DELETE_SEGMENTS_TYPES: UserType[] = [
+    UserType.PLATFORM_SUPER_ADMIN,
+    UserType.BRAND_ADMIN,
 ];
 
 // ============================================================================
@@ -54,11 +53,11 @@ export interface SegmentPermissions {
  * ```
  */
 export function useSegmentPermissions(): SegmentPermissions {
-    const { role } = useAuth();
+    const { userType } = useAuth();
 
     return useMemo(() => {
-        const canManage = role !== null && MANAGE_SEGMENTS_ROLES.includes(role);
-        const canRemove = role !== null && DELETE_SEGMENTS_ROLES.includes(role);
+        const canManage = userType !== null && MANAGE_SEGMENTS_TYPES.includes(userType);
+        const canRemove = userType !== null && DELETE_SEGMENTS_TYPES.includes(userType);
 
         return {
             canEdit: canManage,
@@ -67,5 +66,5 @@ export function useSegmentPermissions(): SegmentPermissions {
             canDelete: canRemove,
             canCreate: canManage,
         };
-    }, [role]);
+    }, [userType]);
 }

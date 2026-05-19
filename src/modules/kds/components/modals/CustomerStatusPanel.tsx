@@ -259,7 +259,7 @@ export const CustomerStatusPanel: React.FC<Props> = ({
 
                 {/* Delay Adjustment (only for DELAY trigger) */}
                 {selectedTrigger === 'DELAY' && (
-                    <KDSPermissionGuard permission="KDS.DELAY_ORDER">
+                    <KDSPermissionGuard permission="KDS_BUMP_ITEM">
                         <div className="space-y-3">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                 Delay Adjustment (+{DELAY_INCREMENT_MINS} min increments)
@@ -329,7 +329,7 @@ export const CustomerStatusPanel: React.FC<Props> = ({
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                             Message Preview
                         </label>
-                        <KDSPermissionGuard permission="KDS.CUSTOMER_MESSAGE">
+                        <KDSPermissionGuard permission="KDS_ORDER_VIEW">
                             <button
                                 onClick={() => setUseCustomMessage(!useCustomMessage)}
                                 className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-lg transition-all ${useCustomMessage

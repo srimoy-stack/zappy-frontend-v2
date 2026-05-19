@@ -3,20 +3,18 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/providers/AuthProvider';
+import { getDefaultPage } from '@/shared/types/auth';
 
 export default function RootPage() {
-    const { role, isLoading } = useAuth();
+    const { userType, isLoading } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
         if (isLoading) return;
 
-        if (role === 'PLATFORM_SUPER_ADMIN') {
-            router.replace('/platform/brands');
-        } else {
-            router.replace('/backoffice/home');
-        }
-    }, [role, isLoading, router]);
+        const target = userType ? getDefaultPage(userType) : '/backoffice/home';
+        router.replace(target);
+    }, [userType, isLoading, router]);
 
     return (
         <div className="min-h-screen bg-slate-900 flex items-center justify-center">

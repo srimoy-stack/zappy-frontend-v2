@@ -325,7 +325,7 @@ const ContentStep: React.FC<StepProps> = ({ data, onChange, onValidate }) => {
     React.useEffect(() => {
         const fetchPlaceholders = async () => {
             try {
-                const { default: apiClient } = await import('@/api/axios');
+                const { apiClient } = await import('@/shared/api/apiClient');
                 const res = await apiClient.get('/email-campaigns/settings/preview-placeholders');
                 if (res.data && typeof res.data === 'object') {
                     setPlaceholders({ ...DEFAULT_PLACEHOLDERS, ...res.data });
@@ -581,7 +581,7 @@ const ReviewStep: React.FC<StepProps> = ({ data, onValidate }) => {
     React.useEffect(() => {
         const fetchPlaceholders = async () => {
             try {
-                const { default: apiClient } = await import('@/api/axios');
+                const { apiClient } = await import('@/shared/api/apiClient');
                 const res = await apiClient.get('/email-campaigns/settings/preview-placeholders');
                 if (res.data && typeof res.data === 'object') {
                     setPlaceholders({ ...DEFAULT_PLACEHOLDERS, ...res.data });

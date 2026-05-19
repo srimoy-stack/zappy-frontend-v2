@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
-import { useRouteAccess } from '@/hooks/useRouteAccess';
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
 import { useRouter } from 'next/navigation';
+import { UserType } from '@/shared/types/auth';
 ;
 import {
     ProfileSettings,
@@ -19,21 +20,21 @@ import { MoreHorizontal, ShieldCheck } from 'lucide-react';
  * Acts as the Central Configuration Hub.
  */
 export const MorePage: React.FC = () => {
-    const { role, user } = useRouteAccess();
+    const { userType, isSuperAdmin, user } = useRouteAccess();
     const router = useRouter();
 
     // Access Control: Brand Admin Full, Store Manager Store-level, POS/KDS No access
-    if (role === 'POS_USER' || role === 'KDS_USER' || role === 'EMPLOYEE') {
+    if (userType === UserType.POS_USER || userType === UserType.KITCHEN_USER || userType === UserType.CALL_CENTER || userType === UserType.DELIVERY) {
         useEffect(() => { router.replace('/backoffice/home'); }, [router]); return null;
     }
 
-    const isAdmin = role === 'ADMIN';
+    const isAdmin = isSuperAdmin || userType === UserType.BRAND_ADMIN;
 
     const mockProfile: UserProfile = {
         name: user?.name || 'John Doe',
         email: 'admin@zyappy.com',
         phone: '+1 (555) 123-4567',
-        role: role || 'ADMIN',
+        role: userType || 'ADMIN',
         twoFactorEnabled: true
     };
 

@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { ShieldAlert, Loader2, CheckCircle2 } from 'lucide-react';
 import { useImpersonation } from '@/app/providers/ImpersonationProvider';
 import { useAuth } from '@/app/providers/AuthProvider';
+import { UserRole } from '@/shared/types/auth';
 
 // ─── Mock Brand Name Resolver ────────────────────────────────────────────────────
 // In production, resolve this from your API using the brandId from the URL.
@@ -32,7 +33,7 @@ const BRAND_NAMES: Record<string, string> = {
  *   /platform/brands/[brandId]/impersonate
  *
  * On mount it:
- *  1. Validates the current user is PLATFORM_SUPER_ADMIN
+ *  1. Validates the current user is SUPER_ADMIN
  *  2. Creates an impersonation session via ImpersonationProvider
  *  3. Shows a brief confirmation UI
  *  4. Redirects to /backoffice/home
@@ -55,8 +56,8 @@ export default function ImpersonatePage() {
     useEffect(() => {
         if (!brandId) return;
 
-        // Guard: only PLATFORM_SUPER_ADMIN may impersonate
-        if (role !== 'PLATFORM_SUPER_ADMIN') {
+        // Guard: only SUPER_ADMIN may impersonate
+        if (role !== UserRole.SUPER_ADMIN) {
             setPhase('denied');
             return;
         }

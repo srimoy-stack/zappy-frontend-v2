@@ -199,7 +199,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, isOpe
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <KDSPermissionGuard permission="KDS.CUSTOMER_MESSAGE">
+                        <KDSPermissionGuard permission="KDS_ORDER_VIEW">
                             <button
                                 onClick={() => {
                                     setStatusPanelTrigger(undefined);
@@ -237,7 +237,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, isOpe
                                 <MessageSquare size={18} /> Message Guest
                             </button>
                         </KDSPermissionGuard>
-                        <KDSPermissionGuard permission="KDS.PRINT">
+                        <KDSPermissionGuard permission="KDS_ORDER_VIEW">
                             <button
                                 onClick={() => window.print()}
                                 className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-gray-200 rounded-xl font-bold text-xs uppercase hover:border-black transition-all"
@@ -245,7 +245,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, isOpe
                                 <Printer size={18} /> Print Label
                             </button>
                         </KDSPermissionGuard>
-                        <KDSPermissionGuard permission="KDS.DELAY_ORDER">
+                        <KDSPermissionGuard permission="KDS_BUMP_ITEM">
                             <button
                                 onClick={() => setIsDelayModalOpen(true)}
                                 className="flex items-center gap-2 px-6 py-3 bg-amber-50 text-amber-600 border-2 border-amber-100 rounded-xl font-bold text-xs uppercase hover:bg-amber-600 hover:text-white transition-all"
@@ -253,7 +253,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, isOpe
                                 <Clock size={18} /> Delay
                             </button>
                         </KDSPermissionGuard>
-                        <KDSPermissionGuard permission="KDS.CANCEL_ORDER">
+                        <KDSPermissionGuard permission="KDS_BUMP_ITEM">
                             <button
                                 onClick={handleCancel}
                                 className="flex items-center gap-2 px-6 py-3 bg-red-50 text-red-600 border-2 border-red-100 rounded-xl font-bold text-xs uppercase hover:bg-red-600 hover:text-white transition-all"
@@ -424,7 +424,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, isOpe
                                         </div>
                                     </div>
 
-                                    <KDSPermissionGuard permission="KDS.STAGE_UPDATE">
+                                    <KDSPermissionGuard permission="KDS_BUMP_ITEM">
                                         <div className="mt-6 pt-6 border-t border-gray-50">
                                             <h4 className="text-[10px] font-bold text-gray-400 uppercase mb-3">Manual Stage Override</h4>
                                             <div className="grid grid-cols-2 gap-2">
@@ -445,7 +445,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, isOpe
                                 </div>
 
                                 <div className="pt-8 border-t border-gray-100">
-                                    <KDSPermissionGuard permission="KDS.STAGE_UPDATE">
+                                    <KDSPermissionGuard permission="KDS_MARK_READY">
                                         <button
                                             onClick={() => {
                                                 if (order.stage === 'NEW') {

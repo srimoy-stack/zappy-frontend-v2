@@ -1,55 +1,71 @@
+import { UserType } from '@/shared/types/auth';
 import { Employee, Shift } from '../types/employees';
 
 export const MOCK_EMPLOYEES: Employee[] = [
     {
         id: '1',
         name: 'John Admin',
+        fullName: 'John Admin',
         email: 'john.admin@zyappy.com',
-        role: 'ADMIN',
-        stores: ['All Stores'],
-        status: 'ACTIVE',
+        userType: UserType.PLATFORM_SUPER_ADMIN,
+        role: { id: 'sa', name: 'Super Admin', permissions: ['*'], isSystem: true },
+        storeIds: [],
+        tenantId: 'tenant-1',
+        status: 'Active',
         lastLogin: '2024-03-20T10:00:00Z',
-        type: 'BACKEND_USER',
+        createdAt: '2024-01-01T00:00:00Z'
     },
     {
         id: '2',
         name: 'Jane Manager',
+        fullName: 'Jane Manager',
         email: 'jane.manager@zyappy.com',
-        role: 'STORE_MANAGER',
-        stores: ['Main Street Store', 'Downtown Store'],
-        status: 'ACTIVE',
+        userType: UserType.BRAND_ADMIN,
+        role: { id: 'ba', name: 'Brand Admin', permissions: ['*'], isSystem: true },
+        storeIds: ['store-1', 'store-2'],
+        tenantId: 'tenant-1',
+        status: 'Active',
         lastLogin: '2024-03-20T09:30:00Z',
-        type: 'BACKEND_USER',
+        createdAt: '2024-01-01T00:00:00Z'
     },
     {
         id: '3',
         name: 'Alice Cashier',
+        fullName: 'Alice Cashier',
         email: 'alice.cashier@zyappy.com',
-        role: 'EMPLOYEE',
-        stores: ['Main Street Store'],
-        status: 'ACTIVE',
+        userType: UserType.POS_USER,
+        role: { id: 'pos', name: 'POS User', permissions: ['pos.*'], isSystem: false },
+        storeIds: ['store-1'],
+        tenantId: 'tenant-1',
+        status: 'Active',
         lastLogin: '2024-03-20T08:00:00Z',
-        type: 'POS_USER',
+        createdAt: '2024-01-01T00:00:00Z'
     },
     {
         id: '6',
         name: 'Diana Host',
+        fullName: 'Diana Host',
         email: 'diana.host@zyappy.com',
-        role: 'EMPLOYEE',
-        stores: ['Main Street Store'],
-        status: 'ACTIVE',
+        userType: UserType.POS_USER,
+        role: { id: 'pos', name: 'POS User', permissions: ['pos.*'], isSystem: false },
+        storeIds: ['store-1'],
+        tenantId: 'tenant-1',
+        status: 'Active',
         lastLogin: '2024-03-20T14:00:00Z',
-        type: 'POS_USER',
+        createdAt: '2024-01-01T00:00:00Z'
     },
     {
         id: '7',
         name: 'Edward Manager',
+        fullName: 'Edward Manager',
         email: 'edward@zyappy.com',
-        role: 'STORE_MANAGER',
-        stores: ['Downtown Store'],
-        status: 'INACTIVE',
+        userType: UserType.MANAGER,
+        role: { id: 'sm', name: 'Store Manager', permissions: ['store.*'], isSystem: false },
+        storeIds: ['store-2'],
+        tenantId: 'tenant-1',
+        status: 'Inactive',
         lastLogin: '2024-03-19T11:00:00Z',
-        type: 'BACKEND_USER',
+        createdAt: '2024-01-01T00:00:00Z'
     }
 ];
 

@@ -17,8 +17,14 @@ import {
     Plus
 } from 'lucide-react';
 
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
+import { UserType } from '@/shared/types/auth';
+
 export const CustomersPage: React.FC = () => {
     const router = useRouter();
+    const { userType, isSuperAdmin } = useRouteAccess();
+
+    const canAdd = isSuperAdmin || userType === UserType.BRAND_ADMIN || userType === UserType.ADMIN || userType === UserType.MANAGER;
 
     // -- State --
     const [data, setData] = useState<Customer[]>([]);
@@ -188,13 +194,15 @@ export const CustomersPage: React.FC = () => {
 
                             {/* Right: Action Buttons */}
                             <div className="flex flex-wrap items-center gap-2">
-                                <button
-                                    onClick={() => setShowAddModal(true)}
-                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-all shadow-sm active:scale-95"
-                                >
-                                    <Plus className="w-4 h-4 text-white" />
-                                    Add Customer
-                                </button>
+                                {canAdd && (
+                                    <button
+                                        onClick={() => setShowAddModal(true)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-all shadow-sm active:scale-95"
+                                    >
+                                        <Plus className="w-4 h-4 text-white" />
+                                        Add Customer
+                                    </button>
+                                )}
 
                                 <button
                                     onClick={() => setShowFilters(!showFilters)}

@@ -1,0 +1,10 @@
+[
+    { "id": "tm-1", "moduleId": "pos", "name": "Point of Sale", "purchased": true, "enabled": true, "startDate": "2025-01-01", "isCore": true },
+    { "id": "tm-2", "moduleId": "inventory", "name": "Inventory Management", "purchased": true, "enabled": true, "startDate": "2025-01-01" },
+    { "id": "tm-3", "moduleId": "kds", "name": "Kitchen Display", "purchased": true, "enabled": true, "startDate": "2025-03-01" },
+    { "id": "tm-4", "moduleId": "kiosk", "name": "Self-Service Kiosk", "purchased": true, "enabled": false, "startDate": null },
+    { "id": "tm-5", "moduleId": "email-campaigns", "name": "Email Campaigns", "purchased": true, "enabled": true, "startDate": "2025-06-01" },
+    { "id": "tm-6", "moduleId": "ai-call-analytics", "name": "AI Call Analytics", "purchased": true, "enabled": true, "startDate": "2025-09-01" },
+    { "id": "tm-7", "moduleId": "analytics", "name": "Advanced Analytics", "purchased": false, "enabled": false, "startDate": null },
+    { "id": "tm-8", "moduleId": "messaging", "name": "Messaging", "purchased": true, "enabled": true, "startDate": "2025-04-01" }
+]

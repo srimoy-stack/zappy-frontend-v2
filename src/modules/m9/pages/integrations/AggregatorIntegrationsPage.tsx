@@ -14,7 +14,8 @@ import {
     LayoutGrid,
     ChevronRight
 } from 'lucide-react';
-import { useRouteAccess } from '@/hooks/useRouteAccess';
+import { UserType } from '@/shared/types/auth';
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
 import {
     StoreIntegration,
     PlacementRule,
@@ -29,15 +30,15 @@ import { integrationsService } from '../../services/integrationsService';
  * M9-T12: Configure Uber Eats / DoorDash integrations per store.
  */
 export const AggregatorIntegrationsPage: React.FC = () => {
-    const { role } = useRouteAccess();
+    const { userType, isSuperAdmin } = useRouteAccess();
     const [integrations, setIntegrations] = useState<StoreIntegration[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
     // Permissions: ADMIN/STORE_MANAGER can edit, others read-only
-    const canEdit = role === 'ADMIN' || role === 'STORE_MANAGER' || role === 'BRAND_ADMIN' || role === 'PLATFORM_SUPER_ADMIN';
-    const isReadOnly = role === 'EMPLOYEE';
+    const canEdit = isSuperAdmin || userType === UserType.BRAND_ADMIN || userType === UserType.ADMIN || userType === UserType.MANAGER;
+    const isReadOnly = userType === UserType.POS_USER || userType === UserType.KITCHEN_USER;
 
     useEffect(() => {
         loadIntegrations();
