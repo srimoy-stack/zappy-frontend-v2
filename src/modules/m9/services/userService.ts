@@ -19,8 +19,8 @@ function mapToModuleUser(u: SharedUser): User {
         fullName: u.fullName || u.name,
         email: u.email,
         type: u.userType as any, // Legacy type mapping
-        roleId: u.roleId,
-        roleName: u.roleName,
+        roleId: u.role.id,
+        roleName: u.role.name,
         assignedStores: u.storeIds,
         status: u.status === 'Active' ? 'Active' : 'Disabled',
         createdAt: u.createdAt,
@@ -54,6 +54,7 @@ export const userService = {
             userType: data.type as any,
             roleId: data.roleId,
             assignedStoreIds: data.assignedStores,
+            tenantId: data.tenantId,
         });
         return mapToModuleUser(sharedUser);
     },

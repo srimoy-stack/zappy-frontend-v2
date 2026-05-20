@@ -40,7 +40,7 @@ import {
 
 export const BusinessOperationsPage: React.FC = () => {
     const router = useRouter();
-    const { userType, isSuperAdmin } = useAuth();
+    const { userType, isSuperAdmin, tenantId } = useAuth();
     const [settings, setSettings] = useState<BusinessOperationsSettings | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState<string | null>(null);
@@ -56,7 +56,7 @@ export const BusinessOperationsPage: React.FC = () => {
     const loadSettings = async () => {
         setLoading(true);
         try {
-            const data = await businessOperationsService.getSettings();
+            const data = await businessOperationsService.getSettings(tenantId);
             setSettings(data);
         } catch (error) {
             console.error(error);
@@ -132,7 +132,7 @@ export const BusinessOperationsPage: React.FC = () => {
                 <LocationsSection
                     locations={settings.locations}
                     canEdit={canEdit}
-                    onSave={(data) => handleSave('Locations', () => businessOperationsService.updateLocations(data))}
+                    onSave={(data) => handleSave('Locations', () => businessOperationsService.updateLocations(tenantId, data))}
                     isSaving={saving === 'Locations'}
                 />
 
@@ -549,6 +549,13 @@ const LocationsSection = ({ locations, canEdit, onSave, isSaving }: { locations:
     const [list, setList] = useState(locations);
     const [expandedLoc, setExpandedLoc] = useState<string | null>(list[0]?.id || null);
 
+    useEffect(() => {
+        setList(locations);
+        if (locations.length > 0 && !expandedLoc) {
+            setExpandedLoc(locations[0]?.id || null);
+        }
+    }, [locations]);
+
     const updateLoc = (id: string, field: keyof BusinessLocation, value: any) => {
         setList(list.map(l => l.id === id ? { ...l, [field]: value } : l));
     };
@@ -563,9 +570,52 @@ const LocationsSection = ({ locations, canEdit, onSave, isSaving }: { locations:
         }));
     };
 
+    const addNewLocation = () => {
+        const newLoc: BusinessLocation = {
+            id: `loc_${Date.now()}`,
+            name: 'New Location',
+            address: '123 Main St, City',
+            status: 'Active',
+            timezone: 'America/New_York',
+            timings: {
+                pos: Array(7).fill(null).map((_, i) => ({
+                    day: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][i] as any,
+                    openTime: '09:00',
+                    closeTime: '22:00',
+                    isOpen: true
+                })),
+                online: Array(7).fill(null).map((_, i) => ({
+                    day: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][i] as any,
+                    openTime: '10:00',
+                    closeTime: '21:00',
+                    isOpen: true
+                })),
+                kiosk: Array(7).fill(null).map((_, i) => ({
+                    day: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][i] as any,
+                    openTime: '09:00',
+                    closeTime: '22:00',
+                    isOpen: true
+                }))
+            }
+        };
+        setList([...list, newLoc]);
+        setExpandedLoc(newLoc.id);
+    };
+
     return (
         <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm transition-all hover:shadow-md">
-            <SectionHeader title="Locations (Operational Configuration)" icon={MapPin} colorClass="text-rose-700" />
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+                <SectionHeader title="Locations (Operational Configuration)" icon={MapPin} colorClass="text-rose-700" />
+                {canEdit && (
+                    <button
+                        onClick={addNewLocation}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-bold transition-all shadow-sm hover:scale-[1.02] active:scale-95"
+                    >
+                        <Plus size={14} strokeWidth={3} />
+                        Add New Location
+                    </button>
+                )}
+            </div>
 
             <div className="space-y-6">
                 {list.map(loc => (

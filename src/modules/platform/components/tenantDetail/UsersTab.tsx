@@ -1,23 +1,26 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
-    Users, Plus, Search, UserCircle, Mail, Shield, Store,
-    Ban, RefreshCw, Send, X, CheckCircle2, AlertTriangle
+    Users, Plus, Search, UserCircle, Mail, Shield, Store, Phone,
+    Ban, RefreshCw, Send, X, CheckCircle2, AlertTriangle, Loader2, Filter,
 } from 'lucide-react';
 import { TENANT_USER_TYPES, UserType } from '@/shared/types/auth';
+import { apiClient } from '@/shared/api/apiClient';
 
 interface TenantUser {
     id: string;
     name: string;
     email: string;
+    phone?: string;
     userType: UserType;
     role: string;
-    status: 'Active' | 'Inactive';
+    status: 'Active' | 'Inactive' | 'Pending';
     storeAccess: string;
     storeIds: string[];
     lastLogin?: string;
     createdAt: string;
+    inviteStatus?: 'pending' | 'accepted' | 'expired';
 }
 
 const TENANT_USER_LABELS: Record<string, string> = {
@@ -48,45 +51,85 @@ interface UsersTabProps {
 export function UsersTab({ tenantId, users: initialUsers, stores }: UsersTabProps) {
     const [users, setUsers] = useState(initialUsers);
     const [searchQuery, setSearchQuery] = useState('');
+    const [storeFilter, setStoreFilter] = useState<string>('all');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [actionLoading, setActionLoading] = useState<string | null>(null);
 
     // Create form
     const [newName, setNewName] = useState('');
     const [newEmail, setNewEmail] = useState('');
+    const [newPhone, setNewPhone] = useState('');
     const [newType, setNewType] = useState<UserType>(UserType.MANAGER);
     const [newStoreIds, setNewStoreIds] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const filtered = users.filter(u =>
-        u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filtered = useMemo(() => {
+        let result = users;
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            result = result.filter(u =>
+                u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+            );
+        }
+        if (storeFilter !== 'all') {
+            result = result.filter(u => u.storeIds.includes(storeFilter) || u.storeIds.length === 0);
+        }
+        return result;
+    }, [users, searchQuery, storeFilter]);
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            // TODO: API call — POST /tenants/{tenantId}/users
+            // API call — POST /tenants/{tenantId}/users
+            const { data: response } = await apiClient.post(`/tenants/${tenantId}/users`, {
+                fullName: newName.trim(),
+                email: newEmail.trim().toLowerCase(),
+                phone: newPhone.trim() || undefined,
+                userType: newType,
+                assignedStoreIds: newStoreIds,
+                inviteMethod: 'email',
+            });
             const newUser: TenantUser = {
-                id: `u-${Date.now()}`,
+                id: String(response.user?.id || response.id || `u-${Date.now()}`),
                 name: newName,
                 email: newEmail,
+                phone: newPhone || undefined,
                 userType: newType,
                 role: TENANT_USER_LABELS[newType] || newType,
-                status: 'Active',
+                status: 'Pending',
                 storeAccess: newStoreIds.length ? stores.filter(s => newStoreIds.includes(s.id)).map(s => s.name).join(', ') : 'All Locations',
                 storeIds: newStoreIds,
                 createdAt: new Date().toISOString(),
+                inviteStatus: 'pending',
             };
             setUsers(prev => [...prev, newUser]);
             setIsAddModalOpen(false);
-            setNewName('');
-            setNewEmail('');
-            setNewType(UserType.MANAGER);
-            setNewStoreIds([]);
+            setNewName(''); setNewEmail(''); setNewPhone('');
+            setNewType(UserType.MANAGER); setNewStoreIds([]);
+        } catch (err: any) {
+            alert(err?.response?.data?.detail || err?.message || 'Failed to create user');
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    const handleSuspendUser = async (userId: string) => {
+        setActionLoading(userId);
+        try {
+            await apiClient.patch(`/tenants/${tenantId}/users/${userId}`, { status: 'inactive' });
+            setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: 'Inactive' as const } : u));
+        } catch { alert('Failed to suspend user'); }
+        finally { setActionLoading(null); }
+    };
+
+    const handleReactivateUser = async (userId: string) => {
+        setActionLoading(userId);
+        try {
+            await apiClient.patch(`/tenants/${tenantId}/users/${userId}`, { status: 'active' });
+            setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: 'Active' as const } : u));
+        } catch { alert('Failed to reactivate user'); }
+        finally { setActionLoading(null); }
     };
 
     return (
@@ -118,16 +161,22 @@ export function UsersTab({ tenantId, users: initialUsers, stores }: UsersTabProp
                 </p>
             </div>
 
-            {/* Search */}
-            <div className="relative max-w-md">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                <input
-                    type="text"
-                    placeholder="Search users..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-11 pr-6 py-3 bg-slate-50 border-2 border-slate-50 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:border-slate-900 outline-none transition-all"
-                />
+            {/* Search + Store Filter */}
+            <div className="flex items-center gap-3">
+                <div className="relative max-w-md flex-1">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <input type="text" placeholder="Search users..." value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-11 pr-6 py-3 bg-slate-50 border-2 border-slate-50 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:border-slate-900 outline-none transition-all" />
+                </div>
+                <div className="relative">
+                    <select value={storeFilter} onChange={e => setStoreFilter(e.target.value)}
+                        className="pl-3 pr-8 py-3 bg-slate-50 border-2 border-slate-50 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:border-slate-900 outline-none transition-all appearance-none min-w-[160px]">
+                        <option value="all">All Stores</option>
+                        {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                    <Filter className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                </div>
             </div>
 
             {/* Table */}
@@ -182,12 +231,16 @@ export function UsersTab({ tenantId, users: initialUsers, stores }: UsersTabProp
                                             <button title="Resend Invite" className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
                                                 <Send size={14} />
                                             </button>
-                                            {user.status === 'Active' ? (
-                                                <button title="Suspend" className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all">
+                                            {actionLoading === user.id ? (
+                                                <Loader2 size={14} className="animate-spin text-slate-400 ml-1" />
+                                            ) : user.status === 'Active' ? (
+                                                <button title="Suspend" onClick={() => handleSuspendUser(user.id)}
+                                                    className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all">
                                                     <Ban size={14} />
                                                 </button>
                                             ) : (
-                                                <button title="Reactivate" className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all">
+                                                <button title="Reactivate" onClick={() => handleReactivateUser(user.id)}
+                                                    className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all">
                                                     <RefreshCw size={14} />
                                                 </button>
                                             )}
@@ -225,7 +278,12 @@ export function UsersTab({ tenantId, users: initialUsers, stores }: UsersTabProp
                                     className="w-full px-5 py-3.5 bg-slate-50 border-2 border-slate-50 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:border-slate-900 outline-none transition-all" />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">User Type</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Phone</label>
+                                <input type="tel" value={newPhone} onChange={e => setNewPhone(e.target.value)} placeholder="+1 (416) 555-0100"
+                                    className="w-full px-5 py-3.5 bg-slate-50 border-2 border-slate-50 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:border-slate-900 outline-none transition-all" />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">User Type / Role</label>
                                 <select required value={newType} onChange={e => setNewType(e.target.value as UserType)}
                                     className="w-full px-5 py-3.5 bg-slate-50 border-2 border-slate-50 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:border-slate-900 outline-none transition-all appearance-none">
                                     {ALLOWED_TENANT_TYPES.map(t => (

@@ -5,8 +5,8 @@
  * Do NOT define user types in module-local files.
  */
 
-// ─── Role type is canonical — re-exported from auth.ts ──────────────────────
-export { UserRole, UserType } from './auth';
+import { UserRole, UserType } from './auth';
+export { UserRole, UserType };
 
 /**
  * Raw backend role strings before normalization via resolveUserType().
@@ -52,6 +52,7 @@ export interface CreateUserDTO {
     roleId: string;
     assignedStoreIds: string[];
     inviteMethod?: 'email' | 'sms' | 'manual';
+    tenantId?: string;
 }
 
 /** DTO for updating a user via PATCH /users/:id */

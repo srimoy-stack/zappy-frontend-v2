@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Check, ChevronRight, Loader2, Rocket, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useOnboardingFlow } from '../hooks/useOnboardingFlow';
 import { STEP_CONFIG } from '../types/onboarding.types';
@@ -29,7 +29,21 @@ import { ReviewStep } from '../components/ReviewStep';
 
 export function OnboardingPage() {
     const router = useRouter();
-    const flow = useOnboardingFlow();
+    const searchParams = useSearchParams();
+    const resumeId = searchParams.get('resume');
+    const flow = useOnboardingFlow(resumeId);
+
+    // Show loading while resuming a draft tenant
+    if (flow.resumeLoading) {
+        return (
+            <div className="min-h-screen bg-slate-50/50 flex items-center justify-center p-6">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 border-4 border-slate-100 border-t-slate-900 rounded-full animate-spin" />
+                    <span className="text-sm font-black text-slate-500">Loading draft tenant data...</span>
+                </div>
+            </div>
+        );
+    }
 
     // Active step config for progress bar
     const activeStepConfig = STEP_CONFIG.filter(s => flow.activeSteps.includes(s.id));

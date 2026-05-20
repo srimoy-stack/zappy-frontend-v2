@@ -9,6 +9,7 @@ import {
     ModuleSettings,
     BusinessLocation
 } from '../types/business-operations';
+import { api } from '@/shared/api';
 
 const INITIAL_DATA: BusinessOperationsSettings = {
     businessInfo: {
@@ -114,9 +115,46 @@ let store = { ...INITIAL_DATA };
 let auditLogs: any[] = [];
 
 export const businessOperationsService = {
-    getSettings: async (): Promise<BusinessOperationsSettings> => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        return { ...store };
+    getSettings: async (tenantId?: string | null): Promise<BusinessOperationsSettings> => {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        let locations: BusinessLocation[] = [];
+        if (tenantId) {
+            try {
+                const stores = await api.getStores(tenantId);
+                locations = stores.map((s) => ({
+                    id: s.id,
+                    name: s.name,
+                    address: s.address || `${s.city}, ${s.province}`,
+                    status: s.status === 'Active' ? 'Active' : 'Inactive',
+                    timezone: s.timezone,
+                    timings: {
+                        pos: Array(7).fill(null).map((_, i) => ({
+                            day: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][i] as any,
+                            openTime: '09:00',
+                            closeTime: '22:00',
+                            isOpen: true
+                        })),
+                        online: Array(7).fill(null).map((_, i) => ({
+                            day: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][i] as any,
+                            openTime: '10:00',
+                            closeTime: '21:00',
+                            isOpen: true
+                        })),
+                        kiosk: Array(7).fill(null).map((_, i) => ({
+                            day: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][i] as any,
+                            openTime: '09:00',
+                            closeTime: '22:00',
+                            isOpen: true
+                        }))
+                    }
+                }));
+            } catch (err) {
+                console.error('Failed to load stores from API:', err);
+            }
+        } else {
+            locations = store.locations;
+        }
+        return { ...store, locations };
     },
 
     updateBusinessInfo: async (data: BusinessInfo) => {
@@ -161,9 +199,39 @@ export const businessOperationsService = {
         return { ...store.modules };
     },
 
-    updateLocations: async (data: BusinessLocation[]) => {
+    updateLocations: async (tenantId: string | null, data: BusinessLocation[]) => {
         store.locations = data;
         logAudit('Location Configuration Updated', data);
+
+        if (tenantId) {
+            try {
+                const existingStores = await api.getStores(tenantId);
+                for (const loc of data) {
+                    const existing = existingStores.find(s => s.id === loc.id);
+                    const statusStr = loc.status === 'Active' ? 'Active' : 'Inactive';
+                    if (existing) {
+                        await api.updateStore(tenantId, loc.id, {
+                            name: loc.name,
+                            address: loc.address,
+                            timezone: loc.timezone,
+                            status: statusStr,
+                        } as any);
+                    } else {
+                        await api.createStore(tenantId, {
+                            name: loc.name,
+                            code: loc.name.toUpperCase().replace(/[^A-Z0-9]/g, '_').slice(0, 10) + `_${Date.now().toString().slice(-4)}`,
+                            address: loc.address,
+                            city: 'Default City',
+                            province: 'Default Province',
+                            timezone: loc.timezone === 'System Default' ? 'America/New_York' : loc.timezone,
+                            status: statusStr,
+                        } as any);
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to sync stores with API:', err);
+            }
+        }
         return [...store.locations];
     },
 

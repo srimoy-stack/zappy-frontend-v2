@@ -6,7 +6,7 @@
  */
 
 import { MeResponse, PaginatedResponse } from '@/shared/types/api';
-import { User, CreateUserDTO } from '@/shared/types/user';
+import { User, CreateUserDTO, UpdateUserDTO } from '@/shared/types/user';
 import { Brand, CreateTenantDTO } from '@/shared/types/tenant';
 import { Store, CreateStoreDTO } from '@/shared/types/store';
 import { Role, CreateRoleDTO } from '@/shared/types/role';
@@ -37,7 +37,7 @@ export interface ApiAdapter {
     getUsers(params?: { page?: number; pageSize?: number; userType?: UserType; roleId?: string; status?: string }): Promise<PaginatedResponse<User>>;
     getUser(id: string): Promise<User>;
     createUser(data: CreateUserDTO): Promise<User>;
-    updateUser(id: string, data: Partial<CreateUserDTO>): Promise<User>;
+    updateUser(id: string, data: UpdateUserDTO): Promise<User>;
     deleteUser(id: string): Promise<void>;
 
     // ─── Roles ───────────────────────────────────────────

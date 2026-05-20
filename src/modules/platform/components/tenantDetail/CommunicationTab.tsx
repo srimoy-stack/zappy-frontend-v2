@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { MessageSquare, Mail, Smartphone, CheckCircle2, AlertTriangle, Save, Globe } from 'lucide-react';
 import type { BrandCommunicationConfig } from '@/shared/types/tenant';
+import { apiClient } from '@/shared/api/apiClient';
 
 interface CommunicationTabProps {
     tenantId: string;
@@ -20,15 +21,31 @@ export function CommunicationTab({ tenantId, config }: CommunicationTabProps) {
     const [smsSenderId, setSmsSenderId] = useState(config?.sms?.senderId || '');
     const [isDirty, setIsDirty] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(false);
 
-    const markDirty = () => setIsDirty(true);
+    const markDirty = () => { setIsDirty(true); setSaveSuccess(false); };
 
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            // TODO: API call — PUT /tenants/{tenantId}/config/communication
-            await new Promise(r => setTimeout(r, 1000));
+            await apiClient.patch(`/tenants/${tenantId}`, {
+                settings: {
+                    email: emailProvider !== 'inherit' ? {
+                        provider: emailProvider,
+                        senderEmail: emailSender,
+                        senderName: emailSenderName,
+                    } : { provider: 'inherit' },
+                    sms: smsProvider !== 'inherit' ? {
+                        provider: smsProvider,
+                        senderId: smsSenderId,
+                    } : { provider: 'inherit' },
+                },
+            });
             setIsDirty(false);
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 3000);
+        } catch (err: any) {
+            alert(err?.response?.data?.detail || 'Failed to save communication config');
         } finally {
             setIsSaving(false);
         }
@@ -46,11 +63,20 @@ export function CommunicationTab({ tenantId, config }: CommunicationTabProps) {
                         Email & SMS provider settings — inherit from platform defaults or configure custom
                     </p>
                 </div>
-                {isDirty && (
-                    <button onClick={handleSave} disabled={isSaving}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black hover:bg-slate-800 transition-all disabled:opacity-50">
-                        <Save size={14} /> {isSaving ? 'Saving...' : 'Save Changes'}
-                    </button>
+                {(isDirty || saveSuccess) && (
+                    <div className="flex items-center gap-3">
+                        {saveSuccess && (
+                            <span className="flex items-center gap-1.5 text-xs font-black text-emerald-600 animate-in fade-in slide-in-from-right-2 duration-300">
+                                <CheckCircle2 size={14} /> Saved
+                            </span>
+                        )}
+                        {isDirty && (
+                            <button onClick={handleSave} disabled={isSaving}
+                                className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black hover:bg-slate-800 transition-all disabled:opacity-50">
+                                <Save size={14} /> {isSaving ? 'Saving...' : 'Save Changes'}
+                            </button>
+                        )}
+                    </div>
                 )}
             </div>
 

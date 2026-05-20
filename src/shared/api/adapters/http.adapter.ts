@@ -135,6 +135,7 @@ export const httpAdapter: ApiAdapter = {
         if (dto.city) payload.city = dto.city;
         if (dto.province) payload.province = dto.province;
         if (dto.postalCode) payload.postal_code = dto.postalCode;
+        if (dto.status !== undefined) payload.is_active = dto.status === 'Active';
         const { data } = await apiClient.patch(`/pos/stores/${storeId}`, payload);
         return normalizeStore(data);
     },

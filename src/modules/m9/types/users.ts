@@ -7,9 +7,33 @@
  * Migration: Replace all imports from this file with '@/shared/types'.
  */
 
+import { UserType } from '@/shared/types/user';
+
 // ─── Re-exports from shared canonical types ──────────────────────────────────
-export type { UserType, UserStatus, User, CreateUserDTO } from '@/shared/types/user';
+export { UserType };
+export type { UserStatus } from '@/shared/types/user';
 export type { Role, Permission, PermissionCategory, CreateRoleDTO } from '@/shared/types/role';
+
+export interface CreateUserDTO {
+    fullName: string;
+    email: string;
+    type: UserType;
+    roleId: string;
+    assignedStores: string[];
+    tenantId?: string;
+}
+
+export interface User {
+    id: string;
+    fullName: string;
+    email: string;
+    type: UserType;
+    roleId: string;
+    roleName?: string;
+    assignedStores: string[];
+    status: 'Active' | 'Disabled';
+    createdAt: string;
+}
 
 // ─── Legacy-only types (no shared equivalent yet) ────────────────────────────
 export interface AuditLog {

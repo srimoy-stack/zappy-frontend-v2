@@ -1,0 +1,112 @@
+GET /api/v1/platform/dashboard-stats?range=30d
+Query Parameters:
+
+Param	Type	Required	Values	Default
+range	string	No	7d, 30d, 90d, all	30d
+Headers (auto-injected by apiClient):
+
+Authorization: Bearer {token}
+No request body — it's a GET.
+
+Expected Response
+jsonc
+// 200 OK
+{
+  // ── Core KPIs ──────────────────────────────────────────
+  "range": "30d",
+  "totalTenants": 24,
+  "active": 18,
+  "draft": 3,
+  "suspended": 1,
+  "provisioned": 1,
+  "configuring": 1,
+  "newTenants": 4,              // new tenants within the selected range
+  "totalUsers": 156,            // all users across all tenants
+  "platformUsers": 5,           // platform-level admins only
+  "newUsers": 12,               // new users within the selected range
+  "activeModules": 8,           // distinct modules enabled across all tenants
+  // ── Module Adoption ────────────────────────────────────
+  "moduleAdoption": [
+    { "module": "pos",              "tenants": 24, "pct": 100 },
+    { "module": "inventory",        "tenants": 18, "pct": 75 },
+    { "module": "email-campaigns",  "tenants": 10, "pct": 42 },
+    { "module": "ai-call-analytics","tenants": 6,  "pct": 25 },
+    { "module": "crm",             "tenants": 4,  "pct": 17 }
+  ],
+  // ── Email Campaign Usage (aggregated across all tenants) ─
+  "campaignUsage": {
+    "totalCampaigns": 87,
+    "sent": 62,
+    "scheduled": 15,
+    "draft": 10,
+    "totalEmailsSent": 45200,
+    "totalOpened": 28900,
+    "totalClicked": 8700,
+    "tenantsUsingCampaigns": 10   // tenants with ≥1 campaign
+  },
+  // ── AI Call Analytics Usage (aggregated across all tenants)
+  "callUsage": {
+    "totalCalls": 1240,
+    "totalMinutes": 3680,
+    "avgDurationSeconds": 178,
+    "totalCost": 245.50,
+    "inbound": 720,
+    "outbound": 480,
+    "webCall": 40,
+    "tenantsUsingCalls": 6        // tenants with ≥1 call
+  },
+  // ── Growth Trend (data points within the range) ────────
+  "growthTrend": [
+    { "date": "May 1",  "count": 1 },
+    { "date": "May 5",  "count": 3 },
+    { "date": "May 10", "count": 0 },
+    { "date": "May 15", "count": 2 },
+    { "date": "May 20", "count": 1 }
+  ],
+  // ── Top Tenants (by user count, top 5-10) ──────────────
+  "topTenants": [
+    {
+      "id": "1",
+      "name": "Acme Pizza Co.",
+      "slug": "acme-pizza",
+      "status": "active",        // lowercase from backend
+      "usersCount": 42,
+      "created": "2025-06-15"
+    },
+    {
+      "id": "2",
+      "name": "QuickBite Foods",
+      "slug": "quickbite",
+      "status": "active",
+      "usersCount": 28,
+      "created": "2025-08-22"
+    }
+  ],
+  // ── Recent Activity (latest 10-20 audit events) ────────
+  "recentActivity": [
+    {
+      "id": "evt-001",
+      "event": "Tenant Created",
+      "detail": "Maple Leaf Burgers registered via onboarding wizard",
+      "time": "2 mins ago",       // human-readable relative time
+      "type": "success"           // "success" | "warning" | "info"
+    },
+    {
+      "id": "evt-002",
+      "event": "Module Suspended",
+      "detail": "AI Call Analytics disabled for QuickBite Foods",
+      "time": "1 hour ago",
+      "type": "warning"
+    }
+  ],
+  // ── Recent Tenants (latest 5 onboarded) ────────────────
+  "recentTenants": [
+    {
+      "id": "3",
+      "name": "Maple Leaf Burgers",
+      "slug": "maple-leaf",
+      "status": "configuring",
+      "created": "2026-05-19"
+    }
+  ]
+}

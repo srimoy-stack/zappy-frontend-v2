@@ -94,8 +94,8 @@ const MOCK_MODULES: ModuleEntitlement[] = [
     { id: 'pos', name: 'Point of Sale', purchased: true, enabled: true, startDate: '2025-06-15', notes: 'Core system module.', isCore: true },
     { id: 'inventory', name: 'Inventory', purchased: true, enabled: true, startDate: '2025-06-15', notes: 'Warehouse and recipe tracking.', isCore: false },
     { id: 'kiosk', name: 'Kiosk', purchased: true, enabled: true, startDate: '2025-07-01', notes: 'Self-service ordering.', isCore: false },
-    { id: 'loyalty', name: 'Loyalty', purchased: true, enabled: false, startDate: '2025-08-10', notes: 'Points and rewards system.', isCore: false },
-    { id: 'analytics', name: 'Analytics', purchased: false, enabled: false, startDate: null, notes: 'Contract pending review.', isCore: false },
+    { id: 'loyalty', name: 'Loyalty', purchased: true, enabled: true, startDate: '2025-08-10', notes: 'Points and rewards system.', isCore: false },
+    { id: 'analytics', name: 'Analytics', purchased: true, enabled: true, startDate: '2025-08-12', notes: 'Contract active.', isCore: false },
 ];
 
 const MOCK_STORES: StoreType[] = [

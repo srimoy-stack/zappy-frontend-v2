@@ -36,15 +36,8 @@ export function ModuleStep({ selectedPaths, onUpdatePaths }: ModuleStepProps) {
     );
 
     // Modules not in Phase 1 → "Coming Soon" (visible, greyed out, not toggleable)
-    const comingSoonIds = useMemo(() => {
-        const ids = new Set<string>();
-        for (const mod of configurableModules) {
-            if (!mod.isCore && !PHASE_1_MODULE_IDS.has(mod.id)) {
-                ids.add(mod.id);
-            }
-        }
-        return ids;
-    }, [configurableModules]);
+    // Updated: All entitlements are now active and selectable
+    const comingSoonIds = useMemo(() => new Set<string>(), []);
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">

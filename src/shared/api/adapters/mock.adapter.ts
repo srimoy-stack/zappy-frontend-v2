@@ -388,7 +388,7 @@ export const mockAdapter: ApiAdapter = {
                 isSystem: role?.isSystem || false,
             },
             storeIds: dto.assignedStoreIds,
-            tenantId: 'brand-001',
+            tenantId: dto.tenantId || 'brand-001',
             status: 'Pending',
             lastLogin: null,
             createdAt: new Date().toISOString(),

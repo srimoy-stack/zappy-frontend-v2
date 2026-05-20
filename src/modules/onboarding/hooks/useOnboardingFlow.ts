@@ -19,7 +19,7 @@
  *   - No stale drafts: every mount starts with a clean form.
  */
 
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import {
     OnboardingFormData,
     OnboardingStep,
@@ -29,13 +29,14 @@ import {
 import * as onboardingService from '../services/onboarding.service';
 import { logAction } from '@/shared/utils/auditLogger';
 import { AUDIT_ACTIONS, AUDIT_ENTITIES } from '@/shared/types/audit';
+import { apiClient } from '@/shared/api/apiClient';
 
 // ── Modules that trigger conditional steps ──────────────────────────────────
 const EMAIL_MODULES = ['email-campaigns'];
 const SMS_MODULES = ['email-campaigns', 'online-ordering'];
 const VAPI_MODULES = ['ai-call-analytics'];
 
-export function useOnboardingFlow() {
+export function useOnboardingFlow(resumeTenantId?: string | null) {
     const [currentStep, setCurrentStep] = useState<OnboardingStep>(1);
     const [formData, setFormData] = useState<OnboardingFormData>(
         () => createInitialFormData()
@@ -47,9 +48,84 @@ export function useOnboardingFlow() {
     const [orchestrationSteps, setOrchestrationSteps] = useState<OrchestrationStepStatus[]>([]);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [stepErrors, setStepErrors] = useState<string[]>([]);
+    const [resumeLoading, setResumeLoading] = useState(!!resumeTenantId);
 
     // Ref to prevent concurrent submissions (survives re-renders)
     const submittingRef = useRef(false);
+
+    // ── Resume draft tenant ──────────────────────────────────────────────────
+    useEffect(() => {
+        if (!resumeTenantId) return;
+        const loadDraft = async () => {
+            setResumeLoading(true);
+            try {
+                const { data } = await apiClient.get(`/tenants/${resumeTenantId}`);
+                const s = data.settings || {};
+
+                // Pre-populate brand from saved data
+                setFormData(prev => ({
+                    ...prev,
+                    brand: {
+                        ...prev.brand,
+                        brandName: data.name || '',
+                        brandLegalName: data.legal_name || '',
+                        tradeName: s.tradeName || data.name || '',
+                        addressLine1: s.addressLine1 || s.address || '',
+                        addressLine2: s.addressLine2 || '',
+                        city: s.city || '',
+                        province: s.province || 'Ontario',
+                        postalCode: s.postalCode || '',
+                        country: s.country || 'Canada',
+                        timezone: data.timezone || 'Eastern Standard Time (EST)',
+                        currency: data.currency || 'CAD ($)',
+                        contactEmail: data.contact_email || '',
+                        contactPhone: data.contact_phone || '',
+                        paymentTermType: s.paymentTermType || 'NET_DAYS',
+                        netDays: s.netDays || 30,
+                    },
+                    // Pre-populate modules
+                    enabledModuleIds: data.enabledModules || [],
+                    selectedEntitlementPaths: (data.enabledModules || []).map((m: string) => m),
+                    // Pre-populate email config if available
+                    email: s.email ? {
+                        provider: s.email.provider || 'smtp',
+                        host: s.email.host || '',
+                        port: s.email.port || 587,
+                        username: s.email.username || '',
+                        password: '',
+                        encryption: s.email.encryption || 'tls',
+                        apiKey: '',
+                        senderEmail: s.email.senderEmail || s.email.from_address || '',
+                        senderName: s.email.senderName || s.email.from_name || '',
+                        replyTo: s.email.replyTo || '',
+                    } : prev.email,
+                    // Pre-populate SMS config if available
+                    sms: s.sms ? {
+                        provider: s.sms.provider || 'inherit',
+                        senderId: s.sms.senderId || s.sms.from || '',
+                        apiKey: '',
+                    } : prev.sms,
+                    // Pre-populate Vapi config
+                    vapi: data.vapi_assistant_id ? {
+                        assistantId: data.vapi_assistant_id || '',
+                        phoneNumber: s.vapi?.phoneNumber || '',
+                    } : prev.vapi,
+                }));
+
+                // Mark tenant as already created — submit pipeline will skip creation
+                setCreatedTenantId(resumeTenantId);
+
+                // Jump to step 2 (modules) since brand is pre-filled
+                // If modules are also filled, stay on step 2 so admin can review
+                setCurrentStep(1);
+            } catch (err) {
+                console.error('Failed to load draft tenant:', err);
+            } finally {
+                setResumeLoading(false);
+            }
+        };
+        loadDraft();
+    }, [resumeTenantId]);
 
     // ── Conditional step visibility ──────────────────────────────────────────
     const needsEmail = useMemo(() => {
@@ -442,5 +518,8 @@ export function useOnboardingFlow() {
         validateStep,
         stepErrors,
         resetDraft,
+
+        // Resume
+        resumeLoading,
     };
 }

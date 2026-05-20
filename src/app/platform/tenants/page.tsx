@@ -14,59 +14,24 @@ import {
     ChevronLeft,
     ChevronRight,
     LogIn,
+    CheckCircle2,
+    Trash2,
+    Play,
 } from 'lucide-react';
 import { UserRole } from '@/shared/types/auth';
 import { Brand, TenantStatus, TENANT_STATUS_CONFIG } from '@/shared/types/tenant';
 import { cn } from '@/utils';
+import { apiClient } from '@/shared/api/apiClient';
+import { mapResponseToBrand } from '@/modules/platform/services/tenant.service';
 
-// ─── Mock Data (aligned with adapter) ──────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────────
 
-const MOCK_BRANDS: Brand[] = [
-    {
-        id: 'brand-001', brandLegalName: 'Acme Pizza Co. Ltd.', brandName: 'Acme Pizza Co.',
-        tradeName: 'Acme Pizza', address: '123 Main St, Toronto', timezone: 'America/Toronto',
-        currency: 'CAD', primaryContact: 'john@acmepizza.com', contactPhone: '+1-416-555-0100',
-        status: 'Operational', createdDate: '2025-06-15', createdBy: 'admin', totalStores: 12,
-        totalUsers: 45, enabledModules: ['pos', 'inventory', 'online-ordering', 'reports', 'email-campaigns'],
-        province: 'Ontario', modulesPurchasedCount: 5, plan: 'Enterprise', slug: 'acme-pizza',
-        lightLogo: '', darkLogo: '', defaultPaymentTerms: 'Net 30',
-        defaultTaxScheme: 'HST', defaultTaxRate: 13,
-        lastActivity: '2026-05-07T14:30:00Z', onboardingProgress: 100
-    },
-    {
-        id: 'brand-002', brandLegalName: 'QuickBite Foods Ltd.', brandName: 'QuickBite Foods',
-        tradeName: 'QuickBite', address: '456 Elm St, Vancouver', timezone: 'America/Vancouver',
-        currency: 'CAD', primaryContact: 'sarah@quickbite.ca', contactPhone: '+1-604-555-0200',
-        status: 'Configuring', createdDate: '2025-08-22', createdBy: 'admin', totalStores: 8,
-        totalUsers: 12, enabledModules: ['pos', 'inventory', 'reports'],
-        province: 'British Columbia', modulesPurchasedCount: 3, plan: 'Growth', slug: 'quickbite',
-        lightLogo: '', darkLogo: '', defaultPaymentTerms: 'Net 15',
-        defaultTaxScheme: 'GST+PST', defaultTaxRate: 12,
-        lastActivity: '2026-05-06T09:15:00Z', onboardingProgress: 65
-    },
-    {
-        id: 'brand-003', brandLegalName: 'Burger Nation Inc.', brandName: 'Burger Nation',
-        tradeName: 'Burger Nation', address: '789 Oak Ave, Calgary', timezone: 'America/Edmonton',
-        currency: 'CAD', primaryContact: 'admin@burgernation.ca', contactPhone: '+1-403-555-0300',
-        status: 'Suspended', createdDate: '2025-03-04', createdBy: 'admin', totalStores: 3,
-        totalUsers: 5, enabledModules: ['pos', 'inventory'],
-        province: 'Alberta', modulesPurchasedCount: 2, plan: 'Starter', slug: 'burger-nation',
-        lightLogo: '', darkLogo: '', defaultPaymentTerms: 'Net 30',
-        defaultTaxScheme: 'GST', defaultTaxRate: 5,
-        lastActivity: '2026-01-20T11:00:00Z', onboardingProgress: 100
-    },
-    {
-        id: 'brand-004', brandLegalName: 'Sushi Express Holdings', brandName: 'Sushi Express',
-        tradeName: 'Sushi Express', address: '101 Bay St, Toronto', timezone: 'America/Toronto',
-        currency: 'CAD', primaryContact: 'ops@sushiexpress.com', contactPhone: '+1-416-555-0400',
-        status: 'Operational', createdDate: '2024-11-10', createdBy: 'admin', totalStores: 22,
-        totalUsers: 85, enabledModules: ['pos', 'inventory', 'online-ordering'],
-        province: 'Ontario', modulesPurchasedCount: 7, plan: 'Enterprise', slug: 'sushi-express',
-        lightLogo: '', darkLogo: '', defaultPaymentTerms: 'Net 30',
-        defaultTaxScheme: 'HST', defaultTaxRate: 13,
-        onboardingProgress: 100
-    },
-];
+/**
+ * Map Laravel Tenant model → frontend Brand type.
+ * Backend returns snake_case; frontend expects camelCase with enriched fields.
+ */
+// mapTenantToBrand is now centralized in tenant.service.ts as mapResponseToBrand
+const mapTenantToBrand = mapResponseToBrand;
 
 interface AuditEvent {
     type: string;
@@ -75,8 +40,6 @@ interface AuditEvent {
     timestamp: string;
     actor: string;
 }
-
-// ─── Helpers ────────────────────────────────────────────────────────────────────
 
 const auditLog: AuditEvent[] = [];
 
@@ -117,13 +80,109 @@ export default function TenantsPage() {
     // Suspend modal
     const [suspendTarget, setSuspendTarget] = useState<Brand | null>(null);
 
-    // ── Data Fetch (mock) ─────────────────────────────────────────────────
+    // ── Data Fetch (real API) ─────────────────────────────────────────────
     useEffect(() => {
         const load = async () => {
             setIsLoading(true);
-            await new Promise((r) => setTimeout(r, 400));
-            setBrands(MOCK_BRANDS);
-            setIsLoading(false);
+            try {
+                const { data } = await apiClient.get('/tenants', {
+                    params: { per_page: 100 },
+                });
+                // Laravel paginate returns { data: [...], ... }
+                const tenants = Array.isArray(data) ? data : (data.data || []);
+                setBrands(tenants.map(mapTenantToBrand));
+            } catch (err) {
+                console.error('[TenantsPage] Failed to fetch tenants, using mock data:', err);
+                // ── Dev Fallback: Dummy tenant for UI review ──
+                setBrands([
+                    {
+                        id: 'tenant-demo-001',
+                        brandLegalName: 'Maple Leaf Pizza Inc.',
+                        brandName: 'Maple Leaf Pizza',
+                        tradeName: 'Maple Leaf Pizza',
+                        address: '250 Yonge Street, Toronto, ON M5B 2L7',
+                        timezone: 'America/Toronto',
+                        currency: 'CAD',
+                        primaryContact: 'admin@mapleleafpizza.ca',
+                        contactPhone: '+1 (416) 555-0142',
+                        status: 'Operational',
+                        createdDate: '2025-11-20',
+                        createdBy: 'Platform Admin',
+                        totalStores: 5,
+                        totalUsers: 18,
+                        province: 'Ontario',
+                        modulesPurchasedCount: 6,
+                        enabledModules: ['pos', 'inventory', 'online-ordering', 'reports', 'email-campaigns', 'ai-call-analytics'],
+                        plan: 'Enterprise',
+                        slug: 'maple-leaf-pizza',
+                        lightLogo: '',
+                        darkLogo: '',
+                        defaultPaymentTerms: 'Net 30',
+                        defaultTaxScheme: 'HST (Ontario)',
+                        defaultTaxRate: 13,
+                        lastActivity: '2026-05-20T10:15:00Z',
+                        onboardingProgress: 100,
+                    },
+                    {
+                        id: 'tenant-demo-002',
+                        brandLegalName: 'Pacific Sushi Holdings Ltd.',
+                        brandName: 'Pacific Sushi',
+                        tradeName: 'Pacific Sushi Co.',
+                        address: '1200 Burrard St, Vancouver, BC V6Z 2C7',
+                        timezone: 'America/Vancouver',
+                        currency: 'CAD',
+                        primaryContact: 'ops@pacificsushi.ca',
+                        contactPhone: '+1 (604) 555-0388',
+                        status: 'Configuring',
+                        createdDate: '2026-04-10',
+                        createdBy: 'Platform Admin',
+                        totalStores: 2,
+                        totalUsers: 6,
+                        province: 'British Columbia',
+                        modulesPurchasedCount: 3,
+                        enabledModules: ['pos', 'inventory', 'reports'],
+                        plan: 'Growth',
+                        slug: 'pacific-sushi',
+                        lightLogo: '',
+                        darkLogo: '',
+                        defaultPaymentTerms: 'Net 15',
+                        defaultTaxScheme: 'GST+PST (BC)',
+                        defaultTaxRate: 12,
+                        lastActivity: '2026-05-19T14:20:00Z',
+                        onboardingProgress: 65,
+                    },
+                    {
+                        id: 'tenant-demo-003',
+                        brandLegalName: 'Prairie Burger Corp.',
+                        brandName: 'Prairie Burger',
+                        tradeName: 'Prairie Burger',
+                        address: '450 Portage Ave, Winnipeg, MB R3C 0E7',
+                        timezone: 'America/Winnipeg',
+                        currency: 'CAD',
+                        primaryContact: 'hello@prairieburger.ca',
+                        contactPhone: '+1 (204) 555-0271',
+                        status: 'Draft',
+                        createdDate: '2026-05-18',
+                        createdBy: 'Platform Admin',
+                        totalStores: 0,
+                        totalUsers: 0,
+                        province: 'Manitoba',
+                        modulesPurchasedCount: 0,
+                        enabledModules: [],
+                        plan: 'Starter',
+                        slug: 'prairie-burger',
+                        lightLogo: '',
+                        darkLogo: '',
+                        defaultPaymentTerms: '',
+                        defaultTaxScheme: 'GST+PST (MB)',
+                        defaultTaxRate: 12,
+                        lastActivity: undefined,
+                        onboardingProgress: 0,
+                    },
+                ]);
+            } finally {
+                setIsLoading(false);
+            }
         };
         load();
     }, []);
@@ -200,6 +259,28 @@ export default function TenantsPage() {
 
         setSuspendTarget(null);
     }, [suspendTarget]);
+
+    const handleActivateTenant = useCallback(async (brand: Brand) => {
+        if (!confirm(`Activate ${brand.brandName}? This will mark the tenant as fully operational.`)) return;
+        try {
+            await apiClient.patch(`/tenants/${brand.id}`, { status: 'active' });
+            setBrands(prev => prev.map(b => b.id === brand.id ? { ...b, status: 'Operational' as TenantStatus, onboardingProgress: 100 } : b));
+        } catch (err) {
+            console.error('Activate failed:', err);
+            alert('Failed to activate tenant.');
+        }
+    }, []);
+
+    const handleDeleteDraft = useCallback(async (brand: Brand) => {
+        if (!confirm(`Permanently delete draft tenant "${brand.brandName}"? This cannot be undone.`)) return;
+        try {
+            await apiClient.delete(`/tenants/${brand.id}`);
+            setBrands(prev => prev.filter(b => b.id !== brand.id));
+        } catch (err) {
+            console.error('Delete failed:', err);
+            alert('Failed to delete tenant. Only draft tenants can be deleted.');
+        }
+    }, []);
 
     const clearFilters = useCallback(() => {
         setSearchQuery('');
@@ -457,7 +538,7 @@ export default function TenantsPage() {
                                                     </div>
                                                 </td>
 
-                                                {/* Actions */}
+                                                {/* Actions — context-aware per status */}
                                                 <td className="px-8 py-5">
                                                     <div
                                                         className="flex items-center justify-center gap-2"
@@ -466,26 +547,59 @@ export default function TenantsPage() {
                                                         <button
                                                             onClick={() => handleRowClick(brand)}
                                                             className="p-2.5 bg-slate-50 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all border border-slate-100"
+                                                            title="View Details"
                                                         >
                                                             <Eye size={16} />
                                                         </button>
-                                                        <button
-                                                            onClick={() => router.push(`/platform/tenants/${brand.id}/impersonate`)}
-                                                            className="p-2.5 bg-amber-50 text-amber-600 hover:text-amber-700 hover:bg-amber-100 rounded-xl transition-all border border-amber-100"
-                                                        >
-                                                            <LogIn size={16} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => setSuspendTarget(brand)}
-                                                            className={cn(
-                                                                "p-2.5 rounded-xl transition-all border",
-                                                                brand.status === 'Suspended'
-                                                                    ? "bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100"
-                                                                    : "bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100"
-                                                            )}
-                                                        >
-                                                            <ShieldBan size={16} />
-                                                        </button>
+                                                        {brand.status === 'Draft' ? (
+                                                            /* Draft: Resume + Activate + Delete */
+                                                            <>
+                                                                <button
+                                                                    onClick={() => router.push(`/platform/tenants/onboarding?resume=${brand.id}`)}
+                                                                    className="p-2.5 bg-blue-50 text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded-xl transition-all border border-blue-100"
+                                                                    title="Resume Onboarding"
+                                                                >
+                                                                    <Play size={16} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleActivateTenant(brand)}
+                                                                    className="p-2.5 bg-emerald-50 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 rounded-xl transition-all border border-emerald-100"
+                                                                    title="Force Activate"
+                                                                >
+                                                                    <CheckCircle2 size={16} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteDraft(brand)}
+                                                                    className="p-2.5 bg-rose-50 text-rose-600 hover:text-rose-700 hover:bg-rose-100 rounded-xl transition-all border border-rose-100"
+                                                                    title="Delete Draft"
+                                                                >
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            </>
+                                                        ) : (
+                                                            /* Active/Suspended: Impersonate + Suspend/Reactivate */
+                                                            <>
+                                                                <button
+                                                                    onClick={() => router.push(`/platform/tenants/${brand.id}/impersonate`)}
+                                                                    className="p-2.5 bg-amber-50 text-amber-600 hover:text-amber-700 hover:bg-amber-100 rounded-xl transition-all border border-amber-100"
+                                                                    title="Impersonate"
+                                                                >
+                                                                    <LogIn size={16} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setSuspendTarget(brand)}
+                                                                    className={cn(
+                                                                        "p-2.5 rounded-xl transition-all border",
+                                                                        brand.status === 'Suspended'
+                                                                            ? "bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100"
+                                                                            : "bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100"
+                                                                    )}
+                                                                    title={brand.status === 'Suspended' ? 'Reactivate' : 'Suspend'}
+                                                                >
+                                                                    <ShieldBan size={16} />
+                                                                </button>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>

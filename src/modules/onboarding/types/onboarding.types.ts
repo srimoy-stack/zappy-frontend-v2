@@ -25,6 +25,8 @@ export interface OnboardingBrandData {
     darkLogo: string | null;
     paymentTermType: 'PREPAID' | 'NET_DAYS' | 'DUE_ON_RECEIPT';
     netDays: number;
+    storeStrategy: 'SINGLE_STORE' | 'FRANCHISE';
+    maxStores?: number;
 }
 
 // ─── Tenant Admin ────────────────────────────────────────────────────────────
@@ -193,6 +195,8 @@ export function createInitialFormData(): OnboardingFormData {
             darkLogo: null,
             paymentTermType: 'NET_DAYS',
             netDays: 30,
+            storeStrategy: 'SINGLE_STORE',
+            maxStores: 1,
         },
         admin: {
             adminName: '',
@@ -219,8 +223,7 @@ export function createInitialFormData(): OnboardingFormData {
             assistantId: '',
             phoneNumber: '',
         },
-        enabledModuleIds: ['pos'],
-        selectedEntitlementPaths: ['pos'],
+        enabledModuleIds: [],
+        selectedEntitlementPaths: [],
     };
 }
-
