@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Building2, UserCircle, LayoutGrid, Mail, Smartphone, CheckCircle2, Bot } from 'lucide-react';
+import { Building2, UserCircle, LayoutGrid, Mail, Smartphone, CheckCircle2, Bot, Globe } from 'lucide-react';
 import { FormSectionTitle, ReviewField } from './ui';
 import type { OnboardingFormData, OnboardingStep } from '../types/onboarding.types';
 import { getNode } from '@/shared/config/modules';
@@ -12,9 +12,10 @@ interface ReviewStepProps {
     needsEmail?: boolean;
     needsSms?: boolean;
     needsVapi?: boolean;
+    needsHosting?: boolean;
 }
 
-export function ReviewStep({ data, onGoToStep, needsEmail = false, needsSms = false, needsVapi = false }: ReviewStepProps) {
+export function ReviewStep({ data, onGoToStep, needsEmail = false, needsSms = false, needsVapi = false, needsHosting = false }: ReviewStepProps) {
     return (
         <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Brand Summary */}
@@ -124,6 +125,36 @@ export function ReviewStep({ data, onGoToStep, needsEmail = false, needsSms = fa
                     <div className="grid grid-cols-2 gap-6">
                         <ReviewField label="Assistant ID" value={data.vapi.assistantId || '—'} />
                         <ReviewField label="Phone Number" value={data.vapi.phoneNumber || '—'} />
+                    </div>
+                </section>
+            )}
+
+            {/* Hosting Configuration — only if online-ordering enabled */}
+            {needsHosting && (
+                <section className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+                    <div className="flex items-center justify-between">
+                        <FormSectionTitle icon={Globe} title="Hosting & Domain" />
+                        <button onClick={() => onGoToStep(8)} className="text-[10px] font-black text-slate-400 hover:text-slate-900 uppercase tracking-widest transition-colors">Edit</button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-6">
+                        <ReviewField label="Custom Domain" value={data.hosting.customDomain} />
+                        <ReviewField label="Hosting Provider" value={{
+                            'zyappy-managed': 'Zyappy Managed',
+                            'custom': 'Custom / Self-Hosted',
+                            'cloudflare': 'Cloudflare Pages',
+                        }[data.hosting.hostingProvider] || data.hosting.hostingProvider} />
+                        <ReviewField label="SSL Method" value={{
+                            'auto-letsencrypt': "Let's Encrypt (Auto)",
+                            'custom-cert': 'Custom Certificate',
+                            'cloudflare-origin': 'Cloudflare Origin',
+                        }[data.hosting.sslMethod] || data.hosting.sslMethod} />
+                        <ReviewField label="DNS Verification" value={{
+                            'cname': 'CNAME Record',
+                            'a-record': 'A Record',
+                            'ns-delegation': 'NS Delegation',
+                        }[data.hosting.dnsVerification] || data.hosting.dnsVerification} />
+                        <ReviewField label="CDN Caching" value={data.hosting.cdnEnabled ? 'Enabled' : 'Disabled'} />
+                        {data.hosting.notes && <ReviewField label="Notes" value={data.hosting.notes} />}
                     </div>
                 </section>
             )}

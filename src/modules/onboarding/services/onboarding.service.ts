@@ -19,6 +19,7 @@ import type {
     OnboardingEmailConfig,
     OnboardingSmsConfig,
     OnboardingVapiConfig,
+    OnboardingHostingConfig,
 } from '../types/onboarding.types';
 
 // ─── 1. Create Tenant ────────────────────────────────────────────────────────
@@ -153,6 +154,36 @@ export async function configureVapi(
             vapi: {
                 phoneNumber: config.phoneNumber?.trim(),
                 assistantId,
+            },
+        },
+    });
+}
+
+// ─── 5b. Configure Hosting (Online Ordering Domain & DNS) ────────────────────
+//
+// Stores the storefront domain, hosting provider, SSL method, DNS config,
+// and CDN settings in the tenant settings JSON.
+
+export async function configureHosting(
+    tenantId: string,
+    config: OnboardingHostingConfig
+): Promise<void> {
+    const domain = config.customDomain?.trim();
+    if (!domain) return;
+
+    await apiClient.patch(`/tenants/${tenantId}`, {
+        settings: {
+            hosting: {
+                customDomain: domain,
+                hostingProvider: config.hostingProvider,
+                sslMethod: config.sslMethod,
+                dnsVerification: config.dnsVerification,
+                cdnEnabled: config.cdnEnabled,
+                notes: config.notes?.trim() || undefined,
+                ...(config.sslCertPem ? { sslCertPem: config.sslCertPem } : {}),
+                ...(config.sslKeyPem ? { sslKeyPem: config.sslKeyPem } : {}),
+                ...(config.cnameTarget ? { cnameTarget: config.cnameTarget } : {}),
+                ...(config.aRecordIp ? { aRecordIp: config.aRecordIp } : {}),
             },
         },
     });
