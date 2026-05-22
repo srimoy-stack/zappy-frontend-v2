@@ -1,0 +1,166 @@
+Zyappy Developer Brief
+Module: Store Configuration & Operational Setup
+Objective
+After Brand onboarding is completed, the next stage is Store Configuration. Brand-level settings create reusable templates and standards, while Store Configuration controls how each location operates independently.
+Examples:
+    • One location uses Uber Direct
+    • Another uses internal drivers
+    • One store runs 24/7
+    • Another closes at 11 PM
+    • One enables catering
+    • Another disables it
+Store settings should override Brand defaults where permissions allow.
+
+Systems Affected
+Store configuration impacts:
+    • POS
+    • Online Ordering
+    • Kiosk
+    • KDS
+    • Delivery Engine
+    • Inventory
+    • AI Agent
+    • Loyalty
+    • Reporting
+    • Marketing
+    • Hardware
+
+High-Level Flow
+Brand Created ↓ Store Created ↓ Store Configuration ↓ Validation Engine ↓ Service Activation ↓ Store Live
+
+Database Structure
+Core Tables:
+stores store_settings store_operating_hours store_delivery_config store_pickup_config store_dinein_config store_integrations store_payment_config store_users store_hardware store_kds store_taxes store_inventory_config store_ai_config store_marketing_config store_notifications store_go_live_checklist
+
+1. Store Basic Information
+Fields:
+store_id brand_id store_name store_code store_number business_type phone secondary_phone email website logo banner address city province postal_code country latitude longitude timezone currency language status manager_id owner_id
+Business Types:
+    • Single Store
+    • Franchise
+    • Corporate
+    • Ghost Kitchen
+Status:
+    • Active
+    • Coming Soon
+    • Temporarily Closed
+    • Inactive
+
+2. Store Settings
+Fields:
+accept_orders enable_pickup enable_delivery enable_dinein enable_kiosk enable_inventory enable_ai enable_loyalty enable_marketing future_orders_enabled prep_capacity_limit order_throttle_limit
+
+3. Operating Hours
+Store should support different operating hours by service.
+Service Types:
+Pickup Delivery Dine-In Online Ordering Call Center Kiosk
+Fields:
+weekday open_time close_time break_start break_end holiday_override is_closed
+Requirements:
+    • Special holiday schedules
+    • Late-night menu schedules
+    • Different hours by channel
+
+4. Delivery Configuration
+Purpose: Configure how store delivery operates.
+Fields:
+enabled provider_type assignment_method minimum_order free_delivery_threshold maximum_radius estimated_delivery_time
+Delivery Types:
+Internal Driver Uber Direct Doordash Drive Hybrid Pickup Only
+Assignment Logic:
+Auto Manual Nearest Driver Round Robin
+Child Configurations:
+Delivery Zones Postal Codes Distance Rules Delivery Fees Driver Rules
+Logic Example:
+IF distance <5KM Assign internal driver
+IF unavailable Send Uber Direct
+Hybrid Mode:
+Under 5KM internal Above 5KM Uber Direct Rush hour overflow routing
+Additional Rules:
+Peak hour surcharge Rain surcharge Free delivery threshold Minimum basket amount Scheduled delivery support
+Customer notifications:
+Order Accepted Driver Assigned Out for Delivery Delivered
+
+5. Pickup Configuration
+Fields:
+pickup_enabled scheduled_pickup curbside_enabled pickup_buffer vehicle_required pickup_instructions
+Optional:
+Vehicle color License plate Car model
+
+6. Dine-In Configuration
+Fields:
+qr_ordering table_service counter_service reservation_enabled waitlist_enabled
+Sub Tables:
+Dining Areas Sections Tables
+Requirements:
+Table assignment Server assignment Reservation management QR ordering
+
+7. Aggregator Integrations
+Supported:
+Uber Eats Doordash Skip Fantuan Ritual
+Fields:
+external_store_id api_key webhook status
+Requirements:
+Menu sync Inventory sync Price override Order sync Pause sync
+
+8. Payment Configuration
+Providers:
+Moneris Clover Stripe Square Bambora Fiserv
+Fields:
+merchant_id terminal_id tips_enabled refund_enabled split_payment_enabled
+Requirements:
+Partial payments Split payments Terminal mapping Refund permissions
+
+9. Hardware Configuration
+Supported Hardware:
+POS KDS Receipt Printer Label Printer Cash Drawer Customer Display Payment Terminal Menu TV Kiosk
+Fields:
+device_name hardware_type ip_address mac_address station status
+Requirements:
+Heartbeat monitoring Offline detection Remote diagnostics
+
+10. KDS Configuration
+Stations:
+Kitchen Pizza Bar Dessert Cutting Packing Completed
+Routing:
+Category based Recipe based Item based
+Actions:
+Accept Delay Ready Transfer Recall Cancel
+
+11. Tax Engine
+Support:
+GST HST PST Regional taxes Packaging fees Delivery fees
+Fields:
+name amount type source
+
+12. Inventory Configuration
+Fields:
+inventory_enabled warehouse_id recipe_sync waste_tracking transfer_enabled
+Requirements:
+Store inventory Transfer support Recipe sync Low stock alerts
+
+Developer Notes
+Store Configuration Architecture Rules
+    1. Store settings inherit Brand defaults initially.
+    2. Store-level settings can override Brand values where permissions allow.
+    3. Every configuration section should support draft and published states.
+    4. Configuration changes must maintain audit logs.
+    5. Store settings should support version history.
+    6. Multi-store brands should allow template assignment.
+    7. Store activation should be blocked until validation succeeds.
+    8. APIs should be modular and independently callable.
+    9. Store configuration must support future feature flags.
+
+Validation Rules
+Store cannot go live if:
+Business hours missing Menu not assigned Payment configuration missing Tax configuration missing Delivery setup incomplete Required hardware unavailable
+
+API Structure
+POST /stores GET /stores GET /store/{id} PATCH /store/{id}
+POST /store/{id}/hours POST /store/{id}/delivery POST /store/{id}/pickup POST /store/{id}/dinein POST /store/{id}/payments POST /store/{id}/hardware POST /store/{id}/integrations POST /store/{id}/inventory
+
+Permissions
+Brand Admin Area Manager Store Manager Supervisor Read Only
+
+Future Roadmap
+Dynamic delivery radius Weather-based delivery pricing AI prep estimation Traffic forecasting Smart operational recommendations

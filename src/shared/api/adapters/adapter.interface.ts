@@ -8,7 +8,7 @@
 import { MeResponse, PaginatedResponse } from '@/shared/types/api';
 import { User, CreateUserDTO, UpdateUserDTO } from '@/shared/types/user';
 import { Brand, CreateTenantDTO } from '@/shared/types/tenant';
-import { Store, CreateStoreDTO } from '@/shared/types/store';
+import { Store, CreateStoreDTO, StoreDetailConfig, StoreUser } from '@/shared/types/store';
 import { Role, CreateRoleDTO } from '@/shared/types/role';
 import { UserType } from '@/shared/types/auth';
 import { TenantModule } from '@/shared/types/module';
@@ -32,6 +32,13 @@ export interface ApiAdapter {
     getStore(tenantId: string, storeId: string): Promise<Store>;
     createStore(tenantId: string, data: CreateStoreDTO): Promise<Store>;
     updateStore(tenantId: string, storeId: string, data: Partial<CreateStoreDTO>): Promise<Store>;
+    suspendStore(tenantId: string, storeId: string): Promise<Store>;
+    activateStore(tenantId: string, storeId: string): Promise<Store>;
+    deleteStore(tenantId: string, storeId: string): Promise<void>;
+    getStoreConfig(tenantId: string, storeId: string): Promise<StoreDetailConfig>;
+    updateStoreConfig(tenantId: string, storeId: string, config: Partial<StoreDetailConfig>): Promise<StoreDetailConfig>;
+    getStoreUsers(tenantId: string, storeId: string): Promise<StoreUser[]>;
+    assignStoreManager(tenantId: string, storeId: string, userId: string): Promise<void>;
 
     // ─── Users ───────────────────────────────────────────
     getUsers(params?: { page?: number; pageSize?: number; userType?: UserType; roleId?: string; status?: string }): Promise<PaginatedResponse<User>>;

@@ -1,0 +1,367 @@
+Zyappy POS — Tax, Tip & Fee Engine 
+Final Developer Handoff Document 
+ 
+1. Purpose 
+The Tax, Tip & Fee Engine is a centralized calculation service responsible for all financial 
+calculations across: 
+•POS 
+•Online Ordering 
+•Kiosk 
+•Uber / Delivery Channels 
+•Future Marketplace Integrations 
+The engine must support: 
+•Multi-region taxes 
+•Multiple fees per order 
+•Flexible gratuity logic 
+•Marketplace fee separation 
+•Store-level overrides 
+•Channel-level rules 
+•Audit-safe financial calculations 
+No financial logic should be hardcoded. 
+ 
+2. Core Calculation Order 
+Recommended runtime sequence: 
+Subtotal​
+→ Discounts​
+→ Apply Multiple Fees​
+→ Calculate Taxes​
+→ Apply Tip​
+→ Final Total 
+Rules: 
+ 
+•Discounts apply before taxes 
+•Multiple fees can apply simultaneously 
+•Taxes calculate after applicable fees 
+•Tips calculate last 
+•Tips are non-taxable by default 
+•Marketplace fees must remain separated from restaurant operational fees 
+ 
+3. Tax Calculation Engine 
+Purpose 
+Provide flexible tax calculation across: 
+•Countries 
+•Provinces / States 
+•Cities 
+•Stores 
+•Channels 
+•Product Categories 
+ 
+4. Supported Tax Types 
+GST​
+HST​
+PST​
+QST​
+VAT​
+Sales Tax​
+Alcohol Tax​
+Environmental Fee Tax​
+Delivery Tax​
+Service Tax 
+ 
+5. Tax Configuration Fields 
+Field 
+tax_rule_id 
+tax_name 
+Field 
+tax_percentage 
+tax_type 
+country 
+province_state 
+city 
+store_scope 
+channel_scope 
+tax_mode 
+priority 
+start_date 
+end_date 
+status 
+ 
+ 
+ 
+6. Tax Modes 
+Exclusive Tax 
+Subtotal = $20​
+HST = 13%​
+Final = $22.60 
+Inclusive Tax 
+Menu Price = $22.60​
+Tax already included 
+Compound Tax 
+Used in regions where taxes stack on top of another tax. 
+ 
+7. Tax Resolution Priority 
+Country​
+→ Province/State​
+→ Store Override​
+→ Channel Override​
+→ Product Override 
+Highest priority rule wins. 
+ 
+8. Product-Level Tax Fields 
+Field 
+taxable 
+tax_group 
+tax_exempt 
+alcohol_taxable 
+delivery_taxable 
+Examples: 
+Gift Card = non-taxable​
+Alcohol = alcohol tax enabled 
+ 
+9. Tax Runtime Flow 
+Subtotal​
+→ Discounts​
+→ Fees​
+→ Taxable Amount​
+→ Tax Calculation​
+→ Final Total 
+Rules: 
+•Taxes calculate after discounts 
+•Delivery fees may be taxable 
+•Service fees may be taxable 
+•Marketplace channels may use separate tax logic 
+•Taxes must support product-level overrides 
+ 
+10. Tip Calculation Engine 
+Purpose 
+Support configurable gratuity calculations. 
+Channels: 
+POS​
+Online​
+Kiosk​
+Delivery 
+ 
+11. Supported Tip Types 
+Percentage​
+Fixed Amount​
+Custom​
+Auto Gratuity 
+ 
+12. Tip Configuration Fields 
+Field 
+tip_rule_id 
+tip_type 
+tip_value 
+minimum_order_amount 
+channel_scope 
+store_scope 
+tax_before_tip 
+enabled 
+ 
+ 
+ 
+13. Suggested Tip Presets 
+10%​
+15%​
+18%​
+20%​
+Custom 
+Store configurable. 
+ 
+14. Auto Gratuity Rules 
+Examples: 
+Party size > 6​
+Large catering orders​
+Large delivery orders 
+Fields: 
+Field 
+auto_gratuity_enabled 
+minimum_party_size 
+minimum_order_value 
+gratuity_percentage 
+ 
+ 
+ 
+15. Tip Calculation Modes 
+Tip Before Tax 
+Tip = subtotal × % 
+Tip After Tax 
+Tip = subtotal + tax × % 
+Store configurable. 
+ 
+16. Tip Distribution Support (Future Ready) 
+Field 
+tip_pool_enabled 
+kitchen_share_percentage 
+driver_share_percentage 
+server_share_percentage 
+ 
+ 
+ 
+17. Fee Calculation Engine 
+Purpose 
+Handle operational charges separately from taxes. 
+Fees must: 
+•Support multiple simultaneous fees 
+•Remain fully configurable 
+•Be individually auditable 
+•Support refund rules 
+•Support tax rules independently 
+ 
+18. Supported Fee Types 
+Delivery Fee​
+Service Fee​
+Packaging Fee​
+Convenience Fee​
+Small Order Fee​
+Marketplace Fee​
+Fuel Surcharge​
+Late Night Fee​
+Processing Fee​
+Bottle Deposit​
+Bag Fee 
+ 
+19. Fee Configuration Fields 
+Field 
+fee_rule_id 
+fee_name 
+fee_type 
+calculation_method 
+fee_value 
+minimum_order_amount 
+maximum_fee 
+channel_scope 
+store_scope 
+taxable 
+refundable 
+status 
+ 
+ 
+ 
+20. Fee Calculation Methods 
+Fixed​
+Percentage​
+Distance-Based​
+Tier-Based​
+Per Item​
+Per Order 
+ 
+21. Multiple Fee Support 
+An order may contain multiple fees simultaneously. 
+Example: 
+Subtotal: $30.00​
+Delivery Fee: $4.99​
+Packaging Fee: $1.50​
+Service Fee: $2.00​
+Bag Fee: $0.25​
+Tax: calculated after eligible fees​
+Tip: optional​
+Final Total: $38.74+ 
+ 
+22. Fee Line Items 
+Fees must be stored separately. 
+Field 
+order_fee_id 
+order_id 
+fee_rule_id 
+fee_name 
+fee_type 
+calculation_method 
+amount 
+taxable 
+refundable 
+applied_channel 
+applied_store 
+created_at 
+ 
+ 
+ 
+23. Fee Runtime Logic 
+Subtotal​
+→ Discounts​
+→ Apply Multiple Fees​
+→ Calculate Taxes​
+→ Apply Tip​
+→ Final Total 
+Rules: 
+•Multiple fees allowed 
+•Each fee shown separately 
+•Each fee has independent taxability 
+•Each fee has independent refund rules 
+•Fee order/priority configurable 
+•No hidden fees allowed 
+ 
+24. Example Fee Stack 
+Delivery Fee      $4.99   Taxable: Yes​
+Packaging Fee     $1.50   Taxable: Yes​
+Service Fee       $2.00   Taxable: No​
+Bag Fee           $0.25   Taxable: Yes 
+ 
+25. Distance-Based Delivery Fee Example 
+0-5km = $4​
+5-10km = $7​
+10km+ = $10 
+ 
+26. Small Order Fee Example 
+If subtotal < $15​
+Charge $2 
+ 
+27. Fee Visibility Rules 
+Receipts must display: 
+Subtotal​
+Discount​
+Delivery Fee​
+Packaging Fee​
+Service Fee​
+Tax​
+Tip​
+Final Total 
+Hidden fee behavior is not allowed. 
+ 
+28. Refund Rules 
+Field 
+refundable 
+partial_refund_supported 
+Examples: 
+Delivery Fee refundable = Yes​
+Processing Fee refundable = No 
+ 
+29. Marketplace Fee Handling 
+Uber / DoorDash may send: 
+Marketplace Commission​
+Delivery Charge​
+Customer Fee​
+Promotional Fee 
+These must remain separated from restaurant operational fees. 
+ 
+30. APIs 
+GET /tax-rules​
+POST /tax-rules​
+​
+GET /tip-rules​
+POST /tip-rules​
+​
+GET /fee-rules​
+POST /fee-rules​
+​
+POST /calculate-order​
+​
+GET /order-fees​
+GET /order-taxes​
+GET /order-tips 
+ 
+31. Audit Logging 
+Every calculation adjustment must be logged. 
+Field 
+action 
+changed_by 
+old_value 
+new_value 
+timestamp 
+ 
+ 
+ 
+32. Acceptance Criteria 
+✔ Multi-region tax support​
+✔ Inclusive/exclusive/compound taxes supported​
+✔ Product-level tax overrides supported​
+✔ Multiple simultaneous fees supported​
+✔ Tips configurable per store/channel​
+✔ Auto gratuity supported​
+✔ Distance-based delivery fees supported​
+✔ Marketplace fees separated​
+✔ Refund rules configurable​
+✔ Fee visibility enforced​
+✔ POS/Online/Kiosk/Uber use same engine​
+✔ No hidden fees​
+✔ No hardcoded logic 

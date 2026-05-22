@@ -9,15 +9,18 @@ import { apiClient } from '@/shared/api/apiClient';
 interface ModulesTabProps {
     tenantId: string;
     initialPaths: string[];
+    /** When true, modules are displayed but cannot be toggled (brand admin view) */
+    readOnly?: boolean;
 }
 
-export function ModulesTab({ tenantId, initialPaths }: ModulesTabProps) {
+export function ModulesTab({ tenantId, initialPaths, readOnly = false }: ModulesTabProps) {
     const [selectedPaths, setSelectedPaths] = useState<string[]>(initialPaths);
     const [isDirty, setIsDirty] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
 
     const handleChange = (paths: string[]) => {
+        if (readOnly) return;
         setSelectedPaths(paths);
         setIsDirty(true);
         setSaveSuccess(false);
@@ -68,28 +71,30 @@ export function ModulesTab({ tenantId, initialPaths }: ModulesTabProps) {
                         Module Entitlements
                     </h3>
                     <p className="text-xs text-slate-500 font-medium mt-1">
-                        {enabledCount} of {totalAvailable} modules enabled — synced with onboarding entitlements step.
+                        {enabledCount} of {totalAvailable} modules enabled{readOnly ? ' — configured by platform admin (read-only)' : ' — synced with onboarding entitlements step'}.
                     </p>
                 </div>
-                <div className="flex items-center gap-3">
-                    {saveSuccess && (
-                        <span className="flex items-center gap-1.5 text-xs font-black text-emerald-600 animate-in fade-in slide-in-from-right-2 duration-300">
-                            <CheckCircle2 size={14} /> Saved
-                        </span>
-                    )}
-                    {isDirty && (
-                        <>
-                            <button onClick={handleReset}
-                                className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-50 transition-all">
-                                <RotateCcw size={14} /> Revert
-                            </button>
-                            <button onClick={handleSave} disabled={isSaving}
-                                className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black hover:bg-slate-800 transition-all disabled:opacity-50">
-                                <Save size={14} /> {isSaving ? 'Saving...' : 'Save Changes'}
-                            </button>
-                        </>
-                    )}
-                </div>
+                {!readOnly && (
+                    <div className="flex items-center gap-3">
+                        {saveSuccess && (
+                            <span className="flex items-center gap-1.5 text-xs font-black text-emerald-600 animate-in fade-in slide-in-from-right-2 duration-300">
+                                <CheckCircle2 size={14} /> Saved
+                            </span>
+                        )}
+                        {isDirty && (
+                            <>
+                                <button onClick={handleReset}
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-50 transition-all">
+                                    <RotateCcw size={14} /> Revert
+                                </button>
+                                <button onClick={handleSave} disabled={isSaving}
+                                    className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black hover:bg-slate-800 transition-all disabled:opacity-50">
+                                    <Save size={14} /> {isSaving ? 'Saving...' : 'Save Changes'}
+                                </button>
+                            </>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Entitlement Stats */}
@@ -113,6 +118,7 @@ export function ModulesTab({ tenantId, initialPaths }: ModulesTabProps) {
                 modules={configurableModules}
                 selectedPaths={selectedPaths}
                 onChange={handleChange}
+                readOnly={readOnly}
             />
         </div>
     );

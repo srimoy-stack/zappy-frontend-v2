@@ -123,38 +123,23 @@ export function resolveVisibleNodes(
 ): ResolvedNavItem[] {
     if (!userType) return [];
 
-    const isSA = isSuperAdmin(userType);
     const sidebarNodes = getSidebarNodes(routePrefix);
 
+    // ── TEMPORARY: Show ALL modules in sidebar (bypass entitlement/RBAC) ──
+    // TODO: REVERT THIS — restore entitlement + RBAC + permission filtering
     const visible: ResolvedNavItem[] = [];
 
     for (const node of sidebarNodes) {
-        // UserType restriction check
-        if (node.allowedUserTypes && !node.allowedUserTypes.includes(userType) && !isSA) {
-            continue;
-        }
-
-        // Access resolution (entitlement + RBAC)
-        const access = resolveAccess(userType, node.entitlementKey, activePaths);
-        if (access === 'hidden' || access === 'denied') continue;
-
-        // Permission check
-        if (node.requiredPermissions?.length && !isSA) {
-            const hasPermission = node.requiredPermissions.some(
-                (p) => permissions.includes(p) || permissions.includes('*')
-            );
-            if (!hasPermission) continue;
-        }
-
         visible.push({
             id: node.id,
             label: node.label,
             href: node.route || '',
             icon: node.icon || 'Package',
             entitlementKey: node.entitlementKey,
-            accessLevel: access as 'full' | 'read-only',
+            accessLevel: 'full',
         });
     }
 
     return visible;
+    // ── END TEMPORARY ─────────────────────────────────────────────────────
 }

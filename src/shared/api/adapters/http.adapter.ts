@@ -16,7 +16,8 @@ import type { ApiAdapter } from './adapter.interface';
 import type { MeResponse, PaginatedResponse } from '@/shared/types/api';
 import type { User, CreateUserDTO } from '@/shared/types/user';
 import type { Brand, CreateTenantDTO } from '@/shared/types/tenant';
-import type { Store, CreateStoreDTO } from '@/shared/types/store';
+import type { Store, CreateStoreDTO, StoreDetailConfig, StoreUser } from '@/shared/types/store';
+import { createDefaultStoreDetailConfig } from '@/shared/types/store';
 import type { Role, CreateRoleDTO } from '@/shared/types/role';
 import type { TenantModule } from '@/shared/types/module';
 import type { BackendPermission, BackendPermissionsByModule } from './normalizeBackend';
@@ -138,6 +139,41 @@ export const httpAdapter: ApiAdapter = {
         if (dto.status !== undefined) payload.is_active = dto.status === 'Active';
         const { data } = await apiClient.patch(`/pos/stores/${storeId}`, payload);
         return normalizeStore(data);
+    },
+
+    async suspendStore(_tenantId, storeId): Promise<Store> {
+        const { data } = await apiClient.patch(`/pos/stores/${storeId}`, { is_active: false });
+        return normalizeStore(data);
+    },
+
+    async activateStore(_tenantId, storeId): Promise<Store> {
+        const { data } = await apiClient.patch(`/pos/stores/${storeId}`, { is_active: true });
+        return normalizeStore(data);
+    },
+
+    async deleteStore(_tenantId, storeId): Promise<void> {
+        await apiClient.delete(`/pos/stores/${storeId}`);
+    },
+
+    async getStoreConfig(_tenantId, _storeId): Promise<StoreDetailConfig> {
+        // Not yet in FastAPI — return defaults
+        console.warn('[HTTP] getStoreConfig: Not implemented in FastAPI backend');
+        return createDefaultStoreDetailConfig();
+    },
+
+    async updateStoreConfig(_tenantId, _storeId, config): Promise<StoreDetailConfig> {
+        console.warn('[HTTP] updateStoreConfig: Not implemented in FastAPI backend');
+        return { ...createDefaultStoreDetailConfig(), ...config } as StoreDetailConfig;
+    },
+
+    async getStoreUsers(_tenantId, _storeId): Promise<StoreUser[]> {
+        // Not yet in FastAPI — return empty
+        console.warn('[HTTP] getStoreUsers: Not implemented in FastAPI backend');
+        return [];
+    },
+
+    async assignStoreManager(_tenantId, _storeId, _userId): Promise<void> {
+        console.warn('[HTTP] assignStoreManager: Not implemented in FastAPI backend');
     },
 
     // ─── Users (FastAPI: /api/users/) ────────────────────

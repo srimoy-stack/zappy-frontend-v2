@@ -11,7 +11,8 @@ import type { ApiAdapter } from './adapter.interface';
 import type { MeResponse, PaginatedResponse } from '@/shared/types/api';
 import type { User } from '@/shared/types/user';
 import type { Brand } from '@/shared/types/tenant';
-import type { Store } from '@/shared/types/store';
+import type { Store, StoreDetailConfig, StoreUser } from '@/shared/types/store';
+import { createDefaultStoreDetailConfig } from '@/shared/types/store';
 import type { Role } from '@/shared/types/role';
 import type { TenantModule } from '@/shared/types/module';
 
@@ -98,13 +99,41 @@ const MOCK_STORES: Store[] = [
     {
         id: 'store-001', name: 'Downtown Toronto', code: 'DT-001', tenantId: 'brand-001',
         timezone: 'America/Toronto', city: 'Toronto', province: 'Ontario', status: 'Active',
-        paymentTerms: 'Net 30', taxProfile: 'Inherit', logoStatus: 'Default',
+        paymentTerms: 'Net 30', taxProfile: 'Inherit', logoStatus: 'Set',
+        address: '100 King St W', postalCode: 'M5X 1A1', country: 'Canada',
+        phone: '+1 (416) 555-0101', email: 'downtown@acmepizza.com',
+        deliveryRadiusKm: 8, latitude: 43.6488, longitude: -79.3853,
+        usersCount: 7, adminName: 'Sarah Chen', adminEmail: 'sarah@acmepizza.com',
+        createdAt: '2025-06-20',
     },
     {
         id: 'store-002', name: 'Midtown Branch', code: 'MT-002', tenantId: 'brand-001',
         timezone: 'America/Toronto', city: 'Toronto', province: 'Ontario', status: 'Active',
         paymentTerms: 'Net 30', taxProfile: 'Inherit', logoStatus: 'Default',
+        address: '55 Bloor St W', postalCode: 'M4W 1A5', country: 'Canada',
+        phone: '+1 (416) 555-0202', email: 'midtown@acmepizza.com',
+        deliveryRadiusKm: 5, latitude: 43.6710, longitude: -79.3886,
+        usersCount: 4, adminName: 'Mike Patel', adminEmail: 'mike@acmepizza.com',
+        createdAt: '2025-07-02',
     },
+    {
+        id: 'store-003', name: 'Scarborough East', code: 'SC-003', tenantId: 'brand-001',
+        timezone: 'America/Toronto', city: 'Scarborough', province: 'Ontario', status: 'Active',
+        paymentTerms: 'Net 15', taxProfile: 'Override', logoStatus: 'Set',
+        address: '300 Borough Dr', postalCode: 'M1P 4P5', country: 'Canada',
+        phone: '+1 (416) 555-0303', email: 'scarborough@acmepizza.com',
+        taxScheme: 'HST', taxRate: 13,
+        deliveryRadiusKm: 12, latitude: 43.7731, longitude: -79.2578,
+        usersCount: 5, adminName: 'Lisa Wong', adminEmail: 'lisa@acmepizza.com',
+        createdAt: '2025-07-15',
+    },
+];
+
+const MOCK_STORE_USERS: StoreUser[] = [
+    { id: 'su-1', name: 'Sarah Chen', email: 'sarah@acmepizza.com', role: 'Store Manager', status: 'Active', isManager: true, lastLogin: '2026-05-07T14:30:00Z', createdAt: '2025-06-20' },
+    { id: 'su-2', name: 'James Liu', email: 'james@acmepizza.com', role: 'Cashier', status: 'Active', isManager: false, lastLogin: '2026-05-07T09:00:00Z', createdAt: '2025-07-01' },
+    { id: 'su-3', name: 'Priya Patel', email: 'priya@acmepizza.com', role: 'Cashier', status: 'Active', isManager: false, lastLogin: '2026-05-06T16:45:00Z', createdAt: '2025-07-15' },
+    { id: 'su-4', name: 'Alex Rodriguez', email: 'alex@acmepizza.com', role: 'Kitchen Staff', status: 'Pending', isManager: false, createdAt: '2026-04-20' },
 ];
 
 const MOCK_ROLES: Role[] = [
@@ -331,6 +360,59 @@ export const mockAdapter: ApiAdapter = {
         stores[idx] = updated;
         setStore('stores', stores);
         return updated;
+    },
+
+    async suspendStore(tenantId, storeId): Promise<Store> {
+        return this.updateStore(tenantId, storeId, { status: 'Inactive' } as any);
+    },
+
+    async activateStore(tenantId, storeId): Promise<Store> {
+        return this.updateStore(tenantId, storeId, { status: 'Active' } as any);
+    },
+
+    async deleteStore(tenantId, storeId): Promise<void> {
+        await delay(200);
+        const stores = getStore('stores', MOCK_STORES);
+        setStore('stores', stores.filter((s: Store) => !(s.id === storeId && s.tenantId === tenantId)));
+    },
+
+    async getStoreConfig(tenantId, storeId): Promise<StoreDetailConfig> {
+        await delay(200);
+        const configs = getStore<Record<string, StoreDetailConfig>>('store_configs', {});
+        return configs[`${tenantId}_${storeId}`] || createDefaultStoreDetailConfig();
+    },
+
+    async updateStoreConfig(tenantId, storeId, config): Promise<StoreDetailConfig> {
+        await delay(300);
+        const configs = getStore<Record<string, StoreDetailConfig>>('store_configs', {});
+        const key = `${tenantId}_${storeId}`;
+        const existing = configs[key] || createDefaultStoreDetailConfig();
+        configs[key] = { ...existing, ...config } as StoreDetailConfig;
+        setStore('store_configs', configs);
+        return configs[key]!;
+    },
+
+    async getStoreUsers(tenantId, storeId): Promise<StoreUser[]> {
+        await delay(200);
+        const stores = getStore('stores', MOCK_STORES);
+        const store = stores.find((s: Store) => s.id === storeId && s.tenantId === tenantId);
+        if (!store) return [];
+        // Return mock users — keyed by storeId for isolation
+        const allUsers = getStore<Record<string, StoreUser[]>>('store_users', {});
+        return allUsers[storeId] || MOCK_STORE_USERS;
+    },
+
+    async assignStoreManager(tenantId, storeId, userId): Promise<void> {
+        await delay(300);
+        const allUsers = getStore<Record<string, StoreUser[]>>('store_users', {});
+        const users = allUsers[storeId] || [...MOCK_STORE_USERS];
+        // Demote current manager, promote new one
+        const updated = users.map((u: StoreUser) => ({
+            ...u,
+            isManager: u.id === userId,
+        }));
+        allUsers[storeId] = updated;
+        setStore('store_users', allUsers);
     },
 
     // ─── Users ───────────────────────────────────────────
