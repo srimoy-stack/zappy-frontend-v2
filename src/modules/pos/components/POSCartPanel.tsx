@@ -20,6 +20,8 @@ interface POSCartPanelProps {
     selectedStore?: POSStore;
     onStoreChange?: (store: POSStore) => void;
     availableStores?: POSStore[];
+    previewItem?: POSCartItem | null;
+    footerAction?: React.ReactNode;
 }
 
 export const POSCartPanel: React.FC<POSCartPanelProps> = ({
@@ -31,7 +33,9 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
     onHoldOrder,
     total,
     onCheckout,
-    onUpdateItem
+    onUpdateItem,
+    previewItem,
+    footerAction
 }) => {
     const [isConfirmingClear, setIsConfirmingClear] = React.useState(false);
 
@@ -142,13 +146,14 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
                             <ShoppingBag size={18} color="var(--pos-action-primary)" strokeWidth={2.5} />
                         </div>
                         <div>
-                            <div style={{ fontSize: '16px', fontWeight: 900, color: 'var(--pos-text-primary)' }}>Order Cart</div>
-                            <div style={{ fontSize: '11px', color: 'var(--pos-text-muted)', fontWeight: 700 }}>
-                                {cart.length} {cart.length === 1 ? 'item' : 'items'}
+                            <div style={{ fontSize: '16px', fontWeight: 900, color: 'var(--pos-text-primary)' }}>{previewItem ? 'Live Config' : 'Order Cart'}</div>
+                            <div style={{ fontSize: '11px', color: previewItem ? 'var(--pos-action-primary)' : 'var(--pos-text-muted)', fontWeight: 700 }}>
+                                {previewItem ? 'Customizing item...' : `${cart.length} ${cart.length === 1 ? 'item' : 'items'}`}
                             </div>
                         </div>
                     </div>
 
+                    {!previewItem && (
                     <div style={{ display: 'flex', gap: '8px' }}>
                         <button
                             onClick={onHoldOrder}
@@ -213,8 +218,10 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
                             )}
                         </div>
                     </div>
+                    )}
                 </div>
 
+                {!previewItem && (
                 <button
                     onClick={onCheckout}
                     disabled={cart.length === 0}
@@ -239,6 +246,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
                 >
                     <CreditCard size={18} /> PROCEED TO PAY - ${total.toFixed(2)}
                 </button>
+                )}
             </div>
 
             {/* Items List */}
@@ -250,7 +258,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
                 flexDirection: 'column',
                 gap: '12px'
             }} className="no-scrollbar">
-                {cart.length === 0 ? (
+                {cart.length === 0 && !previewItem ? (
                     <div style={{
                         height: '100%',
                         display: 'flex',
@@ -258,33 +266,17 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
                         alignItems: 'center',
                         justifyContent: 'center',
                         color: 'var(--pos-text-muted)',
-                        gap: '20px',
+                        gap: '12px',
                         padding: '40px'
                     }}>
-                        <div style={{
-                            width: '100px',
-                            height: '100px',
-                            borderRadius: '50%',
-                            background: 'var(--pos-bg-card)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            border: '2px dashed var(--pos-border-subtle)',
-                            opacity: 0.5
-                        }}>
-                            <ShoppingBag size={40} strokeWidth={1} />
-                        </div>
-                        <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '18px', fontWeight: 900, color: 'var(--pos-text-primary)' }}>Empty Cart</div>
-                            <div style={{ fontSize: '13px', marginTop: '6px', fontWeight: 600 }}>No items added yet</div>
-                        </div>
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--pos-text-muted)' }}>No previous items in cart</div>
                     </div>
                 ) : (
-                    cart.map((item, idx) => (
+                    [...cart, ...(previewItem ? [previewItem] : [])].map((item, idx) => (
                         <div key={`${item.id}-${idx}`} style={{
                             padding: '16px',
-                            background: 'var(--pos-bg-card)',
-                            border: '1px solid var(--pos-border-subtle)',
+                            background: item.id === 'live-preview' ? 'rgba(31, 164, 169, 0.04)' : 'var(--pos-bg-card)',
+                            border: item.id === 'live-preview' ? '2px solid var(--pos-action-primary)' : '1px solid var(--pos-border-subtle)',
                             borderRadius: '16px',
                             display: 'flex',
                             flexDirection: 'column',
@@ -554,10 +546,23 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
                 )}
             </div>
 
+
+
+            {/* Custom Footer Action (e.g., Deploy to Basket) */}
+            {footerAction && (
+                <div style={{ padding: '16px 20px', borderTop: '1px solid var(--pos-border-subtle)', flexShrink: 0 }}>
+                    {footerAction}
+                </div>
+            )}
+
             <style>{`
                 @keyframes posFadeInUp {
                     from { opacity: 0; transform: translateY(10px); }
                     to { opacity: 1; transform: translateY(0); }
+                }
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.4; }
                 }
             `}</style>
         </div>

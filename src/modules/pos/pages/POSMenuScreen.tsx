@@ -11,7 +11,12 @@ import {
     User,
     RotateCcw,
     ChevronDown,
-    Check
+    Check,
+    LayoutGrid,
+    Grid3x3,
+    X,
+    ChevronRight,
+    Clock
 } from 'lucide-react';
 import { usePOS } from '@/modules/pos/context/POSContext';
 import { POSProduct } from '@/modules/pos/types/pos';
@@ -369,11 +374,15 @@ export const POSMenuScreen: React.FC = () => {
     const [activeCategory, setActiveCategory] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState<'all' | 'favorites' | 'top' | 'hold'>('all');
+    const [gridLayout, setGridLayout] = useState<4 | 5 | 6 | 8>(5);
+    const [detailPopup, setDetailPopup] = useState<POSProduct | null>(null);
     const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
     const [customizationProduct, setCustomizationProduct] = useState<POSProduct | null>(null);
     const [editingCartItem, setEditingCartItem] = useState<any | null>(null);
     const [isCustomizationModalOpen, setIsCustomizationModalOpen] = useState(false);
     const [isPizzaModalOpen, setIsPizzaModalOpen] = useState(false);
+    const [isBatchMode, setIsBatchMode] = useState(false);
+    const [batchProductIds, setBatchProductIds] = useState<string[]>([]);
 
     const [isFulfillmentDropdownOpen, setIsFulfillmentDropdownOpen] = useState(false);
 
@@ -460,17 +469,21 @@ export const POSMenuScreen: React.FC = () => {
     const handleProductClick = (product: any) => {
         if (!product.isAvailable) return;
 
-        if (product.isCombo ||
+        // If product has ANY customization options
+        const isCustomizable = product.isCombo ||
             (product.variantGroups && product.variantGroups.length > 0) ||
-            (product.modifierGroups && product.modifierGroups.length > 0)) {
-            setCustomizationProduct(product);
-            setEditingCartItem(null);
+            (product.modifierGroups && product.modifierGroups.length > 0);
 
-            if (product.categoryId === 'pizza' && !product.isCombo) {
-                setIsPizzaModalOpen(true);
-            } else {
-                setIsCustomizationModalOpen(true);
+        if (isCustomizable) {
+            if (isBatchMode) {
+                if (batchProductIds.length >= 4) {
+                    alert('Maximum of 4 items can be batch configured at a time.');
+                    return;
+                }
+                setBatchProductIds(prev => [...prev, product.id]);
+                return;
             }
+            router.push(`/pos/menu/configure?productId=${product.id}`);
             return;
         }
 
@@ -499,13 +512,8 @@ export const POSMenuScreen: React.FC = () => {
     const handleEditItem = (item: any) => {
         const product = MOCK_PRODUCTS.find(p => p.id === item.productId);
         if (product) {
-            setEditingCartItem(item);
-            setCustomizationProduct(product);
-            if (product.categoryId === 'pizza' && !product.isCombo) {
-                setIsPizzaModalOpen(true);
-            } else {
-                setIsCustomizationModalOpen(true);
-            }
+            // Always navigate to configurator for editing
+            router.push(`/pos/menu/configure?productId=${product.id}`);
         }
     };
 
@@ -826,6 +834,36 @@ export const POSMenuScreen: React.FC = () => {
                                 </span>
                             </div>
                         </button>
+
+                        {/* BUTTON 5: MY ORDERS (Indigo) */}
+                        <button
+                            onClick={() => router.push('/pos/my-orders')}
+                            className="hover-scale"
+                            style={{
+                                flex: 1,
+                                height: '64px',
+                                background: '#4F46E5', // Indigo-600
+                                borderRadius: '12px',
+                                border: 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '0 20px',
+                                gap: '14px',
+                                color: 'white',
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 6px -1px rgba(79, 70, 229, 0.2)'
+                            }}
+                        >
+                            <Clock size={24} strokeWidth={2.5} />
+                            <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', lineHeight: '1.2' }}>
+                                <span style={{ fontSize: '10px', fontWeight: 800, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    Cashier Desk
+                                </span>
+                                <span style={{ fontSize: '15px', fontWeight: 900 }}>
+                                    MY ORDERS
+                                </span>
+                            </div>
+                        </button>
                     </div>
 
                     {/* ROW 2: SEARCH BAR (Full Width) */}
@@ -854,9 +892,9 @@ export const POSMenuScreen: React.FC = () => {
                         />
                     </div>
                 </div>
-                {/* Top-level Filter Tabs */}
+                {/* Top-level Filter Tabs + Grid Layout Selector */}
                 <div style={{
-                    padding: '0 24px 20px',
+                    padding: '0 24px 16px',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '12px',
@@ -893,14 +931,93 @@ export const POSMenuScreen: React.FC = () => {
                             </button>
                         ))
                     }
+
+                    {/* Batch Mode Switch */}
+                    <button
+                        onClick={() => {
+                            setIsBatchMode(!isBatchMode);
+                            if (isBatchMode) setBatchProductIds([]);
+                        }}
+                        style={{
+                            padding: '12px 24px',
+                            borderRadius: '12px',
+                            background: isBatchMode ? 'var(--pos-action-primary)' : 'rgba(31, 164, 169, 0.05)',
+                            color: isBatchMode ? 'white' : 'var(--pos-action-primary)',
+                            border: '1px solid rgba(31, 164, 169, 0.2)',
+                            fontWeight: 800,
+                            fontSize: '14px',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.02em',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                        }}
+                        className="hover-scale"
+                    >
+                        <span>🍕</span>
+                        <span>{isBatchMode ? 'Batch Customise ON' : 'Batch Customise'}</span>
+                        {batchProductIds.length > 0 && (
+                            <span style={{
+                                background: isBatchMode ? 'white' : 'var(--pos-action-primary)',
+                                color: isBatchMode ? 'var(--pos-action-primary)' : 'white',
+                                padding: '2px 8px',
+                                borderRadius: '20px',
+                                fontSize: '11px',
+                                fontWeight: 900
+                            }}>
+                                {batchProductIds.length}
+                            </span>
+                        )}
+                    </button>
+
+                    {/* Grid Layout Selector */}
+                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--pos-bg-card)', borderRadius: '12px', padding: '4px', border: '1px solid var(--pos-border-subtle)' }}>
+                        {([4, 5, 6, 8] as const).map(cols => (
+                            <button
+                                key={cols}
+                                onClick={() => setGridLayout(cols)}
+                                title={`${cols} columns`}
+                                style={{
+                                    width: '40px',
+                                    height: '36px',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: gridLayout === cols ? 'var(--pos-action-primary)' : 'transparent',
+                                    color: gridLayout === cols ? 'white' : 'var(--pos-text-muted)',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.15s',
+                                    position: 'relative'
+                                }}
+                            >
+                                {/* Mini grid preview icon */}
+                                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(cols, 4)}, 1fr)`, gap: '2px' }}>
+                                    {Array.from({ length: Math.min(cols, 4) * 2 }).map((_, i) => (
+                                        <div key={i} style={{
+                                            width: cols <= 5 ? '5px' : '4px',
+                                            height: cols <= 5 ? '4px' : '3px',
+                                            borderRadius: '1px',
+                                            background: gridLayout === cols ? 'rgba(255,255,255,0.8)' : 'currentColor',
+                                            opacity: 0.7
+                                        }} />
+                                    ))}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
-                {/* Product Grid */}
-                <div style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>
+                {/* Product Grid — Compact Cards */}
+                <div style={{ flex: 1, padding: '16px', overflowY: 'auto' }}>
                     <div className="pos-products-grid" style={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-                        gap: '20px'
+                        gridTemplateColumns: `repeat(${gridLayout}, 1fr)`,
+                        gap: gridLayout >= 6 ? '8px' : '10px',
+                        alignContent: 'start'
                     }}>
                         {filteredProducts.map(product => {
                             const isOutOfStock = !product.isAvailable;
@@ -913,70 +1030,326 @@ export const POSMenuScreen: React.FC = () => {
                                     style={{
                                         display: 'flex',
                                         flexDirection: 'column',
-                                        background: isOutOfStock ? 'rgba(0,0,0,0.1)' : 'var(--pos-bg-surface)',
-                                        border: '1px solid var(--pos-border-subtle)',
-                                        borderRadius: '24px',
+                                        justifyContent: 'center',
+                                        background: isOutOfStock ? 'rgba(0,0,0,0.05)' : 'var(--pos-bg-surface)',
+                                        border: '1.5px solid var(--pos-border-subtle)',
+                                        borderRadius: gridLayout >= 6 ? '12px' : '14px',
                                         textAlign: 'left',
                                         position: 'relative',
                                         overflow: 'hidden',
                                         cursor: isOutOfStock ? 'not-allowed' : 'pointer',
-                                        opacity: isOutOfStock ? 0.6 : 1,
-                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        padding: 0
+                                        opacity: isOutOfStock ? 0.5 : 1,
+                                        transition: 'all 0.15s',
+                                        padding: gridLayout >= 6 ? '10px 12px' : '14px 16px',
+                                        minHeight: gridLayout >= 6 ? '56px' : '68px'
                                     }}
                                 >
-                                    {/* Detailed Text Info */}
-                                    <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                            <h3 style={{ fontSize: '18px', fontWeight: 900, color: isOutOfStock ? 'var(--pos-text-muted)' : 'var(--pos-text-primary)', margin: 0 }}>{product.name}</h3>
-                                            <span style={{ fontSize: '18px', fontWeight: 900, color: isOutOfStock ? 'var(--pos-text-muted)' : 'var(--pos-action-primary)' }}>${product.price.toFixed(2)}</span>
-                                        </div>
-
-                                        <div style={{ fontSize: '12px', color: 'var(--pos-text-secondary)', fontWeight: 600 }}>
-                                            <span style={{ color: 'var(--pos-text-muted)', fontWeight: 900, textTransform: 'uppercase', fontSize: '10px', display: 'block', marginBottom: '2px' }}>Description:</span>
-                                            {product.ingredients?.join(', ') || 'Standard recipe with high-quality ingredients'}
-                                        </div>
-
-                                        <div style={{ fontSize: '12px', color: 'var(--pos-text-secondary)', fontWeight: 600 }}>
-                                            <span style={{ color: 'var(--pos-text-muted)', fontWeight: 900, textTransform: 'uppercase', fontSize: '10px', display: 'block', marginBottom: '2px' }}>Available Sizes:</span>
-                                            {product.variantGroups?.find(g => g.name === 'Size')?.options.map(o => o.name).join(', ') || 'Regular'}
-                                        </div>
-
-                                        <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px' }}>
+                                    <div style={{ fontSize: gridLayout >= 6 ? '12px' : '14px', fontWeight: 900, color: 'var(--pos-text-primary)', lineHeight: 1.2, marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {product.name}
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                                        <span style={{ fontSize: gridLayout >= 6 ? '13px' : '15px', fontWeight: 900, color: 'var(--pos-action-primary)' }}>
+                                            ${product.price.toFixed(2)}
+                                        </span>
+                                        {product.hasVariants && (
                                             <span style={{
-                                                fontSize: '10px',
+                                                fontSize: '8px',
                                                 fontWeight: 900,
-                                                color: product.hasVariants ? 'var(--pos-action-primary)' : 'var(--pos-text-muted)',
+                                                color: 'var(--pos-action-primary)',
                                                 textTransform: 'uppercase',
-                                                background: product.hasVariants ? 'rgba(31,164,169,0.1)' : 'transparent',
-                                                padding: '4px 8px',
-                                                borderRadius: '6px'
+                                                background: 'rgba(31,164,169,0.08)',
+                                                padding: '2px 6px',
+                                                borderRadius: '4px',
+                                                letterSpacing: '0.03em'
                                             }}>
-                                                {product.hasVariants ? 'Customizable' : 'Standard Item'}
+                                                Customizable
                                             </span>
-                                            <span style={{ fontSize: '11px', color: 'var(--pos-text-muted)', fontWeight: 700 }}>{product.sku}</span>
-                                        </div>
-                                        {isOutOfStock && (
-                                            <div style={{
-                                                marginTop: '8px',
-                                                padding: '8px',
-                                                background: 'rgba(239, 68, 68, 0.1)',
-                                                color: '#EF4444',
-                                                borderRadius: '8px',
-                                                fontSize: '11px',
-                                                fontWeight: 900,
-                                                textAlign: 'center',
-                                                textTransform: 'uppercase'
-                                            }}>
-                                                Temporarily Unavailable
-                                            </div>
                                         )}
                                     </div>
+                                    {isOutOfStock && (
+                                        <div style={{
+                                            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                                            background: 'rgba(255,255,255,0.6)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontSize: '9px', fontWeight: 900, color: '#EF4444',
+                                            textTransform: 'uppercase', letterSpacing: '0.05em'
+                                        }}>
+                                            Unavailable
+                                        </div>
+                                    )}
                                 </button>
                             );
                         })}
                     </div>
                 </div>
+
+                {/* Batch Queue Panel */}
+                {isBatchMode && (
+                    <div style={{
+                        background: 'var(--pos-bg-surface)',
+                        borderTop: '2px solid var(--pos-action-primary)',
+                        padding: '16px 24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        boxShadow: '0 -4px 15px rgba(0,0,0,0.05)',
+                        animation: 'posFadeInUp 0.25s',
+                        zIndex: 100
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                            <div>
+                                <div style={{ fontSize: '13px', fontWeight: 900, color: 'var(--pos-action-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    Batch Customisation Queue
+                                </div>
+                                <div style={{ fontSize: '12px', color: 'var(--pos-text-muted)', fontWeight: 700 }}>
+                                    Tap customizable pizzas to add. Max 4 items.
+                                </div>
+                            </div>
+
+                            {/* Queued pizzas list */}
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                {batchProductIds.length === 0 ? (
+                                    <div style={{ fontSize: '13px', color: 'var(--pos-text-muted)', fontStyle: 'italic', paddingLeft: '12px' }}>
+                                        No pizzas in queue yet
+                                    </div>
+                                ) : (
+                                    batchProductIds.map((pId, idx) => {
+                                        const prod = MOCK_PRODUCTS.find(p => p.id === pId);
+                                        return (
+                                            <div key={idx} style={{
+                                                background: 'var(--pos-bg-main)',
+                                                border: '1px solid var(--pos-border-subtle)',
+                                                borderRadius: '10px',
+                                                padding: '6px 12px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                fontSize: '12px',
+                                                fontWeight: 800,
+                                                color: 'var(--pos-text-primary)'
+                                            }}>
+                                                <span>🍕 {prod?.name || 'Pizza'}</span>
+                                                <button
+                                                    onClick={() => setBatchProductIds(prev => prev.filter((_, i) => i !== idx))}
+                                                    style={{
+                                                        background: 'transparent',
+                                                        border: 'none',
+                                                        color: '#EF4444',
+                                                        cursor: 'pointer',
+                                                        padding: 0,
+                                                        display: 'flex',
+                                                        alignItems: 'center'
+                                                    }}
+                                                >
+                                                    <X size={14} strokeWidth={3} />
+                                                </button>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Configure Button */}
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                            {batchProductIds.length > 0 && (
+                                <button
+                                    onClick={() => setBatchProductIds([])}
+                                    style={{
+                                        background: 'transparent',
+                                        border: '1px solid #EF4444',
+                                        color: '#EF4444',
+                                        padding: '10px 18px',
+                                        borderRadius: '10px',
+                                        fontSize: '12px',
+                                        fontWeight: 800,
+                                        cursor: 'pointer',
+                                        textTransform: 'uppercase'
+                                    }}
+                                    className="hover-scale"
+                                >
+                                    Clear Queue
+                                </button>
+                            )}
+
+                            <button
+                                disabled={batchProductIds.length < 2}
+                                onClick={() => {
+                                    router.push(`/pos/menu/configure?productIds=${batchProductIds.join(',')}`);
+                                }}
+                                style={{
+                                    background: batchProductIds.length >= 2 ? 'var(--pos-action-primary)' : 'var(--pos-text-muted)',
+                                    color: 'white',
+                                    padding: '10px 24px',
+                                    borderRadius: '10px',
+                                    border: 'none',
+                                    fontSize: '13px',
+                                    fontWeight: 900,
+                                    cursor: batchProductIds.length >= 2 ? 'pointer' : 'not-allowed',
+                                    textTransform: 'uppercase',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    boxShadow: batchProductIds.length >= 2 ? '0 4px 6px rgba(31,164,169,0.15)' : 'none'
+                                }}
+                                className={batchProductIds.length >= 2 ? 'hover-scale' : ''}
+                            >
+                                <span>Configure {batchProductIds.length} Pizzas</span>
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* ═══ PRODUCT DETAIL POPUP ═══ */}
+                {detailPopup && (
+                    <div
+                        onClick={() => setDetailPopup(null)}
+                        style={{
+                            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                            background: 'rgba(0,0,0,0.4)',
+                            backdropFilter: 'blur(4px)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            zIndex: 9999,
+                            animation: 'posFadeInUp 0.2s'
+                        }}
+                    >
+                        <div
+                            onClick={e => e.stopPropagation()}
+                            style={{
+                                width: '420px',
+                                background: 'var(--pos-bg-surface)',
+                                borderRadius: '20px',
+                                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+                                overflow: 'hidden',
+                                animation: 'posFadeInUp 0.25s'
+                            }}
+                        >
+                            {/* Popup Header */}
+                            <div style={{
+                                padding: '20px 24px',
+                                background: 'linear-gradient(135deg, var(--pos-action-primary), #0d9488)',
+                                color: 'white',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'flex-start'
+                            }}>
+                                <div>
+                                    <div style={{ fontSize: '20px', fontWeight: 900 }}>{detailPopup.name}</div>
+                                    <div style={{ fontSize: '14px', fontWeight: 700, opacity: 0.9, marginTop: '4px' }}>{detailPopup.sku}</div>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <div style={{ fontSize: '24px', fontWeight: 900 }}>${detailPopup.price.toFixed(2)}</div>
+                                    <button
+                                        onClick={() => setDetailPopup(null)}
+                                        style={{
+                                            width: '32px', height: '32px', borderRadius: '10px',
+                                            background: 'rgba(255,255,255,0.2)', border: 'none',
+                                            color: 'white', cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                        }}
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Popup Body */}
+                            <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                {/* Description */}
+                                <div>
+                                    <div style={{ fontSize: '10px', fontWeight: 900, color: 'var(--pos-text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>Description</div>
+                                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--pos-text-secondary)', lineHeight: 1.5 }}>
+                                        {detailPopup.ingredients?.join(', ') || 'Standard recipe with high-quality ingredients'}
+                                    </div>
+                                </div>
+
+                                {/* Available Sizes */}
+                                <div>
+                                    <div style={{ fontSize: '10px', fontWeight: 900, color: 'var(--pos-text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Available Sizes</div>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                        {(detailPopup.variantGroups?.find(g => g.name === 'Size')?.options || [{ id: 'def', name: 'Regular', additionalPrice: 0 }]).map(opt => (
+                                            <span key={opt.id} style={{
+                                                padding: '6px 14px',
+                                                borderRadius: '8px',
+                                                background: 'rgba(31,164,169,0.08)',
+                                                border: '1px solid rgba(31,164,169,0.15)',
+                                                fontSize: '12px',
+                                                fontWeight: 800,
+                                                color: 'var(--pos-action-primary)'
+                                            }}>
+                                                {opt.name}{opt.additionalPrice > 0 ? ` (+$${opt.additionalPrice.toFixed(2)})` : ''}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Item Type Badge */}
+                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                    <span style={{
+                                        padding: '5px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 900,
+                                        textTransform: 'uppercase', letterSpacing: '0.03em',
+                                        background: detailPopup.hasVariants ? 'rgba(31,164,169,0.1)' : 'var(--pos-bg-main)',
+                                        color: detailPopup.hasVariants ? 'var(--pos-action-primary)' : 'var(--pos-text-muted)'
+                                    }}>
+                                        {detailPopup.hasVariants ? 'Customizable' : 'Standard Item'}
+                                    </span>
+                                    {detailPopup.isVeg && (
+                                        <span style={{ padding: '5px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 900, background: 'rgba(16,185,129,0.1)', color: '#059669', textTransform: 'uppercase' }}>Veg</span>
+                                    )}
+                                    {detailPopup.isCombo && (
+                                        <span style={{ padding: '5px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 900, background: 'rgba(245,158,11,0.1)', color: '#D97706', textTransform: 'uppercase' }}>Combo</span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Popup Footer */}
+                            <div style={{ padding: '16px 24px', borderTop: '1px solid var(--pos-border-subtle)', display: 'flex', gap: '10px' }}>
+                                <button
+                                    onClick={() => setDetailPopup(null)}
+                                    style={{
+                                        flex: 1,
+                                        height: '48px',
+                                        borderRadius: '12px',
+                                        border: '1.5px solid var(--pos-border-subtle)',
+                                        background: 'var(--pos-bg-main)',
+                                        color: 'var(--pos-text-secondary)',
+                                        fontSize: '14px',
+                                        fontWeight: 800,
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        const p = detailPopup;
+                                        setDetailPopup(null);
+                                        handleProductClick(p);
+                                    }}
+                                    style={{
+                                        flex: 2,
+                                        height: '48px',
+                                        borderRadius: '12px',
+                                        border: 'none',
+                                        background: 'var(--pos-action-primary)',
+                                        color: 'white',
+                                        fontSize: '14px',
+                                        fontWeight: 900,
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '8px'
+                                    }}
+                                >
+                                    {detailPopup.hasVariants ? 'Customize' : 'Add to Cart'}
+                                    <ChevronRight size={18} />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* 3. CART/ORDER PANEL */}
