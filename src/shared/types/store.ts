@@ -87,6 +87,15 @@ export interface HardwareConfig {
     devices: HardwareDevice[];
 }
 
+// ─── Tax Configuration ──────────────────────────────────────────────────────
+
+export interface TaxConfig {
+    scheme: string;                    // e.g. 'HST', 'GST', 'GST+PST', 'GST+QST', 'PST', 'No Tax'
+    rate: number;                      // e.g. 13 for 13%
+    deliveryFeeTaxEnabled?: boolean;   // Whether tax applies to delivery fees
+    packagingFeeTaxEnabled?: boolean;  // Whether tax applies to packaging fees
+}
+
 // ─── Core Store Type ────────────────────────────────────────────────────────
 
 export interface Store {
@@ -113,6 +122,9 @@ export interface Store {
     taxProfile: 'Inherit' | 'Override';
     taxScheme?: string;
     taxRate?: number;
+    taxInheritBrand?: boolean;
+    taxOverrideEnabled?: boolean;
+    taxConfig?: TaxConfig;
     logoStatus: 'Set' | 'Default';
     // ─── Delivery Radius & Geo ──────────────────────────────────────────
     deliveryRadiusKm?: number;
@@ -205,7 +217,7 @@ export interface CreateStoreDTO {
     splitPaymentsEnabled?: boolean;
     taxInheritBrand?: boolean;
     taxOverrideEnabled?: boolean;
-    taxConfig?: any;
+    taxConfig?: TaxConfig;
     tipPresets?: number[];
     tipCalculationMode?: string;
     autoGratuityEnabled?: boolean;
@@ -309,6 +321,68 @@ export interface StoreIntegration {
     lastSyncAt?: string;
 }
 
+// ─── Store Page Data (GET /pos/stores/{id}/page-data) ───────────────────────
+
+export interface StorePageModule {
+    enabled: boolean;
+    url: string;
+}
+
+export interface StorePageSummary {
+    total_orders: number;
+    open_orders: number;
+    completed_orders: number;
+    cancelled_orders: number;
+    total_revenue: number;
+    payments: number;
+    completed_payments: number;
+    inventory_items: number;
+    low_stock_items: number;
+    assigned_users: number;
+    brand_categories: number;
+    brand_menu_items: number;
+    store_menu_items: number;
+    price_overrides: number;
+}
+
+export interface StorePageRecentOrder {
+    id: string;
+    tenant_id: string;
+    store_id: string;
+    order_number: string;
+    order_type: string;
+    source: string;
+    status: string;
+    payment_status: string;
+    subtotal: number;
+    tax: number;
+    delivery_fee: number;
+    discount: number;
+    total: number;
+    created_at: string;
+}
+
+export interface StorePageData {
+    store: any;  // full raw store object from backend
+    tenant_id: string;
+    brand_id: string;
+    modules: Record<string, StorePageModule>;
+    summary: StorePageSummary;
+    users: any[];
+    recent_orders: StorePageRecentOrder[];
+    catalog: {
+        categories_count: number;
+        brand_items_count: number;
+        store_items_count: number;
+        price_overrides_count: number;
+    };
+    inventory: {
+        items_count: number;
+        low_stock_count: number;
+    };
+    urls: Record<string, string>;
+}
+
 // ─── Store Users (scoped to a single store) ────────────────────────────────
 
 export interface StoreUser {
@@ -363,7 +437,7 @@ export function evaluateGoLiveReadiness(
         {
             id: 'hours', label: 'Operating hours', description: 'At least one channel has hours configured',
             passed: !!(config?.operatingHours && Object.values(config.operatingHours).some(
-                slots => slots.some(s => s.isOpen)
+                slots => Array.isArray(slots) && slots.some(s => s?.isOpen)
             )), severity: 'required',
         },
         {
@@ -372,7 +446,7 @@ export function evaluateGoLiveReadiness(
         },
         {
             id: 'tax', label: 'Tax profile configured', description: 'Tax scheme and rate are set',
-            passed: store.taxProfile === 'Inherit' || !!(store.taxScheme && store.taxRate !== undefined),
+            passed: store.taxInheritBrand === true || store.taxProfile === 'Inherit' || !!(store.taxConfig?.scheme && store.taxConfig?.rate !== undefined) || !!(store.taxScheme && store.taxRate !== undefined),
             severity: 'required',
         },
         {

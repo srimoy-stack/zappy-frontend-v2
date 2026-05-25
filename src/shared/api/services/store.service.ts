@@ -1,5 +1,5 @@
 import { api } from '@/shared/api';
-import type { Store, CreateStoreDTO, StoreDetailConfig, StoreUser } from '@/shared/types/store';
+import type { Store, CreateStoreDTO, StoreDetailConfig, StoreUser, StorePageData } from '@/shared/types/store';
 
 export const storeService = {
     list: (tenantId: string) =>
@@ -29,9 +29,16 @@ export const storeService = {
     updateConfig: (tenantId: string, storeId: string, config: Partial<StoreDetailConfig>) =>
         api.updateStoreConfig(tenantId, storeId, config),
 
+    getPageData: (tenantId: string, storeId: string): Promise<StorePageData> =>
+        api.getStorePageData(tenantId, storeId),
+
     getStoreUsers: (tenantId: string, storeId: string) =>
         api.getStoreUsers(tenantId, storeId),
 
     assignManager: (tenantId: string, storeId: string, userId: string) =>
         api.assignStoreManager(tenantId, storeId, userId),
+
+    createStoreUser: (tenantId: string, storeId: string, user: { name: string; email: string; role: string; status: string; isManager: boolean }) =>
+        api.createStoreUser(tenantId, storeId, user),
 };
+

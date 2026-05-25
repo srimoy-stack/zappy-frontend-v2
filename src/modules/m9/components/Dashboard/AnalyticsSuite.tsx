@@ -357,8 +357,9 @@ export const AnalyticsSuite: React.FC<AnalyticsSuiteProps> = ({
                                                             cy={y}
                                                             r="4.5"
                                                             className="fill-white stroke-amber-500 stroke-[3]"
-                                                            title="Daily Peak"
-                                                        />
+                                                        >
+                                                            <title>Daily Peak</title>
+                                                        </circle>
                                                     </g>
                                                 );
                                             }

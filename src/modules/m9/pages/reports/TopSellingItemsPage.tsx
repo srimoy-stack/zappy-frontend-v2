@@ -43,8 +43,7 @@ export const TopSellingItemsPage: React.FC = () => {
                 filters={filters}
                 onFilterChange={setFilters}
                 showStoreFilter={true}
-                showChannelFilter={true}
-            />
+             />
 
             <ReportExportActions onExport={(format) => console.log('Exporting', format)} />
 

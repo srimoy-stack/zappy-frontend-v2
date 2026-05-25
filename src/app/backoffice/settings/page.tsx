@@ -9,9 +9,8 @@ import {
 
 import { Brand } from '@/shared/types/tenant';
 import { UserType } from '@/shared/types/auth';
-import { cn } from '@/utils';
 import { useAuth } from '@/shared/contexts/AuthContext';
-import { apiClient } from '@/shared/api/apiClient';
+import { cn } from '@/utils';
 import { mapResponseToBrand } from '@/modules/platform/services/tenant.service';
 import { storeService } from '@/shared/api/services/store.service';
 import { tenantService } from '@/shared/api';

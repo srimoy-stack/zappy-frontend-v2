@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Users, Shield, Crown, Clock, Mail, Loader2, Plus, Pencil,
     X, UserPlus, ChevronDown, Check,
@@ -127,6 +127,10 @@ export function StoreUsersTab({ users: initialUsers, onAssignManager, onCreateUs
     const [promoting, setPromoting] = useState<string | null>(null);
     const [showForm, setShowForm] = useState<'create' | 'edit' | null>(null);
     const [editingUser, setEditingUser] = useState<StoreUser | null>(null);
+
+    useEffect(() => {
+        setUsers(initialUsers);
+    }, [initialUsers]);
 
     const handlePromote = async (userId: string) => {
         setPromoting(userId);

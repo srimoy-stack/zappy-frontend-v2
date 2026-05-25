@@ -43,8 +43,7 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
                                 <Sidebar
                                     navItems={filteredNav}
                                     variant="backoffice"
-                                    // showNewSale={!!canShowNewSale} // TODO: re-enable when POS terminal is ready
-                                    showNewSale={false}
+                                    showNewSale={!!canShowNewSale}
                                     logoHref="/backoffice/home"
                                 />
                                 <div className="flex-1 flex flex-col min-h-screen ml-64 transition-all duration-300 min-w-0">

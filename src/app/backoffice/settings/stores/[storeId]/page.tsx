@@ -12,7 +12,7 @@ import { useAuth } from '@/shared/contexts/AuthContext';
 import { storeService } from '@/shared/api/services/store.service';
 import type {
     Store, StoreDetailConfig, StoreUser, CreateStoreDTO, OperatingHours,
-    DeliveryConfig, PickupConfig, HardwareConfig,
+    DeliveryConfig, PickupConfig, HardwareConfig, StorePageData,
 } from '@/shared/types/store';
 import { createDefaultStoreDetailConfig } from '@/shared/types/store';
 
@@ -20,7 +20,6 @@ import { StoreSkeleton } from '@/modules/stores/components/shared/StoreSkeleton'
 import { StoreStatusBadge } from '@/modules/stores/components/shared/StoreStatusBadge';
 import {
     StoreOverviewTab,
-    StoreGeneralTab,
     StoreOperationsTab,
     StoreDeliveryTab,
     StorePickupTab,
@@ -32,12 +31,11 @@ import {
 
 // ─── Tab Config ─────────────────────────────────────────────────────────────
 
-type StoreTab = 'overview' | 'general' | 'operations' | 'delivery' | 'pickup' |
+type StoreTab = 'overview' | 'operations' | 'delivery' | 'pickup' |
     'integrations' | 'hardware' | 'tax' | 'users';
 
 const STORE_TABS: { id: StoreTab; label: string; icon: any }[] = [
     { id: 'overview', label: 'Overview', icon: Activity },
-    { id: 'general', label: 'General', icon: Building2 },
     { id: 'operations', label: 'Operations', icon: Clock },
     { id: 'delivery', label: 'Delivery', icon: Truck },
     { id: 'pickup', label: 'Pickup', icon: ShoppingBag },
@@ -58,6 +56,7 @@ export default function StoreDetailPage() {
     const [store, setStore] = useState<Store | null>(null);
     const [config, setConfig] = useState<StoreDetailConfig>(createDefaultStoreDetailConfig());
     const [storeUsers, setStoreUsers] = useState<StoreUser[]>([]);
+    const [pageData, setPageData] = useState<StorePageData | null>(null);
     const [activeTab, setActiveTab] = useState<StoreTab>('overview');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -71,14 +70,16 @@ export default function StoreDetailPage() {
         setLoading(true);
         setError(null);
         try {
-            const [storeData, configData, usersData] = await Promise.all([
+            const [storeData, configData, usersData, pageDataResult] = await Promise.all([
                 storeService.get(resolvedTenantId, storeId),
                 storeService.getConfig(resolvedTenantId, storeId).catch(() => createDefaultStoreDetailConfig()),
                 storeService.getStoreUsers(resolvedTenantId, storeId).catch(() => []),
+                storeService.getPageData(resolvedTenantId, storeId).catch(() => null),
             ]);
             setStore(storeData);
             setConfig(configData);
             setStoreUsers(usersData);
+            setPageData(pageDataResult);
         } catch (err: any) {
             console.error('Failed to fetch store:', err);
             setError(err?.message || 'Failed to load store details');
@@ -117,14 +118,26 @@ export default function StoreDetailPage() {
         await handleConfigSave({ hardwareConfig });
     };
 
-    const handleTaxSave = async (data: any) => {
-        await storeService.update(resolvedTenantId, storeId, data);
+    const handleTaxSave = async (data: { paymentTerms: string; taxInheritBrand: boolean; taxOverrideEnabled: boolean; taxConfig?: import('@/shared/types/store').TaxConfig }) => {
+        const dto: Partial<CreateStoreDTO> = {
+            paymentTerms: data.paymentTerms,
+            taxInheritBrand: data.taxInheritBrand,
+            taxOverrideEnabled: data.taxOverrideEnabled,
+            ...(data.taxConfig ? { taxConfig: data.taxConfig } : {}),
+        };
+        await storeService.update(resolvedTenantId, storeId, dto);
         const updated = await storeService.get(resolvedTenantId, storeId);
         setStore(updated);
     };
 
     const handleAssignManager = async (userId: string) => {
         await storeService.assignManager(resolvedTenantId, storeId, userId);
+        const usersData = await storeService.getStoreUsers(resolvedTenantId, storeId);
+        setStoreUsers(usersData);
+    };
+
+    const handleCreateUser = async (user: { name: string; email: string; role: string; status: string; isManager: boolean }) => {
+        await storeService.createStoreUser(resolvedTenantId, storeId, user);
         const usersData = await storeService.getStoreUsers(resolvedTenantId, storeId);
         setStoreUsers(usersData);
     };
@@ -251,12 +264,11 @@ export default function StoreDetailPage() {
                 {activeTab === 'overview' && (
                     <StoreOverviewTab
                         store={store} config={config} users={storeUsers}
+                        pageData={pageData ?? undefined}
                         onPublish={store.status === 'Draft' ? handlePublish : undefined}
                         isPublishing={actionLoading}
+                        onSaveGeneral={handleGeneralSave}
                     />
-                )}
-                {activeTab === 'general' && (
-                    <StoreGeneralTab store={store} onSave={handleGeneralSave} />
                 )}
                 {activeTab === 'operations' && (
                     <StoreOperationsTab operatingHours={config.operatingHours} onSave={handleOperationsSave} />
@@ -277,7 +289,7 @@ export default function StoreDetailPage() {
                     <StoreTaxPaymentsTab store={store} onSave={handleTaxSave} />
                 )}
                 {activeTab === 'users' && (
-                    <StoreUsersTab users={storeUsers} onAssignManager={handleAssignManager} />
+                    <StoreUsersTab users={storeUsers} onAssignManager={handleAssignManager} onCreateUser={handleCreateUser} />
                 )}
             </div>
         </div>

@@ -1,4 +1,4 @@
-export type ItemType = 'SINGLE' | 'COMBO';
+export type ItemType = 'SINGLE' | 'COMBO' | 'CONFIGURABLE_DEAL' | 'FIXED_COMBO';
 export type ProductDeploymentScope = 'GLOBAL' | 'STORE_SPECIFIC';
 export type SyncStatusType = 'DRAFT' | 'QUEUED' | 'SYNCED' | 'FAILED';
 
@@ -54,6 +54,7 @@ export interface ItemVariant {
     id: string;
     name: string; // e.g. "Small", "Regular"
     basePrice: number;
+    priceAdjustment?: number; // Incremental pricing: +$0, +$3, +$6 from baseProductPrice
     sku?: string;
     isAvailable: boolean;
     recipe?: RecipeEntry[]; // BOM per variant
@@ -124,7 +125,13 @@ export interface Item {
     name: string;
     description: string;
     imageUrl?: string;
+    sku?: string;
+    tags?: string[];
     categoryId: string;
+    secondaryCategoryIds?: string[];
+    baseProductPrice?: number; // Anchor price for incremental variant pricing
+    dietaryFlags?: string[];
+    channelVisibility?: string[];
     variantGroups: ItemVariantGroup[];
     
     // Decoupled structure: links to shared modifier pools

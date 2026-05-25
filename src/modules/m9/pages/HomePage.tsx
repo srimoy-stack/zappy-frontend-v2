@@ -370,14 +370,14 @@ export const HomePage: React.FC = () => {
             if (triggerNewOrder) {
                 const channels = ['POS', 'Online', 'Uber', 'Zomato', 'Swiggy'] as const;
                 const names = ['David Beckham', 'Gordon Ramsay', 'Selena G.', 'Will Smith', 'Taylor S.'];
-                const selectedChannel = channels[Math.floor(Math.random() * channels.length)];
+                const selectedChannel = channels[Math.floor(Math.random() * channels.length)] || 'POS';
                 const randomId = Math.floor(Math.random() * 900) + 10500;
                 
                 const newOrder: RecentOrder = {
                     id: `order-${randomId}`,
                     orderNumber: `#${randomId}`,
                     time: 'Just now',
-                    customer: names[Math.floor(Math.random() * names.length)],
+                    customer: names[Math.floor(Math.random() * names.length)] || 'Guest',
                     channel: selectedChannel,
                     status: 'prep',
                     total: parseFloat((Math.random() * 45 + 10).toFixed(2)),
@@ -505,8 +505,8 @@ export const HomePage: React.FC = () => {
         <div className="min-h-screen bg-slate-100 flex flex-col gap-8 pb-16">
             {/* 1. Header (Operations-grade HUD) */}
             <DashboardHeader
-                brandName={user?.tenantName || 'Zyappy Gourmet'}
-                userName={user?.name || 'Operations Executive'}
+                brandName={user?.tenantName || 'Demo Pizza Brand'}
+                userName={user?.name || 'Brand Admin'}
                 storeCount={kpis?.activeStores || 4}
                 isLoading={isLoading}
                 onRefresh={() => initializeData()}

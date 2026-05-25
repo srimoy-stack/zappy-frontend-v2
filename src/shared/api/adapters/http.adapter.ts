@@ -16,7 +16,7 @@ import type { ApiAdapter } from './adapter.interface';
 import type { MeResponse, PaginatedResponse } from '@/shared/types/api';
 import type { User, CreateUserDTO } from '@/shared/types/user';
 import type { Brand, CreateTenantDTO } from '@/shared/types/tenant';
-import type { Store, CreateStoreDTO, StoreDetailConfig, StoreUser } from '@/shared/types/store';
+import type { Store, CreateStoreDTO, StoreDetailConfig, StoreUser, StorePageData, OperatingHours, DayOfWeek, ChannelKey } from '@/shared/types/store';
 import { createDefaultStoreDetailConfig } from '@/shared/types/store';
 import type { Role, CreateRoleDTO } from '@/shared/types/role';
 import type { TenantModule } from '@/shared/types/module';
@@ -29,6 +29,54 @@ import {
     wrapAsPaginated,
 } from './normalizeBackend';
 
+function parseOperatingHours(backendHours: any): OperatingHours {
+    const defaultHours = createDefaultStoreDetailConfig().operatingHours;
+    if (!backendHours) return defaultHours;
+
+    // Check if it's already in frontend format (has channel keys as arrays)
+    if (backendHours.pos && Array.isArray(backendHours.pos)) {
+        return backendHours as OperatingHours;
+    }
+
+    const days = backendHours.days;
+    if (!days) return defaultHours;
+
+    const daysOfWeek: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const channels: ChannelKey[] = ['pos', 'online', 'kiosk', 'delivery', 'dineIn', 'callCenter'];
+
+    const result: OperatingHours = { ...defaultHours };
+
+    channels.forEach(ch => {
+        result[ch] = daysOfWeek.map(day => {
+            const dayKey = day.toLowerCase();
+            const dayData = days[dayKey];
+            
+            // Check if dayData exists and has channel data
+            const channelData = dayData?.[ch];
+            if (channelData) {
+                return {
+                    day,
+                    openTime: channelData.open || '09:00',
+                    closeTime: channelData.close || '22:00',
+                    isOpen: channelData.enabled ?? (channelData.is_closed !== undefined ? !channelData.is_closed : true),
+                };
+            }
+            
+            // Fallback
+            const isDayClosed = dayData?.is_closed ?? false;
+            const defaultSlot = defaultHours[ch]?.find(s => s.day === day);
+            return {
+                day,
+                openTime: defaultSlot?.openTime || '09:00',
+                closeTime: defaultSlot?.closeTime || '22:00',
+                isOpen: isDayClosed ? false : (defaultSlot?.isOpen ?? true),
+            };
+        });
+    });
+
+    return result;
+}
+
 export const httpAdapter: ApiAdapter = {
     // ─── Auth ────────────────────────────────────────────
     async getMe(): Promise<MeResponse> {
@@ -39,7 +87,11 @@ export const httpAdapter: ApiAdapter = {
             name: data.full_name || '',
             email: data.email || '',
             role: data.role || '',
-            tenant: null,
+            tenant: data.tenant_id ? {
+                id: data.tenant_id,
+                name: data.brand_name || 'Demo Pizza Brand',
+                slug: data.brand_slug || 'demo-pizza',
+            } : null,
             stores: [],
             permissions: data.permissions || [],
             enabledModules: [],
@@ -197,12 +249,94 @@ export const httpAdapter: ApiAdapter = {
 
     async updateStore(_tenantId, storeId, dto): Promise<Store> {
         const payload: Record<string, any> = {};
-        if (dto.name) payload.name = dto.name;
-        if (dto.phone) payload.phone = dto.phone;
-        if (dto.city) payload.city = dto.city;
-        if (dto.province) payload.province = dto.province;
-        if (dto.postalCode) payload.postal_code = dto.postalCode;
-        if (dto.status !== undefined) payload.is_active = dto.status === 'Active';
+        
+        // General & Address fields
+        if (dto.name !== undefined) payload.name = dto.name;
+        if (dto.storeName !== undefined) payload.store_name = dto.storeName;
+        if (dto.storeCode !== undefined) payload.store_code = dto.storeCode;
+        if (dto.storeNumber !== undefined) payload.store_number = dto.storeNumber;
+        if (dto.businessType !== undefined) payload.business_type = dto.businessType;
+        if (dto.phone !== undefined) payload.phone = dto.phone;
+        if (dto.secondaryPhone !== undefined) payload.secondary_phone = dto.secondaryPhone;
+        if (dto.email !== undefined) payload.email = dto.email;
+        if (dto.website !== undefined) payload.website = dto.website;
+        if (dto.logo !== undefined) payload.logo = dto.logo;
+        if (dto.banner !== undefined) payload.banner = dto.banner;
+        if (dto.address !== undefined) payload.address = dto.address;
+        if (dto.addressLine1 !== undefined) payload.address_line_1 = dto.addressLine1;
+        if (dto.addressLine2 !== undefined) payload.address_line_2 = dto.addressLine2;
+        if (dto.city !== undefined) payload.city = dto.city;
+        if (dto.province !== undefined) payload.province = dto.province;
+        if (dto.postalCode !== undefined) payload.postal_code = dto.postalCode;
+        if (dto.country !== undefined) payload.country = dto.country;
+        if (dto.latitude !== undefined) payload.latitude = dto.latitude;
+        if (dto.longitude !== undefined) payload.longitude = dto.longitude;
+        if (dto.timezone !== undefined) payload.timezone = dto.timezone;
+        if (dto.currency !== undefined) payload.currency = dto.currency;
+        if (dto.language !== undefined) payload.language = dto.language;
+        if (dto.status !== undefined) {
+            payload.status = dto.status.toLowerCase();
+            payload.is_active = dto.status === 'Active';
+        }
+        if (dto.isActive !== undefined) {
+            payload.is_active = dto.isActive;
+            payload.status = dto.isActive ? 'active' : 'inactive';
+        }
+        if (dto.setupStatus !== undefined) payload.setup_status = dto.setupStatus;
+        if (dto.setupStep !== undefined) payload.setup_step = dto.setupStep;
+        if (dto.managerId !== undefined) payload.manager_id = dto.managerId;
+        if (dto.ownerId !== undefined) payload.owner_id = dto.ownerId;
+        
+        // Settings & fulfillment toggles
+        if (dto.deliveryRadiusKm !== undefined) payload.delivery_radius_km = dto.deliveryRadiusKm;
+        if (dto.imageUrl !== undefined) payload.image_url = dto.imageUrl;
+        if (dto.acceptOrders !== undefined) payload.accept_orders = dto.acceptOrders;
+        if (dto.enablePickup !== undefined) payload.enable_pickup = dto.enablePickup;
+        if (dto.enableDelivery !== undefined) payload.enable_delivery = dto.enableDelivery;
+        if (dto.enableDinein !== undefined) payload.enable_dinein = dto.enableDinein;
+        if (dto.enableKiosk !== undefined) payload.enable_kiosk = dto.enableKiosk;
+        if (dto.enableInventory !== undefined) payload.enable_inventory = dto.enableInventory;
+        if (dto.enableAi !== undefined) payload.enable_ai = dto.enableAi;
+        if (dto.enableLoyalty !== undefined) payload.enable_loyalty = dto.enableLoyalty;
+        if (dto.enableMarketing !== undefined) payload.enable_marketing = dto.enableMarketing;
+        if (dto.futureOrdersEnabled !== undefined) payload.future_orders_enabled = dto.futureOrdersEnabled;
+        if (dto.prepCapacityLimit !== undefined) payload.prep_capacity_limit = dto.prepCapacityLimit;
+        if (dto.orderThrottleLimit !== undefined) payload.order_throttle_limit = dto.orderThrottleLimit;
+        if (dto.pickupEnabled !== undefined) payload.pickup_enabled = dto.pickupEnabled;
+        if (dto.deliveryEnabled !== undefined) payload.delivery_enabled = dto.deliveryEnabled;
+
+        // Operating hours & times
+        if (dto.hoursPreset !== undefined) payload.hours_preset = dto.hoursPreset;
+        if (dto.posOpeningTime !== undefined) payload.pos_opening_time = dto.posOpeningTime;
+        if (dto.posClosingTime !== undefined) payload.pos_closing_time = dto.posClosingTime;
+        if (dto.onlineOpeningTime !== undefined) payload.online_opening_time = dto.onlineOpeningTime;
+        if (dto.onlineClosingTime !== undefined) payload.online_closing_time = dto.onlineClosingTime;
+        if (dto.operatingHours !== undefined) payload.operating_hours = dto.operatingHours;
+
+        // Delivery configuration
+        if (dto.deliveryProvider !== undefined) payload.delivery_provider = dto.deliveryProvider;
+        if (dto.deliveryMinOrderAmount !== undefined) payload.delivery_min_order_amount = dto.deliveryMinOrderAmount;
+        if (dto.deliveryBaseFee !== undefined) payload.delivery_base_fee = dto.deliveryBaseFee;
+        if (dto.freeDeliveryOverAmount !== undefined) payload.free_delivery_over_amount = dto.freeDeliveryOverAmount;
+        if (dto.deliveryEstimatedMinutes !== undefined) payload.delivery_estimated_minutes = dto.deliveryEstimatedMinutes;
+        if (dto.deliveryRules !== undefined) payload.delivery_rules = dto.deliveryRules;
+        if (dto.pickupDineinConfig !== undefined) payload.pickup_dinein_config = dto.pickupDineinConfig;
+
+        // Payment details & tips
+        if (dto.paymentProvider !== undefined) payload.payment_provider = dto.paymentProvider;
+        if (dto.tipsEnabled !== undefined) payload.tips_enabled = dto.tipsEnabled;
+        if (dto.refundsEnabled !== undefined) payload.refunds_enabled = dto.refundsEnabled;
+        if (dto.splitPaymentsEnabled !== undefined) payload.split_payments_enabled = dto.splitPaymentsEnabled;
+        if (dto.taxInheritBrand !== undefined) payload.tax_inherit_brand = dto.taxInheritBrand;
+        if (dto.taxOverrideEnabled !== undefined) payload.tax_override_enabled = dto.taxOverrideEnabled;
+        if (dto.taxConfig !== undefined) payload.tax_config = dto.taxConfig;
+        if (dto.tipPresets !== undefined) payload.tip_presets = dto.tipPresets;
+        if (dto.tipCalculationMode !== undefined) payload.tip_calculation_mode = dto.tipCalculationMode;
+        if (dto.autoGratuityEnabled !== undefined) payload.auto_gratuity_enabled = dto.autoGratuityEnabled;
+        if (dto.feeRules !== undefined) payload.fee_rules = dto.feeRules;
+        if (dto.paymentTerms !== undefined) payload.payment_terms = dto.paymentTerms;
+        if (dto.runtimeCalculationOrder !== undefined) payload.runtime_calculation_order = dto.runtimeCalculationOrder;
+
         const { data } = await apiClient.patch(`/pos/stores/${storeId}`, payload);
         return normalizeStore(data);
     },
@@ -221,25 +355,174 @@ export const httpAdapter: ApiAdapter = {
         await apiClient.delete(`/pos/stores/${storeId}`);
     },
 
-    async getStoreConfig(_tenantId, _storeId): Promise<StoreDetailConfig> {
-        // Not yet in FastAPI — return defaults
-        console.warn('[HTTP] getStoreConfig: Not implemented in FastAPI backend');
-        return createDefaultStoreDetailConfig();
+    async getStoreConfig(_tenantId, storeId): Promise<StoreDetailConfig> {
+        const { data: raw } = await apiClient.get(`/pos/stores/${storeId}`);
+
+        const operatingHours = parseOperatingHours(raw.operating_hours);
+
+        const deliveryConfig = {
+            enabled: raw.delivery_enabled ?? raw.enable_delivery ?? false,
+            radiusKm: raw.delivery_radius_km ?? 5,
+            minimumOrder: raw.delivery_min_order_amount ?? 0,
+            baseFee: raw.delivery_base_fee ?? 0,
+            freeDeliveryThreshold: raw.free_delivery_over_amount ?? 0,
+            estimatedMinutes: raw.delivery_estimated_minutes ?? 0,
+            providerType: raw.delivery_provider ?? 'internal',
+        };
+
+        const pickupConfig = {
+            enabled: raw.pickup_enabled ?? raw.enable_pickup ?? true,
+            prepTimeMinutes: 15,
+            slotDurationMinutes: 15,
+            instructions: '',
+        };
+
+        const storeSettings = {
+            acceptOrders: raw.accept_orders ?? true,
+            enablePickup: raw.enable_pickup ?? raw.pickup_enabled ?? true,
+            enableDelivery: raw.enable_delivery ?? raw.delivery_enabled ?? false,
+            enableDineIn: raw.enable_dinein ?? false,
+            enableKiosk: raw.enable_kiosk ?? false,
+            enableInventory: raw.enable_inventory ?? true,
+            enableAI: raw.enable_ai ?? false,
+            enableLoyalty: raw.enable_loyalty ?? false,
+            enableMarketing: raw.enable_marketing ?? false,
+            futureOrdersEnabled: raw.future_orders_enabled ?? true,
+        };
+
+        const paymentConfig = {
+            provider: raw.payment_provider ?? 'moneris',
+            tipsEnabled: raw.tips_enabled ?? true,
+            refundEnabled: raw.refunds_enabled ?? true,
+            splitPaymentEnabled: raw.split_payments_enabled ?? false,
+        };
+
+        return {
+            operatingHours,
+            deliveryConfig,
+            pickupConfig,
+            hardwareConfig: raw.hardware_config || { devices: [] },
+            integrations: raw.integrations || [],
+            dineInConfig: { enabled: raw.enable_dinein ?? false },
+            paymentConfig,
+            storeSettings,
+        };
     },
 
-    async updateStoreConfig(_tenantId, _storeId, config): Promise<StoreDetailConfig> {
-        console.warn('[HTTP] updateStoreConfig: Not implemented in FastAPI backend');
-        return { ...createDefaultStoreDetailConfig(), ...config } as StoreDetailConfig;
+    async updateStoreConfig(_tenantId, storeId, config): Promise<StoreDetailConfig> {
+        const payload: Record<string, any> = {};
+
+        if (config.operatingHours !== undefined) {
+            payload.operating_hours = config.operatingHours;
+        }
+
+        if (config.deliveryConfig !== undefined) {
+            const dc = config.deliveryConfig;
+            if (dc.enabled !== undefined) {
+                payload.enable_delivery = dc.enabled;
+                payload.delivery_enabled = dc.enabled;
+            }
+            if (dc.radiusKm !== undefined) payload.delivery_radius_km = dc.radiusKm;
+            if (dc.minimumOrder !== undefined) payload.delivery_min_order_amount = dc.minimumOrder;
+            if (dc.baseFee !== undefined) payload.delivery_base_fee = dc.baseFee;
+            if (dc.freeDeliveryThreshold !== undefined) payload.free_delivery_over_amount = dc.freeDeliveryThreshold;
+            if (dc.estimatedMinutes !== undefined) payload.delivery_estimated_minutes = dc.estimatedMinutes;
+            if (dc.providerType !== undefined) payload.delivery_provider = dc.providerType;
+        }
+
+        if (config.pickupConfig !== undefined) {
+            const pc = config.pickupConfig;
+            if (pc.enabled !== undefined) {
+                payload.enable_pickup = pc.enabled;
+                payload.pickup_enabled = pc.enabled;
+            }
+        }
+
+        if (config.paymentConfig !== undefined) {
+            const pmc = config.paymentConfig;
+            if (pmc.provider !== undefined) payload.payment_provider = pmc.provider;
+            if (pmc.tipsEnabled !== undefined) payload.tips_enabled = pmc.tipsEnabled;
+            if (pmc.refundEnabled !== undefined) payload.refunds_enabled = pmc.refundEnabled;
+            if (pmc.splitPaymentEnabled !== undefined) payload.split_payments_enabled = pmc.splitPaymentEnabled;
+        }
+
+        if (config.storeSettings !== undefined) {
+            const ss = config.storeSettings;
+            if (ss.acceptOrders !== undefined) payload.accept_orders = ss.acceptOrders;
+            if (ss.enablePickup !== undefined) {
+                payload.enable_pickup = ss.enablePickup;
+                payload.pickup_enabled = ss.enablePickup;
+            }
+            if (ss.enableDelivery !== undefined) {
+                payload.enable_delivery = ss.enableDelivery;
+                payload.delivery_enabled = ss.enableDelivery;
+            }
+            if (ss.enableDineIn !== undefined) payload.enable_dinein = ss.enableDineIn;
+            if (ss.enableKiosk !== undefined) payload.enable_kiosk = ss.enableKiosk;
+            if (ss.enableInventory !== undefined) payload.enable_inventory = ss.enableInventory;
+        }
+
+        if (Object.keys(payload).length > 0) {
+            await apiClient.patch(`/pos/stores/${storeId}`, payload);
+        }
+
+        // Return current defaults merged with saved config overrides
+        return {
+            ...createDefaultStoreDetailConfig(),
+            ...config
+        };
     },
 
-    async getStoreUsers(_tenantId, _storeId): Promise<StoreUser[]> {
-        // Not yet in FastAPI — return empty
-        console.warn('[HTTP] getStoreUsers: Not implemented in FastAPI backend');
-        return [];
+    async getStorePageData(_tenantId: string, storeId: string): Promise<StorePageData> {
+        const { data } = await apiClient.get(`/pos/stores/${storeId}/page-data`);
+        return data as StorePageData;
     },
 
-    async assignStoreManager(_tenantId, _storeId, _userId): Promise<void> {
+    async getStoreUsers(_tenantId: string, storeId: string): Promise<StoreUser[]> {
+        try {
+            const { data } = await apiClient.get(`/pos/stores/${storeId}/page-data`);
+            const rawUsers: any[] = data?.users || [];
+            return rawUsers.map((u: any): StoreUser => ({
+                id: String(u.id),
+                name: u.full_name || '',
+                email: u.email || '',
+                role: u.role_name || u.role || '',
+                status: u.is_active ? 'Active' : 'Inactive',
+                isManager: u.role_name?.toLowerCase().includes('manager') || false,
+                lastLogin: u.last_login || undefined,
+                createdAt: u.created_at || undefined,
+            }));
+        } catch {
+            return [];
+        }
+    },
+
+    async assignStoreManager(_tenantId: string, _storeId: string, _userId: string): Promise<void> {
         console.warn('[HTTP] assignStoreManager: Not implemented in FastAPI backend');
+    },
+
+    async createStoreUser(tenantId: string, storeId: string, user: { name: string; email: string; role: string; status: string; isManager: boolean }): Promise<StoreUser> {
+        const brandSlug = tenantId;
+        const storeSlug = storeId;
+        const payload = {
+            full_name: user.name,
+            email: user.email,
+            phone: '',
+            role_name: user.role,
+            is_active: user.status === 'Active',
+            is_manager: user.isManager,
+            invite_method: 'TEMP_PASSWORD',
+        };
+        const { data } = await apiClient.post(`/api/store/${brandSlug}/${storeSlug}/users`, payload);
+        return {
+            id: String(data.id),
+            name: data.full_name || '',
+            email: data.email || '',
+            role: data.role_name || data.role?.name || '',
+            status: data.is_active ? 'Active' : 'Inactive',
+            isManager: data.is_manager || data.role_name?.toLowerCase().includes('manager') || false,
+            createdAt: data.created_at || undefined,
+        };
     },
 
     // ─── Users (FastAPI: /api/users/) ────────────────────

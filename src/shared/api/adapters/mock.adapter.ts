@@ -11,7 +11,7 @@ import type { ApiAdapter } from './adapter.interface';
 import type { MeResponse, PaginatedResponse } from '@/shared/types/api';
 import type { User } from '@/shared/types/user';
 import type { Brand } from '@/shared/types/tenant';
-import type { Store, StoreDetailConfig, StoreUser } from '@/shared/types/store';
+import type { Store, StoreDetailConfig, StoreUser, StorePageData } from '@/shared/types/store';
 import { createDefaultStoreDetailConfig } from '@/shared/types/store';
 import type { Role } from '@/shared/types/role';
 import type { TenantModule } from '@/shared/types/module';
@@ -392,6 +392,53 @@ export const mockAdapter: ApiAdapter = {
         return configs[key]!;
     },
 
+    async getStorePageData(tenantId: string, storeId: string): Promise<StorePageData> {
+        await delay(300);
+        const stores = getStore('stores', MOCK_STORES);
+        const store = stores.find((s: Store) => s.id === storeId) || MOCK_STORES[0]!;
+        return {
+            store,
+            tenant_id: tenantId,
+            brand_id: tenantId,
+            modules: {
+                pos: { enabled: true, url: `/pos/orders?tenant_id=${tenantId}&store_id=${storeId}` },
+                kds: { enabled: true, url: `/api/kds/orders?store_id=${storeId}` },
+                kiosk: { enabled: false, url: `/api/kiosk/catalog?store_id=${storeId}` },
+                orders: { enabled: true, url: `/pos/orders?store_id=${storeId}` },
+                payments: { enabled: true, url: `/pos/payments?store_id=${storeId}` },
+                inventory: { enabled: true, url: `/pos/inventory?store_id=${storeId}` },
+                reports: { enabled: true, url: `/pos/reports/sales-summary?store_id=${storeId}` },
+            },
+            summary: {
+                total_orders: 148,
+                open_orders: 6,
+                completed_orders: 130,
+                cancelled_orders: 12,
+                total_revenue: 18420.50,
+                payments: 142,
+                completed_payments: 138,
+                inventory_items: 84,
+                low_stock_items: 3,
+                assigned_users: 4,
+                brand_categories: 12,
+                brand_menu_items: 96,
+                store_menu_items: 24,
+                price_overrides: 8,
+            },
+            users: MOCK_STORE_USERS,
+            recent_orders: [],
+            catalog: { categories_count: 12, brand_items_count: 96, store_items_count: 24, price_overrides_count: 8 },
+            inventory: { items_count: 84, low_stock_count: 3 },
+            urls: {
+                store: `/pos/stores/${storeId}`,
+                store_page_data: `/pos/stores/${storeId}/page-data`,
+                pos_orders: `/pos/orders?store_id=${storeId}`,
+                inventory: `/pos/inventory?store_id=${storeId}`,
+                sales_summary: `/pos/reports/sales-summary?store_id=${storeId}`,
+            },
+        };
+    },
+
     async getStoreUsers(tenantId, storeId): Promise<StoreUser[]> {
         await delay(200);
         const stores = getStore('stores', MOCK_STORES);
@@ -413,6 +460,27 @@ export const mockAdapter: ApiAdapter = {
         }));
         allUsers[storeId] = updated;
         setStore('store_users', allUsers);
+    },
+
+    async createStoreUser(tenantId, storeId, user): Promise<StoreUser> {
+        await delay(300);
+        const allUsers = getStore<Record<string, StoreUser[]>>('store_users', {});
+        const users = allUsers[storeId] || [...MOCK_STORE_USERS];
+        
+        const newUser: StoreUser = {
+            id: `user-${Date.now()}`,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            status: user.status as any,
+            isManager: user.isManager,
+            createdAt: new Date().toISOString(),
+        };
+        
+        users.push(newUser);
+        allUsers[storeId] = users;
+        setStore('store_users', allUsers);
+        return newUser;
     },
 
     // ─── Users ───────────────────────────────────────────

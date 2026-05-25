@@ -6,7 +6,7 @@ import { HomePage } from '@/modules/m9/pages';
 import { ShieldAlert, Loader2 } from 'lucide-react';
 
 export default function Page() {
-    const { user, role, isLoading } = useAuth();
+    const { role, isLoading } = useAuth();
 
     if (isLoading) {
         return (
@@ -37,14 +37,6 @@ export default function Page() {
 
     return (
         <div className="relative">
-            {/* Context-aware Greeting */}
-            <div className="absolute top-8 right-8 z-50 text-right hidden lg:block">
-                <div className="bg-white/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-white shadow-lg shadow-emerald-500/10">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Logged in as</p>
-                    <p className="text-sm font-bold text-slate-800">{user?.name || 'Brand Executive'}</p>
-                </div>
-            </div>
-            
             {/* Render the Beautiful Dashboard */}
             <HomePage />
         </div>

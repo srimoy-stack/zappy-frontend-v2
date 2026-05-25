@@ -1,0 +1,670 @@
+Zyappy POS — Master Developer Brief
+Menu, Product, Variant, Modifier, Deal, Combo, Pricing & Rules Engine Architecture
+
+1. Objective
+The objective of this architecture is to build a single unified menu and pricing system that works consistently across:
+    • POS
+    • Online Ordering
+    • Kiosk
+    • AI Phone Ordering
+    • Uber Eats
+    • DoorDash
+    • SkipTheDishes
+    • Future Mobile Apps
+    • Future APIs
+The system must support:
+    • Pizza-first ordering
+    • Variants
+    • Modifier groups
+    • Half & Half toppings
+    • Dynamic deals
+    • Fixed combos
+    • Dynamic pricing
+    • Coupons
+    • Taxes
+    • Fees
+    • Rules engine
+    • Channel compatibility
+    • Inventory deduction
+    • Store overrides
+    • Franchise-safe validation
+The system must avoid duplicate product creation across channels.
+The same product structure must work everywhere.
+
+2. Core Architecture Principles
+2.1 Single Source of Truth
+There must only be ONE:
+    • Menu Service
+    • Pricing Engine
+    • Rules Engine
+    • Inventory Engine
+    • Offer Validation Engine
+No separate pricing or validation logic may exist for:
+    • POS
+    • Online Ordering
+    • Uber
+    • Kiosk
+    • AI Ordering
+
+2.2 No Hardcoding
+Developers must NEVER hardcode:
+    • Premium = 2 toppings
+    • 3 toppings free
+    • No half-half allowed
+    • Must buy with pizza
+    • Uber pricing adjustments
+    • Store-specific pricing
+    • Topping limits
+Everything must be configurable via rules.
+
+2.3 Channel Compatibility Layer
+Zyappy internally supports advanced features.
+Some channels may not support all features.
+Example:
+Feature
+Zyappy
+Uber
+Half & Half
+Yes
+Limited
+Quarter Toppings
+Yes
+No
+Shared Toppings
+Yes
+No
+Dynamic Slots
+Yes
+Limited
+The Channel Adapter Layer decides:
+    • what to expose
+    • what to simplify
+    • what to hide
+    • how to map modifiers
+without changing the internal product structure.
+
+3. Final Menu Structure
+Items
+ ├── Item List
+ ├── Categories
+ ├── Variant Groups
+ ├── Modifier Groups
+ └── Rules Library
+
+4. Categories
+Categories are organizational only.
+Examples:
+    • Signature Pizza
+    • Traditional Pizza
+    • Drinks
+    • Wings
+    • Sides
+    • Desserts
+    • Combos
+Categories must NOT contain:
+    • pricing logic
+    • modifier logic
+    • deal logic
+Categories support:
+    • store visibility
+    • channel visibility
+    • scheduling
+    • sorting
+
+5. Product Types
+Every product must have a mandatory Product Type.
+Product Type cannot be changed after creation.
+5.1 Single Product
+Examples:
+    • Pizza
+    • Pasta
+    • Wings
+    • Drink
+    • Dip
+    • Dessert
+Supports:
+    • variants
+    • modifiers
+    • toppings
+    • pricing
+    • inventory
+
+5.2 Configurable Deal
+Used for build-your-own deals.
+Examples:
+    • 3 Pizza + 1 Dip + 2 Coke
+    • Wings + Fries + Drink
+    • Noodles + Chicken + Coke
+Supports:
+    • slot engine
+    • topping rules
+    • addon rules
+    • dynamic validation
+    • shared topping pools
+
+5.3 Fixed Combo
+Uses only pre-created products.
+Examples:
+    • Burger + Fries + Coke
+    • Noodle + Chicken + Coke
+Limited customization.
+
+6. Variant Engine
+Variants define required product configurations.
+Examples:
+    • Size
+    • Crust
+    • Sauce
+    • Spice Level
+    • Noodle Type
+Variant Groups are global and reusable.
+Variants must NEVER be created inside products.
+
+7. Variant Pricing
+Variants use incremental pricing.
+Correct Pricing Model
+Base Product Price
++ Variant Adjustments
++ Modifier Adjustments
+Example:
+Veggie Pizza Base Price = $9.99
+
+Small = +0
+Medium = +3
+Large = +6
+Do NOT use full standalone pricing per variant.
+Incorrect:
+Small = $9.99
+Medium = $12.99
+Large = $15.99
+This creates:
+    • combination explosion
+    • third-party mapping complexity
+    • deal engine conflicts
+    • analytics problems
+
+8. Modifier Engine
+Modifier Groups are reusable customization groups.
+Examples:
+    • Regular Toppings
+    • Premium Toppings
+    • Extra Cheese
+    • Dips
+    • Drinks
+    • Sauces
+Modifier Groups support:
+    • min/max selection
+    • required/optional
+    • free quantity
+    • paid quantity
+    • half/full placement
+    • pricing rules
+    • inventory mapping
+
+9. Modifier Types
+9.1 Surface-Based Modifier
+Examples:
+    • Onion
+    • Mushroom
+    • Paneer
+    • Chicken
+Rules:
+    • supports full/left/right
+    • no quantity selector
+    • counts toward topping allowance
+
+9.2 Quantity-Based Modifier
+Examples:
+    • Coke
+    • Garlic Dip
+    • Ranch Dip
+Rules:
+    • quantity selector allowed
+    • no half/left/right
+    • deduct by unit
+
+10. Rules Library
+Core Change
+Each product must support attachable reusable rules.
+Rules are attached similarly to:
+    • Variant Groups
+    • Modifier Groups
+Rules can be attached to:
+    • Single Product
+    • Deal
+    • Combo
+    • Modifier Group
+    • Specific Modifier
+    • Store Override
+    • Channel Override
+
+11. Rule Types
+11A. Topping Equivalency Rule
+Example
+Premium Topping = 2 Regular Toppings
+Each topping must be classified as:
+    • Regular Topping
+    • Premium Topping
+    • Free Topping
+    • Blocked Topping
+Fields
+Rule Name
+Rule Type: TOPPING_EQUIVALENCY
+Premium Multiplier
+Applies To
+Store Override Allowed
+Status
+
+11B. Free Topping Allowance Rule
+Example
+This deal includes 3 free toppings.
+After 3 toppings charge extra.
+Fields
+Included Toppings
+Count Method
+Extra Topping Charge Method
+Max Toppings Allowed
+Block Checkout If Exceeded
+Count Method:
+    • Per Pizza
+    • Shared Across Deal
+
+11C. Maximum Topping Rule
+Example
+Maximum 5 toppings allowed
+Important:
+Premium toppings must count based on equivalent units.
+Fields
+Max Regular Equivalent Units
+Max Physical Toppings
+Apply Premium Multiplier
+Manager Override Allowed
+
+11D. Half & Half Rule
+Example
+Left/right allowed
+Quarter allowed
+Half topping counts as 0.5
+Same topping both halves counts as 1
+Fields
+Allow Full
+Allow LeftRight
+Allow Quarter
+Half Counts As
+Same Topping Merge Logic
+
+11E. Premium Half-Side Rule
+Example
+Paneer Left + Chicken Right
+Recommended Logic:
+Premium Full = 2 units
+Premium Half = 1 unit
+Same Premium Left + Right = 2 units
+Different Premium Left + Right = 2 units
+NOT 4.
+This keeps pricing fair and customer-friendly.
+
+11F. No Left/Right Rule
+Some deals should not allow half-half.
+Example
+Walk-in special
+No half-half allowed
+Fields
+Allow Full
+Allow LeftRight
+Allow Quarter
+
+11G. Must Buy With Rule
+Examples
+Garlic Dip requires pizza
+Coke offer requires wings
+Fields
+Required Product Type
+Required Category
+Required Product
+Minimum Quantity
+Apply To Channels
+
+12. Rule Priority System
+Rules must follow priority order.
+Store Override Rule
+↓
+Channel Rule
+↓
+Deal / Combo Rule
+↓
+Product Rule
+↓
+Modifier Group Rule
+↓
+Global Brand Rule
+Highest priority wins.
+
+13. Deal Engine
+Deals are NOT hardcoded bundles.
+Deals are:
+Rule Contracts
+Deals use Slot Engine.
+
+14. Slot Engine
+A Slot represents one required or optional section of a deal.
+Example:
+3 Pizza Deal
+ ├── Pizza Slot 1
+ ├── Pizza Slot 2
+ ├── Pizza Slot 3
+ ├── Dip Slot
+ └── Drink Slots
+Each slot contains rules.
+
+15. Slot Rules
+Each slot must define:
+Slot Name
+Slot Type
+Required/Optional
+Allowed Products
+Allowed Product Types
+Allowed Categories
+Allowed Variants
+Allowed Modifiers
+Included Quantity
+Pricing Rules
+Inventory Rules
+
+16. Deal Rules
+Deals contain their own Rules section.
+Example
+Deal:
+3 Pizza + 1 Dip + 2 Coke
+Rules
+Pizza Slots = 3
+Included Toppings = 3 per pizza
+Premium = 2 regular
+Max Toppings = 5
+Half-half allowed
+Included Dip = 1
+Included Drinks = 2
+Extra items charged separately
+Deals must use the same Offer Validation Engine across all channels.
+
+17. Combo Rules
+Combos use simpler validation.
+Example
+Noodle + Chicken + Coke
+Combo Rules
+Only pre-created products
+No substitutions unless allowed
+Must select 1 noodle
+Must select 1 chicken item
+Must select 1 drink
+Extra drink charge applies
+
+18. Addon Engine
+Addons become active for:
+    • Deals
+    • Combos
+    • Optional Single Products
+Addons can include:
+    • drinks
+    • dips
+    • desserts
+    • wings
+    • sauces
+    • sides
+Rules:
+Included Addon
+Paid Addon
+Blocked Addon
+
+19. Product Creation Flow
+Single Product
+Create Product
+→ Select Product Type
+→ Category
+→ Product Name
+→ Base Price
+→ Variant Groups
+→ Modifier Groups
+→ Rules
+→ Pricing
+→ Inventory
+→ Availability
+→ Store Overrides
+→ Save
+
+20. Deal Creation Flow
+Create Deal
+→ Deal Name
+→ Base Price
+→ Add Slots
+→ Configure Slot Rules
+→ Configure Included Items
+→ Configure Shared Toppings
+→ Configure Validation Rules
+→ Save
+
+21. Combo Creation Flow
+Create Combo
+→ Combo Name
+→ Select Existing Products
+→ Set Combo Price
+→ Configure Restrictions
+→ Save
+
+22. Recommended Admin UI
+Item Edit Tabs
+General
+Variants
+Modifier Groups
+Rules
+Pricing
+Inventory / Recipe
+Availability
+Store Overrides
+Audit Log
+
+23. Pricing Engine
+Frontend must NEVER calculate final totals.
+Backend Pricing Engine is authoritative.
+
+24. Pricing Calculation Order
+1. Base Product Price
+2. Variant Adjustments
+3. Modifier Adjustments
+4. Addons
+5. Deal Rules
+6. Dynamic Pricing
+7. Coupons
+8. Fees
+9. Taxes
+10. Tips
+11. Final Total
+Never change this order.
+
+25. Dynamic Pricing Engine
+Dynamic Pricing is separate from coupons.
+Dynamic pricing modifies prices before coupon calculation.
+Supported Dynamic Pricing
+Time-Based
+Lunch Special
+Day-Based
+Tuesday Discount
+Channel-Based
+Uber +15%
+Store-Based
+Downtown Store +$1
+Demand-Based (Future)
+Dinner Rush +5%
+
+26. Coupon Engine
+Coupons apply AFTER dynamic pricing.
+Coupon Types
+    • Flat Discount
+    • Percentage Discount
+    • Buy One Get One
+    • Free Item
+    • Delivery Discount
+    • Conditional Spend
+Coupon Validation
+Coupons can validate:
+    • subtotal
+    • category
+    • customer type
+    • store
+    • channel
+    • first order
+    • time/day
+    • loyalty status
+    • usage count
+
+27. Taxes Engine
+Taxes must NEVER be hardcoded.
+Tax Types
+    • Percentage Tax
+    • Fixed Tax
+    • Environmental Fee
+    • Bottle Deposit
+Tax Scope
+Taxes can apply to:
+    • products
+    • delivery fee
+    • service fee
+    • alcohol
+    • category-specific items
+
+28. Fees Engine
+Fees are separate from taxes.
+Fee Types
+    • Delivery Fee
+    • Service Fee
+    • Small Order Fee
+    • Packaging Fee
+
+29. Tips Engine
+Tips apply LAST.
+Supports:
+    • percentage
+    • fixed amount
+    • custom amount
+
+30. Inventory Integration
+Inventory must deduct:
+    • products
+    • toppings
+    • addons
+    • combo items
+    • deal items
+Each slot deducts independently.
+Examples:
+Pizza:
+    • dough
+    • cheese
+    • toppings
+Drink:
+    • can inventory
+Dip:
+    • dip unit inventory
+
+31. Channel Adapter Layer
+Required for:
+    • Uber
+    • DoorDash
+    • Skip
+    • Kiosk
+    • AI Ordering
+Responsibilities:
+    • map modifiers
+    • simplify unsupported rules
+    • restrict unsupported options
+    • preserve pricing integrity
+    • preserve inventory integrity
+
+32. Audit Logging
+Every pricing calculation must store:
+    • base price
+    • variants
+    • modifiers
+    • dynamic pricing
+    • coupon discounts
+    • taxes
+    • fees
+    • tips
+    • final total
+This is required for:
+    • refunds
+    • franchise auditing
+    • accounting
+    • support disputes
+
+33. Required Backend Services
+Menu Service
+Variant Engine
+Modifier Engine
+Rules Engine
+Deal Engine
+Combo Engine
+Pricing Engine
+Coupon Engine
+Tax Engine
+Fee Engine
+Tip Engine
+Inventory Engine
+Offer Validation Engine
+Channel Adapter Layer
+Do NOT merge everything into one service.
+
+34. Developer Restrictions
+Developers must NOT:
+    • hardcode pricing
+    • hardcode topping logic
+    • duplicate products for Uber
+    • create separate POS pricing
+    • bypass Rules Engine
+    • bypass Validation Engine
+    • calculate final totals on frontend
+
+35. Final Acceptance Criteria
+System is complete when:
+    • Single Product works
+    • Deals work with slot engine
+    • Fixed Combos work
+    • Variant Groups are reusable
+    • Modifier Groups are reusable
+    • Rules are reusable
+    • Half-half works correctly
+    • Premium equivalency works
+    • Shared toppings work
+    • Dynamic pricing works
+    • Coupons work
+    • Taxes work
+    • Fees work
+    • Tips work
+    • Inventory deducts correctly
+    • Uber pricing works without duplicate products
+    • Same product works across all channels
+    • Backend is authoritative for pricing
+    • Invalid deals cannot checkout
+    • Store overrides do not affect other stores
+    • Channel adapters work correctly
+    • All calculations are auditable
+
+36. Final Architectural Vision
+Zyappy should become:
+Uber simplicity
++
+Domino’s pizza intelligence
++
+Enterprise rules engine
++
+Franchise-safe operations
+The goal is NOT just a POS.
+The goal is:
+A unified restaurant commerce engine that powers:
+    • POS
+    • Online Ordering
+    • Marketplace Integrations
+    • Kiosk
+    • AI Ordering
+    • Customer Apps
+    • Future Channels
+from ONE product architecture.

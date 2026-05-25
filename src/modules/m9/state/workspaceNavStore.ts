@@ -3,7 +3,10 @@ import { create } from 'zustand';
 export type WorkspacePanel = 
     | 'ITEMS' 
     | 'POOLS' 
-    | 'CATEGORIES' 
+    | 'VARIANT_GROUPS'
+    | 'MODIFIER_GROUPS'
+    | 'ADDON_GROUPS'
+    | 'RULES'
     | 'PUBLISH' 
     | 'OVERRIDES' 
     | 'SYNC' 
