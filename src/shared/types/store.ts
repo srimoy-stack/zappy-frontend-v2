@@ -151,6 +151,66 @@ export interface CreateStoreDTO {
         rate: number;
     };
     status?: StoreStatus;
+
+    // Backend-specific payload extensions
+    brandId?: string;
+    storeName?: string;
+    storeCode?: string;
+    storeNumber?: string;
+    businessType?: BusinessType;
+    secondaryPhone?: string;
+    website?: string;
+    logo?: string;
+    banner?: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    currency?: string;
+    language?: string;
+    setupStatus?: string;
+    setupStep?: number;
+    managerId?: number;
+    ownerId?: number;
+    imageUrl?: string;
+    isActive?: boolean;
+    acceptOrders?: boolean;
+    enablePickup?: boolean;
+    enableDelivery?: boolean;
+    enableDinein?: boolean;
+    enableKiosk?: boolean;
+    enableInventory?: boolean;
+    enableAi?: boolean;
+    enableLoyalty?: boolean;
+    enableMarketing?: boolean;
+    futureOrdersEnabled?: boolean;
+    prepCapacityLimit?: number;
+    orderThrottleLimit?: number;
+    pickupEnabled?: boolean;
+    deliveryEnabled?: boolean;
+    hoursPreset?: string;
+    posOpeningTime?: string;
+    posClosingTime?: string;
+    onlineOpeningTime?: string;
+    onlineClosingTime?: string;
+    operatingHours?: any;
+    deliveryProvider?: string;
+    deliveryMinOrderAmount?: number;
+    deliveryBaseFee?: number;
+    freeDeliveryOverAmount?: number;
+    deliveryEstimatedMinutes?: number;
+    deliveryRules?: any;
+    pickupDineinConfig?: any;
+    paymentProvider?: string;
+    tipsEnabled?: boolean;
+    refundsEnabled?: boolean;
+    splitPaymentsEnabled?: boolean;
+    taxInheritBrand?: boolean;
+    taxOverrideEnabled?: boolean;
+    taxConfig?: any;
+    tipPresets?: number[];
+    tipCalculationMode?: string;
+    autoGratuityEnabled?: boolean;
+    feeRules?: any[];
+    runtimeCalculationOrder?: string[];
 }
 
 /** DTO for PATCH /stores/:id — superset of create with optional status transition */

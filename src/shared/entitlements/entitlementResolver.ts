@@ -115,6 +115,19 @@ export function resolveAccess(
  * Combines entitlement filtering with RBAC access levels.
  * Returns pre-sorted, sidebar-ready items.
  */
+// --- CONFIGURATION FOR SIDEBAR RESOLUTION & REVERSION ---
+// Set to true to revert Brand Admin to entitlements-based resolution (backend allowed modules).
+const REVERT_BRAND_ADMIN_TO_ENTITLEMENTS = false;
+
+// Set to true to revert all other roles to the core entitlements/RBAC architecture.
+const REVERT_OTHER_ROLES_TO_CORE_ARCHITECTURE = false;
+// --------------------------------------------------------
+
+/**
+ * Resolve visible navigation items for a given user + tenant context.
+ * Combines entitlement filtering with RBAC access levels.
+ * Returns pre-sorted, sidebar-ready items.
+ */
 export function resolveVisibleNodes(
     userType: UserType | null,
     activePaths: string[],
@@ -123,23 +136,91 @@ export function resolveVisibleNodes(
 ): ResolvedNavItem[] {
     if (!userType) return [];
 
+    const isSA = isSuperAdmin(userType);
     const sidebarNodes = getSidebarNodes(routePrefix);
 
-    // ── TEMPORARY: Show ALL modules in sidebar (bypass entitlement/RBAC) ──
-    // TODO: REVERT THIS — restore entitlement + RBAC + permission filtering
-    const visible: ResolvedNavItem[] = [];
+    // 1. Core Architecture implementation helper (resolves node via entitlement/RBAC/permission)
+    const resolveCoreNode = (node: typeof sidebarNodes[0]): ResolvedNavItem | null => {
+        // UserType restriction check
+        if (node.allowedUserTypes && !node.allowedUserTypes.includes(userType) && !isSA) {
+            return null;
+        }
 
-    for (const node of sidebarNodes) {
-        visible.push({
+        // Access resolution (entitlement + RBAC)
+        const access = resolveAccess(userType, node.entitlementKey, activePaths);
+        if (access === 'hidden' || access === 'denied') return null;
+
+        // Permission check
+        if (node.requiredPermissions?.length && !isSA) {
+            const hasPermission = node.requiredPermissions.some(
+                (p) => permissions.includes(p) || permissions.includes('*')
+            );
+            if (!hasPermission) return null;
+        }
+
+        return {
+            id: node.id,
+            label: node.label,
+            href: node.route || '',
+            icon: node.icon || 'Package',
+            entitlementKey: node.entitlementKey,
+            accessLevel: access as 'full' | 'read-only',
+        };
+    };
+
+    // 2. Bypass/Temporary implementation helper (shows everything with 'full' access)
+    const resolveBypassNode = (node: typeof sidebarNodes[0]): ResolvedNavItem => {
+        return {
             id: node.id,
             label: node.label,
             href: node.route || '',
             icon: node.icon || 'Package',
             entitlementKey: node.entitlementKey,
             accessLevel: 'full',
-        });
+        };
+    };
+
+    // 3. Resolve nodes based on role and configuration
+    const visible: ResolvedNavItem[] = [];
+
+    if (userType === UserType.BRAND_ADMIN) {
+        if (REVERT_BRAND_ADMIN_TO_ENTITLEMENTS) {
+            // Reverted: Use previous entitlements resolution based on backend allowed modules
+            for (const node of sidebarNodes) {
+                const resolved = resolveCoreNode(node);
+                if (resolved) visible.push(resolved);
+            }
+        } else {
+            // Temporary restriction: Only show the 6 specific modules
+            const allowedBrandAdminModules = [
+                'home',
+                'items',
+                'users',
+                'email-campaigns',
+                'ai-call-analytics',
+                'settings',
+            ];
+            for (const node of sidebarNodes) {
+                if (allowedBrandAdminModules.includes(node.id)) {
+                    visible.push(resolveBypassNode(node));
+                }
+            }
+        }
+    } else {
+        // Other roles
+        if (REVERT_OTHER_ROLES_TO_CORE_ARCHITECTURE) {
+            // Reverted to core architecture
+            for (const node of sidebarNodes) {
+                const resolved = resolveCoreNode(node);
+                if (resolved) visible.push(resolved);
+            }
+        } else {
+            // Keep using the temporary bypass (show all modules) for other roles for now
+            for (const node of sidebarNodes) {
+                visible.push(resolveBypassNode(node));
+            }
+        }
     }
 
     return visible;
-    // ── END TEMPORARY ─────────────────────────────────────────────────────
 }

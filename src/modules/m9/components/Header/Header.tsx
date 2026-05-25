@@ -121,16 +121,10 @@ export const Header: React.FC = () => {
                     <button
                         onClick={() => setShowUserMenu(!showUserMenu)}
                         className={cn(
-                            "flex items-center gap-3 ml-1 pl-2 border-l border-slate-100 hover:bg-slate-50 py-1 rounded-lg transition-all",
+                            "flex items-center gap-2 ml-1 pl-2 border-l border-slate-100 hover:bg-slate-50 py-1 rounded-lg transition-all",
                             showUserMenu && "bg-slate-50"
                         )}
                     >
-                        <div className="flex flex-col items-end hidden md:flex">
-                            <span className="text-xs font-bold text-slate-900 leading-none">{user?.name}</span>
-                            <span className="text-[10px] text-slate-400 font-medium uppercase tracking-tight mt-0.5">
-                                {isSuperAdmin ? 'Zyappy Global' : `Tenant: ${user?.tenantId}`}
-                            </span>
-                        </div>
                         <div className="h-8 w-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 uppercase">
                             {user?.name?.split(' ').map((n: string) => n[0]).join('') || '?'}
                         </div>

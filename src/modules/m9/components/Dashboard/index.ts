@@ -1,8 +1,10 @@
 export { KpiCard } from './KpiCard';
 export { KpiRow } from './KpiRow';
-export { SalesByChannelTable } from './SalesByChannelTable';
-export { RecentOrdersTable } from './RecentOrdersTable';
-export { SalesChart } from './SalesChart';
-export { SalesPerformanceCard } from './SalesPerformanceCard';
-export { ChannelSplitChart } from './ChannelSplitChart';
 export { DashboardDateRangePicker } from './DashboardDateRangePicker';
+export { DashboardHeader } from './DashboardHeader';
+export { AlertsRecoveryCenter } from './AlertsRecoveryCenter';
+export { LiveOperationsMonitor } from './LiveOperationsMonitor';
+export { AnalyticsSuite } from './AnalyticsSuite';
+export { StorePerformance } from './StorePerformance';
+export { OrderFlowVisibility } from './OrderFlowVisibility';
+export { QuickActionCenter } from './QuickActionCenter';

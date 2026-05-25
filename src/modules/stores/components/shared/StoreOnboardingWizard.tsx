@@ -172,22 +172,108 @@ export function StoreOnboardingWizard({ tenantId, onCancel, onSubmit }: StoreOnb
         try {
             const dto: CreateStoreDTO = {
                 name: data.name.trim(),
+                storeName: data.name.trim(),
+                storeCode: data.code.trim() || undefined,
+                businessType: data.businessType,
+                address: data.address.trim() || undefined,
+                addressLine1: data.address.trim() || undefined,
                 city: data.city.trim(),
                 province: data.province,
-                address: data.address.trim() || undefined,
                 postalCode: data.postalCode.trim() || undefined,
                 country: data.country || 'Canada',
                 timezone: data.timezone,
                 phone: data.phone.trim() || undefined,
+                secondaryPhone: data.secondaryPhone.trim() || undefined,
                 email: data.email.trim() || undefined,
-                deliveryRadiusKm: data.enableDelivery ? (parseFloat(data.deliveryRadius) || 5) : undefined,
+                website: data.website.trim() || undefined,
                 latitude: data.latitude ? parseFloat(data.latitude) : undefined,
                 longitude: data.longitude ? parseFloat(data.longitude) : undefined,
-                paymentTerms: data.paymentTerms,
-                taxSetup: data.taxProfile === 'Override' && data.taxRules.length > 0 ? {
-                    scheme: data.taxRules[0]?.type || 'HST',
-                    rate: parseFloat(data.taxRules[0]?.rate || '13'),
+
+                managerId: null as any,
+                ownerId: null as any,
+
+                // Services / Channels
+                enablePickup: data.enablePickup,
+                enableDelivery: data.enableDelivery,
+                enableDinein: data.enableDineIn,
+                enableKiosk: data.enableKiosk,
+
+                // Hours preset/schedule
+                posOpeningTime: data.posOpen,
+                posClosingTime: data.posClose,
+                onlineOpeningTime: data.onlineOpen,
+                onlineClosingTime: data.onlineClose,
+
+                // Operating Hours schedule
+                operatingHours: data.posOpen && data.posClose ? {
+                    pos: [
+                        { day: 'Monday', openTime: data.posOpen, closeTime: data.posClose, isOpen: true },
+                        { day: 'Tuesday', openTime: data.posOpen, closeTime: data.posClose, isOpen: true },
+                        { day: 'Wednesday', openTime: data.posOpen, closeTime: data.posClose, isOpen: true },
+                        { day: 'Thursday', openTime: data.posOpen, closeTime: data.posClose, isOpen: true },
+                        { day: 'Friday', openTime: data.posOpen, closeTime: data.posClose, isOpen: true },
+                        { day: 'Saturday', openTime: data.posOpen, closeTime: data.posClose, isOpen: true },
+                        { day: 'Sunday', openTime: data.posOpen, closeTime: data.posClose, isOpen: true }
+                    ]
                 } : undefined,
+
+                // Delivery Configuration
+                deliveryRadiusKm: data.enableDelivery ? (parseFloat(data.deliveryRadius) || 5) : undefined,
+                deliveryProvider: data.deliveryProvider,
+                deliveryMinOrderAmount: parseFloat(data.deliveryMinOrder) || 0,
+                deliveryBaseFee: parseFloat(data.deliveryBaseFee) || 0,
+                freeDeliveryOverAmount: parseFloat(data.deliveryFreeThreshold) || 0,
+                deliveryEstimatedMinutes: parseInt(data.deliveryEstMinutes) || 0,
+
+                // Pickup & Dine-in Details
+                pickupDineinConfig: {
+                    pickup_prep_time_minutes: parseInt(data.pickupPrepTime) || 15,
+                    pickup_slot_duration_minutes: parseInt(data.pickupSlotDuration) || 15,
+                    pickup_curbside_enabled: data.pickupCurbside,
+                    pickup_instructions: data.pickupInstructions,
+                    dine_in_qr_ordering: data.dineInQR,
+                    dine_in_table_service: data.dineInTableService,
+                    dine_in_reservation: data.dineInReservation,
+                    dine_in_waitlist: data.dineInWaitlist
+                },
+
+                // Payments
+                paymentProvider: data.paymentProvider || 'moneris',
+                tipsEnabled: data.tipsEnabled,
+                refundsEnabled: data.refundEnabled,
+                splitPaymentsEnabled: data.splitPayment,
+
+                // Tax Configuration
+                taxInheritBrand: data.taxProfile === 'Inherit',
+                taxOverrideEnabled: data.taxProfile === 'Override',
+                taxConfig: data.taxProfile === 'Override' && data.taxRules.length > 0 ? {
+                    rules: data.taxRules.map(r => ({
+                        name: r.name,
+                        type: r.type,
+                        rate: parseFloat(r.rate) || 0,
+                        mode: r.mode,
+                        channel_scope: r.channelScope,
+                        priority: r.priority
+                    }))
+                } : {},
+
+                // Tip Presets & Auto Gratuity
+                tipPresets: data.tipPresets.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v)),
+                tipCalculationMode: data.tipCalcMode,
+                autoGratuityEnabled: data.autoGratuityEnabled,
+
+                // Fee rules
+                feeRules: data.feeRules.map(f => ({
+                    name: f.name,
+                    type: f.type,
+                    method: f.method,
+                    value: parseFloat(f.value) || 0,
+                    taxable: f.taxable,
+                    refundable: f.refundable,
+                    enabled: f.enabled
+                })),
+
+                paymentTerms: data.paymentTerms,
                 status: 'Draft',
             };
             await onSubmit(dto);
@@ -264,8 +350,8 @@ export function StoreOnboardingWizard({ tenantId, onCancel, onSubmit }: StoreOnb
                                     className={cn(
                                         'w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all',
                                         active ? 'bg-slate-900 text-white shadow-lg shadow-slate-200' :
-                                        done ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 cursor-pointer' :
-                                        'text-slate-400 cursor-not-allowed'
+                                            done ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 cursor-pointer' :
+                                                'text-slate-400 cursor-not-allowed'
                                     )}>
                                     <div className={cn(
                                         'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',

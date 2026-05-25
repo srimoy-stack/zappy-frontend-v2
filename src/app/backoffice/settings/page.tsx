@@ -14,6 +14,7 @@ import { useAuth } from '@/shared/contexts/AuthContext';
 import { apiClient } from '@/shared/api/apiClient';
 import { mapResponseToBrand } from '@/modules/platform/services/tenant.service';
 import { storeService } from '@/shared/api/services/store.service';
+import { tenantService } from '@/shared/api';
 import type { Store } from '@/shared/types/store';
 
 import {
@@ -129,18 +130,11 @@ export default function SettingsPage() {
 
             setLoading(true);
             try {
-                const { data } = await apiClient.get(`/tenants/${tenantId}`);
-                const mapped = mapResponseToBrand(data);
-
-                // Extract communication config from settings
-                if (data.settings?.email || data.settings?.sms) {
-                    mapped.communicationConfig = {
-                        email: data.settings?.email || { provider: 'smtp', senderEmail: '', senderName: '' },
-                        sms: data.settings?.sms || { provider: 'twilio', senderId: '' },
-                    };
-                }
-
-                setBrand(mapped);
+                // Fetch tenant via the official service (which uses the correct adapter and endpoint)
+                const tenantData = await tenantService.get(tenantId);
+                
+                // Keep the same state update
+                setBrand(tenantData);
 
                 // Fetch stores from API
                 try {
@@ -149,8 +143,9 @@ export default function SettingsPage() {
                 } catch { setStores([]); }
 
                 // Map users from API
-                if (data.users) {
-                    setUsers(data.users.map((u: any) => ({
+                const rawUsers = (tenantData as any).users;
+                if (rawUsers) {
+                    setUsers(rawUsers.map((u: any) => ({
                         id: String(u.id),
                         name: u.name,
                         email: u.email,

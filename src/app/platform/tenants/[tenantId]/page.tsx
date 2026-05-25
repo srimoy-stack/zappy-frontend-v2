@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
     ArrowLeft, ChevronRight, Building2, Activity, Shield, LayoutGrid,
-    Store, Users, MessageSquare, FileText, Ban, RefreshCw, LogIn,
+    Store as StoreIcon, Users, MessageSquare, FileText, Ban, RefreshCw, LogIn,
     Play, CheckCircle2, Trash2, Loader2,
 } from 'lucide-react';
 
@@ -13,6 +13,8 @@ import { UserType } from '@/shared/types/auth';
 import { cn } from '@/utils';
 import { apiClient } from '@/shared/api/apiClient';
 import { mapResponseToBrand, updateTenantStatus, deleteTenant as deleteTenantApi } from '@/modules/platform/services/tenant.service';
+import { storeService } from '@/shared/api/services/store.service';
+import type { Store, CreateStoreDTO } from '@/shared/types/store';
 
 import {
     OverviewTab,
@@ -37,7 +39,7 @@ interface TabDef {
 const TABS: TabDef[] = [
     { id: 'overview', label: 'Overview', icon: Activity },
     { id: 'modules', label: 'Modules', icon: LayoutGrid },
-    { id: 'stores', label: 'Stores', icon: Store },
+    { id: 'stores', label: 'Stores', icon: StoreIcon },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'roles', label: 'Roles', icon: Shield },
     { id: 'communication', label: 'Communication', icon: MessageSquare },
@@ -121,6 +123,7 @@ export default function TenantDetailPage() {
     const [brand, setBrand] = useState<Brand | null>(null);
     const [loading, setLoading] = useState(true);
     const [users, setUsers] = useState<typeof MOCK_USERS>([]);
+    const [stores, setStores] = useState<Store[]>([]);
 
     // Fetch real tenant data from API
     useEffect(() => {
@@ -142,6 +145,14 @@ export default function TenantDetailPage() {
 
                 setBrand(mapped);
 
+                // Fetch stores from API
+                try {
+                    const apiStores = await storeService.list(tenantId);
+                    setStores(apiStores);
+                } catch {
+                    setStores([]);
+                }
+
                 // Map users
                 if (data.users) {
                     setUsers(data.users.map((u: any) => ({
@@ -162,6 +173,12 @@ export default function TenantDetailPage() {
                 // Fallback to mock for dev
                 setBrand(MOCK_BRAND);
                 setUsers([]);
+                try {
+                    const apiStores = await storeService.list(MOCK_BRAND.id);
+                    setStores(apiStores);
+                } catch {
+                    setStores([]);
+                }
             } finally {
                 setLoading(false);
             }
@@ -361,12 +378,40 @@ export default function TenantDetailPage() {
                     />
                 )}
                 {activeTab === 'modules' && <ModulesTab tenantId={tenantId || ''} initialPaths={brand.enabledModules || []} />}
-                {activeTab === 'stores' && <StoresTab tenantId={tenantId || ''} stores={MOCK_STORES} />}
+                {activeTab === 'stores' && (
+                    <StoresTab
+                        tenantId={tenantId || ''}
+                        stores={stores}
+                        maxStores={brand.maxStores || 50}
+                        onViewStore={(storeId) => router.push(`/backoffice/settings/stores/${storeId}`)}
+                        onConfigureStore={(storeId) => router.push(`/backoffice/settings/stores/${storeId}`)}
+                        onCreateStore={async (dto) => {
+                            await storeService.create(tenantId!, dto);
+                            const refreshed = await storeService.list(tenantId!);
+                            setStores(refreshed);
+                        }}
+                        onUpdateStore={async (storeId, dto) => {
+                            await storeService.update(tenantId!, storeId, dto);
+                            const refreshed = await storeService.list(tenantId!);
+                            setStores(refreshed);
+                        }}
+                        onSuspendStore={async (storeId) => {
+                            await storeService.suspend(tenantId!, storeId);
+                            const refreshed = await storeService.list(tenantId!);
+                            setStores(refreshed);
+                        }}
+                        onReactivateStore={async (storeId) => {
+                            await storeService.activate(tenantId!, storeId);
+                            const refreshed = await storeService.list(tenantId!);
+                            setStores(refreshed);
+                        }}
+                    />
+                )}
                 {activeTab === 'users' && (
                     <UsersTab
                         tenantId={tenantId || ''}
                         users={users}
-                        stores={MOCK_STORES.map(s => ({ id: s.id, name: s.name }))}
+                        stores={stores.map(s => ({ id: s.id, name: s.name }))}
                     />
                 )}
                 {activeTab === 'roles' && <RolesTab tenantId={tenantId || ''} />}

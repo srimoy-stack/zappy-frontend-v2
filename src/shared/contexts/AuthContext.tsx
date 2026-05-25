@@ -109,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     throw new Error('Missing access token for auth/me');
                 }
 
-                const meRes = await fetch(`${getApiUrl()}/auth/me`, {
+                const meRes = await fetch(`${getApiUrl()}/api/auth/me`, {
                     headers: {
                         Authorization: `Bearer ${accessToken}`,
                         'Content-Type': 'application/json',
