@@ -11,7 +11,7 @@ import { Brand } from '@/shared/types/tenant';
 import { UserType } from '@/shared/types/auth';
 import { useAuth } from '@/shared/contexts/AuthContext';
 import { cn } from '@/utils';
-import { mapResponseToBrand } from '@/modules/platform/services/tenant.service';
+
 import { storeService } from '@/shared/api/services/store.service';
 import { tenantService } from '@/shared/api';
 import type { Store } from '@/shared/types/store';
@@ -79,11 +79,7 @@ const MOCK_BRAND: Brand = {
     onboardingProgress: 100,
 };
 
-const MOCK_STORES = [
-    { id: 'store-01', name: 'Downtown Toronto', code: 'DT-001', status: 'Active' as const, city: 'Toronto', province: 'Ontario', paymentTerms: 'Net 30', taxProfile: 'Inherit' as const, logoStatus: 'Set' as const, tenantId: 'brand-001', timezone: 'EST', address: '100 King St W', deliveryRadiusKm: 8, latitude: 43.6488, longitude: -79.3853, usersCount: 7, adminName: 'Sarah Chen', adminEmail: 'sarah@acmepizza.com', createdAt: '2025-06-20' },
-    { id: 'store-02', name: 'Midtown', code: 'MT-002', status: 'Active' as const, city: 'Toronto', province: 'Ontario', paymentTerms: 'Net 30', taxProfile: 'Inherit' as const, logoStatus: 'Default' as const, tenantId: 'brand-001', timezone: 'EST', address: '55 Bloor St W', deliveryRadiusKm: 5, latitude: 43.6710, longitude: -79.3886, usersCount: 4, adminName: 'Mike Patel', adminEmail: 'mike@acmepizza.com', createdAt: '2025-07-02' },
-    { id: 'store-03', name: 'Scarborough', code: 'SC-003', status: 'Active' as const, city: 'Scarborough', province: 'Ontario', paymentTerms: 'Net 15', taxProfile: 'Override' as const, logoStatus: 'Set' as const, tenantId: 'brand-001', timezone: 'EST', address: '300 Borough Dr', deliveryRadiusKm: 12, latitude: 43.7731, longitude: -79.2578, usersCount: 5, adminName: 'Lisa Wong', adminEmail: 'lisa@acmepizza.com', createdAt: '2025-07-15' },
-];
+
 
 const MOCK_USERS = [
     { id: 'u-1', name: 'John Doe', email: 'john@acmepizza.com', userType: UserType.BRAND_ADMIN, role: 'Brand Admin', storeAccess: 'All Locations', storeIds: [] as string[], status: 'Active' as const, lastLogin: '2026-05-07', createdAt: '2025-06-15' },
@@ -323,7 +319,7 @@ export default function SettingsPage() {
                         onViewStore={(storeId) => router.push(`/backoffice/settings/stores/${storeId}`)}
                         onConfigureStore={(storeId) => router.push(`/backoffice/settings/stores/${storeId}`)}
                         onCreateStore={async (dto) => {
-                            const created = await storeService.create(resolvedTenantId, dto);
+                            await storeService.create(resolvedTenantId, dto);
                             const refreshed = await storeService.list(resolvedTenantId);
                             setStores(refreshed);
                         }}
