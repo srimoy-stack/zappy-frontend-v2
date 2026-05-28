@@ -2,10 +2,27 @@ export type ItemType = 'SINGLE' | 'COMBO' | 'CONFIGURABLE_DEAL' | 'FIXED_COMBO';
 export type ProductDeploymentScope = 'GLOBAL' | 'STORE_SPECIFIC';
 export type SyncStatusType = 'DRAFT' | 'QUEUED' | 'SYNCED' | 'FAILED';
 
+export interface CustomDaySchedule {
+    dayOfWeek: 'MON' | 'TUE' | 'WED' | 'THU' | 'FRI' | 'SAT' | 'SUN';
+    startTime: string;
+    endTime: string;
+}
+
+export interface CategoryChannelSchedule {
+    channelId: string;
+    allDays: boolean;               // If true, applies one start/end time for all days
+    allDaysStartTime?: string;      // e.g. '09:00'
+    allDaysEndTime?: string;        // e.g. '22:00'
+    customDays?: CustomDaySchedule[];
+}
+
 export interface Category {
     id: string;
     name: string;
     description?: string;
+    visibilityMode?: 'ALL' | 'CUSTOM';           // Default: 'ALL' — visible on all channels
+    customChannels?: string[];                     // Only used when visibilityMode === 'CUSTOM'
+    channelSchedules?: CategoryChannelSchedule[];  // Per-channel scheduling
 }
 
 export interface RecipeEntry {
@@ -140,6 +157,8 @@ export interface Item {
     // Keep legacy modifierGroups for backward compatibility with current mock/editor view compilations
     modifierGroups: ModifierGroup[]; 
 
+    comboSlots?: ComboSlot[];
+
     isAvailable: boolean;
     taxRate?: number;
     
@@ -157,6 +176,16 @@ export interface Item {
         user: string;
         action: string;
     }[];
+}
+
+export interface ComboSlot {
+    id: string;
+    slotName: string;
+    quantity: number;
+    selectedVariantTemplateId: string | null;
+    selectedModifierTemplateIds: string[];
+    customPrice: number | null; // null = use base price
+    isConfigured: boolean;
 }
 
 // Retain legacy structure (ModifierGroup) for backward compatibility

@@ -10,27 +10,72 @@ import { ProductTypeStep } from './steps/ProductTypeStep';
 import { CategoryMetadataStep } from './steps/CategoryMetadataStep';
 import { VariantGroupsStep } from './steps/VariantGroupsStep';
 import { ModifierAttachmentStep } from './steps/ModifierAttachmentStep';
+import { AddonAttachmentStep } from './steps/AddonAttachmentStep';
 import { ComboBuilderStep } from './steps/ComboBuilderStep';
 import { RulesStep } from './steps/RulesStep';
 import { PricingStep } from './steps/PricingStep';
 import { StoreOverridesStep } from './steps/StoreOverridesStep';
 import { InventoryRecipeStep } from './steps/InventoryRecipeStep';
 import { ReviewPublishStep } from './steps/ReviewPublishStep';
+import { Item } from '../../../types/items';
 import { cn } from '@/utils';
 
 interface ProductWizardProps {
     onClose: () => void;
+    editItem?: Item | null;
 }
 
-export const ProductWizard: React.FC<ProductWizardProps> = ({ onClose }) => {
+export const ProductWizard: React.FC<ProductWizardProps> = ({ onClose, editItem }) => {
     const {
         currentStep, formData, editingItemId, isDirty,
-        validateAllSteps, setSubmitting, resetForm, lastSavedAt
+        validateAllSteps, setSubmitting, resetForm, lastSavedAt,
+        initializeForEdit, setDirty
     } = useWizardStore();
 
     const { createItem, updateItem, publishDraft } = useCatalogStore();
 
     const isComboType = formData.productType === 'FIXED_COMBO' || formData.productType === 'CONFIGURABLE_DEAL';
+
+    // Initialize wizard for edit mode OR reset for create mode.
+    // Single effect handles both init and cleanup to avoid React Strict Mode race conditions.
+    // The component is keyed (key={`edit-${id}`}), so it fully remounts on item change.
+    useEffect(() => {
+        if (editItem) {
+            const hasVariants = (editItem.variantGroups || []).length > 0;
+            const hasModifiers = (editItem.modifierAttachments || []).length > 0 || (editItem.modifierGroups || []).length > 0;
+
+            initializeForEdit(editItem.id, {
+                productType: editItem.productType,
+                name: editItem.name,
+                sku: editItem.sku || '',
+                description: editItem.description || '',
+                imageUrl: editItem.imageUrl || '',
+                tags: editItem.tags || [],
+                categoryId: editItem.categoryId || '',
+                secondaryCategoryIds: editItem.secondaryCategoryIds || [],
+                taxRate: editItem.taxRate ?? 5.0,
+                baseProductPrice: editItem.baseProductPrice ?? 0,
+                variantGroups: editItem.variantGroups || [],
+                modifierAttachments: editItem.modifierAttachments || [],
+                isAvailable: editItem.isAvailable,
+                channelVisibility: editItem.channelVisibility || ['POS', 'ONLINE'],
+                dietaryFlags: editItem.dietaryFlags || [],
+                scopeConfig: editItem.scopeConfig || { scope: 'GLOBAL', targetedStoreIds: [] },
+                enableVariants: hasVariants,
+                enableModifiers: hasModifiers,
+                enableAddons: false,
+                storeOverrides: (editItem.storeOverrides || []).map(o => ({
+                    storeId: o.storeId,
+                    storeName: o.storeId,
+                    priceOverride: o.price,
+                    availabilityOverride: o.isAvailable,
+                })),
+                comboSlots: editItem.comboSlots || [],
+            });
+        }
+        return () => { resetForm(); };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [editItem?.id]);
 
     // Warn on unsaved changes
     useEffect(() => {
@@ -55,12 +100,17 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ onClose }) => {
         channelVisibility: formData.channelVisibility,
         variantGroups: formData.variantGroups,
         modifierAttachments: formData.modifierAttachments,
-        modifierGroups: [],
-        storeOverrides: [],
+        modifierGroups: editItem?.modifierGroups || [],
+        storeOverrides: (formData.storeOverrides || []).map(o => ({
+            storeId: o.storeId,
+            price: o.priceOverride,
+            isAvailable: o.availabilityOverride,
+        })),
         isAvailable: formData.isAvailable,
         taxRate: formData.taxRate,
         scopeConfig: formData.scopeConfig,
-    }), [formData]);
+        comboSlots: formData.comboSlots || [],
+    }), [formData, editItem]);
 
     const handleSaveDraft = useCallback(() => {
         const payload = buildItemPayload();
@@ -71,6 +121,20 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ onClose }) => {
         }
         onClose();
     }, [buildItemPayload, editingItemId, createItem, updateItem, onClose]);
+
+    const handleUpdateStep = useCallback(() => {
+        const payload = buildItemPayload();
+        if (editingItemId) {
+            updateItem(editingItemId, payload);
+        } else {
+            const created = createItem(payload);
+            // Re-initialize store state to keep the wizard open in edit mode
+            initializeForEdit(created.id, {
+                ...formData,
+            });
+        }
+        setDirty(false);
+    }, [buildItemPayload, editingItemId, createItem, updateItem, initializeForEdit, formData, setDirty]);
 
     const handlePublish = useCallback(async () => {
         const isValid = validateAllSteps();
@@ -119,6 +183,8 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ onClose }) => {
                 return isComboType
                     ? <PlaceholderStep title="Combo Add-Ons" desc="Add optional side items, drinks, and extras to the combo. Coming in Phase 3." />
                     : <ModifierAttachmentStep />;
+            case 'ADDONS':
+                return <AddonAttachmentStep />;
             case 'RULES':
                 return <RulesStep />;
             case 'PRICING':
@@ -150,11 +216,11 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ onClose }) => {
                             <div className="p-2 bg-slate-950 rounded-xl">
                                 <Target className="w-4 h-4 text-emerald-400" />
                             </div>
-                            <h2 className="text-lg font-black text-slate-950 uppercase tracking-tight">
-                                {editingItemId ? `Edit: ${formData.name || 'Product'}` : 'New Product'}
+                            <h2 className="text-lg font-bold text-slate-950 tracking-tight">
+                                {editingItemId ? `Edit: ${formData.name || 'Product'}` : (formData.name || 'New Product')}
                             </h2>
                         </div>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-1 ml-[52px]">
+                        <p className="text-xs text-slate-500 font-semibold mt-1 ml-[52px]">
                             {isComboType
                                 ? 'Combo product creation — configure each item in the bundle'
                                 : 'Step-by-step product creation wizard'}
@@ -164,18 +230,18 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ onClose }) => {
 
                 <div className="flex items-center gap-3">
                     {lastSavedAt && (
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">
+                        <span className="text-xs text-slate-500 font-semibold">
                             Last saved {new Date(lastSavedAt).toLocaleTimeString()}
                         </span>
                     )}
                     <span className={cn(
-                        "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border",
-                        formData.productType === 'SINGLE' ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
-                        formData.productType === 'CONFIGURABLE_DEAL' ? "bg-violet-50 text-violet-700 border-violet-100" :
-                        formData.productType === 'FIXED_COMBO' ? "bg-amber-50 text-amber-700 border-amber-100" :
-                        "bg-slate-50 text-slate-700 border-slate-100"
+                        "px-3 py-1 rounded-lg text-[10px] font-bold border capitalize",
+                        formData.productType === 'SINGLE' ? "bg-emerald-50 text-emerald-800 border-emerald-200" :
+                        formData.productType === 'CONFIGURABLE_DEAL' ? "bg-violet-50 text-violet-850 border-violet-200" :
+                        formData.productType === 'FIXED_COMBO' ? "bg-amber-50 text-amber-850 border-amber-200" :
+                        "bg-slate-50 text-slate-800 border-slate-200"
                     )}>
-                        {formData.productType.replace(/_/g, ' ')}
+                        {formData.productType.replace(/_/g, ' ').toLowerCase()}
                     </span>
                 </div>
             </div>
@@ -184,12 +250,20 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ onClose }) => {
             <ProgressStepper />
 
             {/* Step Content */}
-            <div className="min-h-[400px]">
+            <div 
+                className="min-h-[400px]"
+                onClick={() => { if (!isDirty) setDirty(true); }}
+                onKeyDown={() => { if (!isDirty) setDirty(true); }}
+            >
                 {renderStep()}
             </div>
 
             {/* Navigation Footer */}
-            <StepNavigation onSaveDraft={handleSaveDraft} onPublish={handlePublish} />
+            <StepNavigation 
+                onSaveDraft={handleSaveDraft} 
+                onPublish={handlePublish} 
+                onUpdateStep={handleUpdateStep} 
+            />
         </div>
     );
 };

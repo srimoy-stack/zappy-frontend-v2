@@ -14,6 +14,8 @@ interface CatalogState {
     // Core CRUD & Draft Actions
     setItems: (items: Item[]) => void;
     setCategories: (categories: Category[]) => void;
+    addCategory: (category: Category) => void;
+    updateCategory: (id: string, updates: Partial<Category>) => void;
     selectItem: (id: string | null) => void;
     createItem: (itemData: Partial<Item>) => Item;
     updateItem: (id: string, updates: Partial<Item>) => void;
@@ -30,13 +32,38 @@ interface CatalogState {
 }
 
 export const useCatalogStore = create<CatalogState>((set, get) => {
+    // Cache version — bump this when Item schema changes to invalidate stale localStorage
+    const CATALOG_CACHE_VERSION = 2;
+
     // Try to load cached drafts from localStorage if available in browser context
     const getCachedItems = (): Item[] => {
         if (typeof window !== 'undefined') {
+            const version = localStorage.getItem('zyappy_catalog_cache_version');
             const cached = localStorage.getItem('zyappy_catalog_items_drafts');
-            if (cached) {
+
+            // If cache version doesn't match, clear stale data
+            if (version !== String(CATALOG_CACHE_VERSION)) {
+                localStorage.removeItem('zyappy_catalog_items_drafts');
+                localStorage.setItem('zyappy_catalog_cache_version', String(CATALOG_CACHE_VERSION));
+            } else if (cached) {
                 try {
-                    return JSON.parse(cached);
+                    const parsed: Item[] = JSON.parse(cached);
+                    // Backfill any newly-added fields with defaults
+                    return parsed.map(item => ({
+                        ...item,
+                        sku: item.sku ?? '',
+                        tags: item.tags ?? [],
+                        secondaryCategoryIds: item.secondaryCategoryIds ?? [],
+                        baseProductPrice: item.baseProductPrice ?? 0,
+                        dietaryFlags: item.dietaryFlags ?? [],
+                        channelVisibility: item.channelVisibility ?? ['POS', 'ONLINE'],
+                        taxRate: item.taxRate ?? 5.0,
+                        modifierAttachments: item.modifierAttachments || [],
+                        scopeConfig: item.scopeConfig || { scope: 'GLOBAL', targetedStoreIds: [] },
+                        storeOverridesResolver: item.storeOverridesResolver || [],
+                        equivalencyRules: item.equivalencyRules || [],
+                        storeOverrides: item.storeOverrides || [],
+                    }));
                 } catch (e) {
                     console.error('Failed to parse cached catalog drafts:', e);
                 }
@@ -83,6 +110,16 @@ export const useCatalogStore = create<CatalogState>((set, get) => {
 
         setCategories: (categories) => set({ categories }),
 
+        addCategory: (category) => {
+            set(state => ({ categories: [...state.categories, category] }));
+        },
+
+        updateCategory: (id, updates) => {
+            set(state => ({
+                categories: state.categories.map(c => c.id === id ? { ...c, ...updates } : c)
+            }));
+        },
+
         selectItem: (id) => set({ selectedItemId: id }),
 
         createItem: (itemData) => {
@@ -90,18 +127,24 @@ export const useCatalogStore = create<CatalogState>((set, get) => {
                 id: 'item-' + Date.now(),
                 productType: itemData.productType || 'SINGLE',
                 name: itemData.name || 'New Master Offering',
+                sku: itemData.sku || '',
+                tags: itemData.tags || [],
                 description: itemData.description || '',
                 imageUrl: itemData.imageUrl,
                 categoryId: itemData.categoryId || '',
+                secondaryCategoryIds: itemData.secondaryCategoryIds || [],
+                baseProductPrice: itemData.baseProductPrice ?? 0,
+                dietaryFlags: itemData.dietaryFlags || [],
+                channelVisibility: itemData.channelVisibility || ['POS', 'ONLINE'],
                 variantGroups: itemData.variantGroups || [],
                 modifierAttachments: itemData.modifierAttachments || [],
                 modifierGroups: itemData.modifierGroups || [],
                 isAvailable: itemData.isAvailable !== undefined ? itemData.isAvailable : true,
-                taxRate: itemData.taxRate || 0,
+                taxRate: itemData.taxRate ?? 5.0,
                 scopeConfig: itemData.scopeConfig || { scope: 'GLOBAL', targetedStoreIds: [] },
                 storeOverridesResolver: itemData.storeOverridesResolver || [],
                 equivalencyRules: itemData.equivalencyRules || [],
-                storeOverrides: [],
+                storeOverrides: itemData.storeOverrides || [],
                 versionMetadata: {
                     version: 1,
                     lastModifiedBy: 'Brand Admin',

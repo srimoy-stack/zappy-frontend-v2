@@ -129,24 +129,112 @@ export const ProductTypeStep: React.FC = () => {
                                 </div>
 
                                 <h4 className={cn(
-                                    "text-xs font-black uppercase tracking-wider mb-1.5",
-                                    isSelected ? colors.text : "text-slate-700"
+                                    "text-sm font-bold mb-1.5",
+                                    isSelected ? colors.text : "text-slate-900"
                                 )}>
                                     {opt.label}
                                 </h4>
 
-                                <p className="text-[10px] text-slate-500 font-medium leading-relaxed mb-3">
+                                <p className="text-xs text-slate-600 font-semibold leading-relaxed mb-3">
                                     {opt.desc}
                                 </p>
 
                                 <div className="pt-3 border-t border-slate-100">
-                                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">
+                                    <span className="text-xs text-slate-500 font-bold">
                                         e.g. {opt.examples}
                                     </span>
                                 </div>
                             </button>
                         );
                     })}
+                </div>
+            </StepCard>
+
+            {/* Wizard Steps to Include Toggles */}
+            <StepCard>
+                <StepHeader
+                    icon={<Sparkles className="w-4.5 h-4.5 text-emerald-400" />}
+                    title="Customize Setup Steps"
+                    subtitle="Toggle optional wizard configurations based on what this product needs"
+                />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <button
+                        onClick={() => updateFormData('enableVariants', !formData.enableVariants)}
+                        className={cn(
+                            "flex items-center justify-between p-4 rounded-xl border-2 transition-all text-left",
+                            formData.enableVariants
+                                ? "border-emerald-500 bg-emerald-50/50 shadow-sm"
+                                : "border-slate-150 hover:border-slate-300 bg-white"
+                        )}
+                    >
+                        <div className="flex flex-col">
+                            <span className={cn("text-xs font-bold", formData.enableVariants ? "text-emerald-700" : "text-slate-800")}>
+                                Variant Groups
+                            </span>
+                            <span className="text-xs text-slate-500 font-semibold mt-0.5">
+                                Sizes, crusts, and pricing
+                            </span>
+                        </div>
+                        <div className={cn("w-4 h-4 rounded-md border-2 flex items-center justify-center", formData.enableVariants ? "border-emerald-500 bg-emerald-500" : "border-slate-300")}>
+                            {formData.enableVariants && (
+                                <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                            )}
+                        </div>
+                    </button>
+
+                    <button
+                        onClick={() => updateFormData('enableModifiers', !formData.enableModifiers)}
+                        className={cn(
+                            "flex items-center justify-between p-4 rounded-xl border-2 transition-all text-left",
+                            formData.enableModifiers
+                                ? "border-emerald-500 bg-emerald-50/50 shadow-sm"
+                                : "border-slate-150 hover:border-slate-300 bg-white"
+                        )}
+                    >
+                        <div className="flex flex-col">
+                            <span className={cn("text-xs font-bold", formData.enableModifiers ? "text-emerald-700" : "text-slate-800")}>
+                                Modifier Pools
+                            </span>
+                            <span className="text-xs text-slate-500 font-semibold mt-0.5">
+                                Toppings, sauces, and extras
+                            </span>
+                        </div>
+                        <div className={cn("w-4 h-4 rounded-md border-2 flex items-center justify-center", formData.enableModifiers ? "border-emerald-500 bg-emerald-500" : "border-slate-300")}>
+                            {formData.enableModifiers && (
+                                <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                            )}
+                        </div>
+                    </button>
+
+                    <button
+                        onClick={() => updateFormData('enableAddons', !formData.enableAddons)}
+                        className={cn(
+                            "flex items-center justify-between p-4 rounded-xl border-2 transition-all text-left",
+                            formData.enableAddons
+                                ? "border-emerald-500 bg-emerald-50/50 shadow-sm"
+                                : "border-slate-150 hover:border-slate-300 bg-white"
+                        )}
+                    >
+                        <div className="flex flex-col">
+                            <span className={cn("text-xs font-bold", formData.enableAddons ? "text-emerald-700" : "text-slate-800")}>
+                                Add-On Groups
+                            </span>
+                            <span className="text-xs text-slate-500 font-semibold mt-0.5">
+                                Sides, drinks, and desserts
+                            </span>
+                        </div>
+                        <div className={cn("w-4 h-4 rounded-md border-2 flex items-center justify-center", formData.enableAddons ? "border-emerald-500 bg-emerald-500" : "border-slate-300")}>
+                            {formData.enableAddons && (
+                                <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                            )}
+                        </div>
+                    </button>
                 </div>
             </StepCard>
 

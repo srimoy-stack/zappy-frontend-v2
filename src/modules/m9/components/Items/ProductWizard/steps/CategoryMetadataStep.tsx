@@ -52,21 +52,15 @@ export const CategoryMetadataStep: React.FC = () => {
             <StepCard>
                 <StepHeader
                     icon={<Layers className="w-4.5 h-4.5 text-emerald-400" />}
-                    title="Category & Taxonomy"
+                    title="Category"
                     subtitle="Organizational placement within the menu structure"
                 />
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div className="max-w-md">
                     <FormField label="Primary Category" required error={errors.find(e => e.includes('category'))}>
                         <SelectInput value={formData.categoryId} onChange={(e) => updateFormData('categoryId', e.target.value)} hasError={!!errors.find(e => e.includes('category'))}>
                             <option value="">Select a category...</option>
                             {mockCategories.map(cat => (<option key={cat.id} value={cat.id}>{cat.name}</option>))}
                         </SelectInput>
-                    </FormField>
-                    <FormField label="Tax Rate (%)" required>
-                        <div className="relative">
-                            <Percent className="absolute right-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                            <input type="number" step="0.01" min="0" max="100" value={formData.taxRate} onChange={(e) => updateFormData('taxRate', parseFloat(e.target.value) || 0)} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-mono font-bold focus:border-slate-900 outline-none transition-all pr-10" />
-                        </div>
                     </FormField>
                 </div>
             </StepCard>
@@ -87,27 +81,7 @@ export const CategoryMetadataStep: React.FC = () => {
                 </div>
             </StepCard>
 
-            <StepCard>
-                <StepHeader icon={<Globe className="w-4.5 h-4.5 text-emerald-400" />} title="Channel Visibility" subtitle="Where this product will be available for ordering" />
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {CHANNELS.map(ch => {
-                        const isActive = formData.channelVisibility.includes(ch.id);
-                        return (
-                            <button key={ch.id} onClick={() => { const nc = isActive ? formData.channelVisibility.filter(c => c !== ch.id) : [...formData.channelVisibility, ch.id]; updateFormData('channelVisibility', nc); }}
-                                className={cn("flex flex-col p-4 rounded-xl border-2 transition-all text-left", isActive ? "border-slate-950 bg-slate-50 shadow-sm" : "border-slate-150 hover:border-slate-300 bg-white")}>
-                                <div className="flex items-center justify-between mb-1.5">
-                                    <span className={cn("text-[10px] font-black uppercase tracking-wider", isActive ? "text-slate-950" : "text-slate-500")}>{ch.label}</span>
-                                    <div className={cn("w-4 h-4 rounded-md border-2 flex items-center justify-center", isActive ? "border-emerald-500 bg-emerald-500" : "border-slate-300")}>
-                                        {isActive && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
-                                    </div>
-                                </div>
-                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">{ch.desc}</span>
-                            </button>
-                        );
-                    })}
-                </div>
-                {formData.channelVisibility.length === 0 && (<div className="mt-3 px-3 py-2 bg-amber-50 border border-amber-100 rounded-lg"><span className="text-[9px] font-bold text-amber-700 uppercase tracking-tight">⚠ Product won't be visible on any channel</span></div>)}
-            </StepCard>
+
 
             <StepCard>
                 <StepHeader icon={<Calendar className="w-4.5 h-4.5 text-emerald-400" />} title="Availability Schedule" subtitle="Optional time-based availability restrictions" />

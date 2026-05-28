@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { CheckCircle2, AlertTriangle, Package, Layers, DollarSign, Settings2, ShieldCheck, Server, Rocket } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckCircle2, AlertTriangle, Package, DollarSign, ShieldCheck, Server, ChevronDown, Check, Building2 } from 'lucide-react';
 import { useWizardStore } from '../../../../state/wizardStore';
 import { useModifierPoolStore } from '../../../../state/modifierPoolStore';
 import { StepHeader, StepCard } from '../shared/StepHeader';
@@ -13,13 +13,218 @@ export const ReviewPublishStep: React.FC = () => {
     const { formData, stepValidations, validateAllSteps, setCurrentStep } = useWizardStore();
     const { pools } = useModifierPoolStore();
 
+    const [expandedStepId, setExpandedStepId] = useState<string | null>(null);
+
     React.useEffect(() => { validateAllSteps(); }, []);
 
     const allValid = WIZARD_STEPS.filter(s => s.isRequired).every(s => stepValidations[s.id]?.errors?.length === 0);
     const totalErrors = Object.values(stepValidations).reduce((sum, v) => sum + (v?.errors?.length || 0), 0);
-    const totalWarnings = Object.values(stepValidations).reduce((sum, v) => sum + (v?.warnings?.length || 0), 0);
     const category = mockCategories.find(c => c.id === formData.categoryId);
     const totalVariants = formData.variantGroups.reduce((sum, g) => sum + g.variants.length, 0);
+
+    const toggleStep = (stepId: string) => {
+        setExpandedStepId(prev => prev === stepId ? null : stepId);
+    };
+
+    const renderStepSummary = (stepId: string) => {
+        switch (stepId) {
+            case 'PRODUCT_TYPE': // Product Type & Identity
+                return (
+                    <div className="mt-3 pt-3 border-t border-slate-100/60 space-y-2 text-[10px] text-slate-600 font-bold uppercase tracking-tight animate-in slide-in-from-top-1 duration-150">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <span className="text-[8px] text-slate-400 block mb-0.5">Product Name</span>
+                                <span className="text-slate-800 font-black">{formData.name || '—'}</span>
+                            </div>
+                            <div>
+                                <span className="text-[8px] text-slate-400 block mb-0.5">Product Type</span>
+                                <span className="text-slate-800 font-black">{formData.productType}</span>
+                            </div>
+                            <div>
+                                <span className="text-[8px] text-slate-400 block mb-0.5">SKU / Code</span>
+                                <span className="text-slate-800 font-mono font-black">{formData.sku || 'Auto-generated'}</span>
+                            </div>
+                            <div>
+                                <span className="text-[8px] text-slate-400 block mb-0.5">Description</span>
+                                <span className="text-slate-800 block truncate normal-case font-medium">{formData.description || 'No description provided'}</span>
+                            </div>
+                        </div>
+                    </div>
+                );
+            case 'CATEGORY_META': // Category & Metadata
+                return (
+                    <div className="mt-3 pt-3 border-t border-slate-100/60 space-y-2 text-[10px] text-slate-600 font-bold uppercase tracking-tight animate-in slide-in-from-top-1 duration-150">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <span className="text-[8px] text-slate-400 block mb-0.5">Category</span>
+                                <span className="text-slate-800 font-black">{category?.name || '—'}</span>
+                            </div>
+                            <div>
+                                <span className="text-[8px] text-slate-400 block mb-0.5">Tax Rate</span>
+                                <span className="text-slate-800 font-mono font-black">{formData.taxRate}%</span>
+                            </div>
+                            <div>
+                                <span className="text-[8px] text-slate-400 block mb-0.5">Calories</span>
+                                <span className="text-slate-800 font-mono font-black">{formData.calories || 0} kcal</span>
+                            </div>
+                            <div>
+                                <span className="text-[8px] text-slate-400 block mb-0.5">Dietary Tags</span>
+                                <span className="text-slate-800 block truncate">{formData.dietaryFlags?.join(', ') || 'None'}</span>
+                            </div>
+                        </div>
+                    </div>
+                );
+            case 'VARIANTS': // Variant Groups
+                return (
+                    <div className="mt-3 pt-3 border-t border-slate-100/60 space-y-2 text-[10px] text-slate-600 font-bold uppercase tracking-tight animate-in slide-in-from-top-1 duration-150">
+                        {formData.variantGroups.length === 0 ? (
+                            <span className="text-[9px] text-slate-400 font-medium normal-case">No variant groups configured. Inherits single default variant.</span>
+                        ) : (
+                            <div className="space-y-1.5">
+                                {formData.variantGroups.map((g, idx) => (
+                                    <div key={idx} className="flex flex-col bg-white border border-slate-100 rounded-lg p-2 gap-0.5">
+                                        <span className="text-slate-800 font-black block">{g.name}</span>
+                                        <span className="text-[8.5px] text-slate-400 font-mono block">
+                                            Options: {g.variants.map(v => `${v.name} (+$${v.priceCost || 0})`).join(', ')}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                );
+            case 'MODIFIERS': // Modifier Pools
+                return (
+                    <div className="mt-3 pt-3 border-t border-slate-100/60 space-y-2 text-[10px] text-slate-600 font-bold uppercase tracking-tight animate-in slide-in-from-top-1 duration-150">
+                        {formData.modifierAttachments.length === 0 ? (
+                            <span className="text-[9px] text-slate-400 font-medium normal-case">No modifier pools attached.</span>
+                        ) : (
+                            <div className="space-y-1.5">
+                                {formData.modifierAttachments.map(att => {
+                                    const pool = pools.find(p => p.id === att.modifierPoolId);
+                                    return (
+                                        <div key={att.modifierPoolId} className="flex flex-col bg-white border border-slate-100 rounded-lg p-2 gap-0.5">
+                                            <span className="text-slate-800 font-black block">{pool?.name || 'Unknown Pool'}</span>
+                                            <span className="text-[8.5px] text-slate-400 font-bold block">
+                                                Selection Limits: Min {att.minSelection} • Max {att.maxSelection}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                );
+            case 'ADDONS': // Add-On Groups
+                return (
+                    <div className="mt-3 pt-3 border-t border-slate-100/60 space-y-2 text-[10px] text-slate-600 font-bold uppercase tracking-tight animate-in slide-in-from-top-1 duration-150">
+                        {(!formData.addonGroups || formData.addonGroups.length === 0) ? (
+                            <span className="text-[9px] text-slate-400 font-medium normal-case">No addon groups attached.</span>
+                        ) : (
+                            <div className="space-y-1.5">
+                                {(formData.addonGroups || []).map((grp, idx) => (
+                                    <div key={idx} className="flex items-center justify-between bg-white border border-slate-100 rounded-lg p-2">
+                                        <span className="text-slate-800 font-black">{grp.name}</span>
+                                        <span className="text-[8.5px] text-slate-400 font-mono">Options: {grp.addons?.length || 0}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                );
+            case 'RULES': // Rules & Constraints
+                return (
+                    <div className="mt-3 pt-3 border-t border-slate-100/60 space-y-2 text-[10px] text-slate-600 font-bold uppercase tracking-tight animate-in slide-in-from-top-1 duration-150">
+                        {(!formData.kitchenRules || formData.kitchenRules.length === 0) ? (
+                            <span className="text-[9px] text-slate-400 font-medium normal-case">No operational or kitchen dispatch rules configured.</span>
+                        ) : (
+                            <div className="space-y-1.5">
+                                {formData.kitchenRules.map(rule => (
+                                    <div key={rule.id} className="p-2.5 bg-white border border-slate-100 rounded-lg">
+                                        <span className="font-black text-slate-800 block">{rule.name}</span>
+                                        <p className="text-[8.5px] text-slate-400 font-medium normal-case mt-1">{rule.description || 'No summary brief provided'}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                );
+            case 'PRICING': // Pricing & Availability
+                return (
+                    <div className="mt-3 pt-3 border-t border-slate-100/60 space-y-2 text-[10px] text-slate-600 font-bold uppercase tracking-tight animate-in slide-in-from-top-1 duration-150">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <span className="text-[8px] text-slate-400 block mb-0.5">Base Product Price</span>
+                                <span className="text-emerald-800 font-mono font-black">$ {formData.baseProductPrice.toFixed(2)}</span>
+                            </div>
+                            <div>
+                                <span className="text-[8px] text-slate-400 block mb-0.5">Channel Visibility</span>
+                                <span className="text-slate-800 font-black">{formData.channelVisibility?.join(', ') || 'None'}</span>
+                            </div>
+                            <div className="col-span-2">
+                                <span className="text-[8px] text-slate-400 block mb-0.5">Active Days Schedule</span>
+                                <span className="text-slate-800 font-black">
+                                    {formData.availabilitySchedule?.days?.join(', ') || 'All Days'} ({formData.availabilitySchedule?.timeStart || '00:00'} - {formData.availabilitySchedule?.timeEnd || '23:59'})
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                );
+            case 'INVENTORY': // Inventory & Recipe
+                const totalCost = formData.recipe?.reduce((s, r) => s + r.quantity * (r.costPerUnit || 0), 0) || 0;
+                return (
+                    <div className="mt-3 pt-3 border-t border-slate-100/60 space-y-2 text-[10px] text-slate-600 font-bold uppercase tracking-tight animate-in slide-in-from-top-1 duration-150">
+                        {(!formData.recipe || formData.recipe.length === 0) ? (
+                            <span className="text-[9px] text-slate-400 font-medium normal-case">No recipe mapping. Raw stock will not deduct on fulfillments.</span>
+                        ) : (
+                            <div className="space-y-1.5">
+                                {formData.recipe.map(r => (
+                                    <div key={r.id} className="flex items-center justify-between bg-white border border-slate-100 rounded-lg p-2">
+                                        <span className="text-slate-800 font-black">{r.ingredientName} ({r.quantity} {r.unit})</span>
+                                        <span className="text-emerald-700 font-mono font-bold">${(r.quantity * (r.costPerUnit || 0)).toFixed(2)}</span>
+                                    </div>
+                                ))}
+                                <div className="flex items-center justify-between border-t border-slate-100 pt-2 font-black">
+                                    <span>Total Est. COGS</span>
+                                    <span className="text-emerald-800 font-mono">${totalCost.toFixed(2)}</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            case 'OVERRIDES': // Store Overrides
+                return (
+                    <div className="mt-3 pt-3 border-t border-slate-100/60 space-y-2 text-[10px] text-slate-600 font-bold uppercase tracking-tight animate-in slide-in-from-top-1 duration-150">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <span className="text-[8px] text-slate-400 block mb-0.5">Deployment Scope</span>
+                                <span className="text-slate-800 font-black">
+                                    {formData.scopeConfig?.scope === 'STORE_SPECIFIC' ? 'Store-Specific' : 'Global Availability'}
+                                </span>
+                            </div>
+                            <div>
+                                <span className="text-[8px] text-slate-400 block mb-0.5">Target Branches</span>
+                                <span className="text-slate-800 font-black">
+                                    {formData.scopeConfig?.scope === 'STORE_SPECIFIC' 
+                                        ? `${formData.scopeConfig.targetedStoreIds?.length || 0} selected` 
+                                        : 'All Locations Active'}
+                                </span>
+                            </div>
+                            <div className="col-span-2">
+                                <span className="text-[8px] text-slate-400 block mb-0.5">Active Custom Overrides</span>
+                                <span className="text-slate-800 font-black">
+                                    {formData.storeOverrides?.length > 0 
+                                        ? `${formData.storeOverrides.length} branches customized` 
+                                        : 'None (All inheriting brand settings)'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                );
+            default:
+                return null;
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -46,23 +251,39 @@ export const ReviewPublishStep: React.FC = () => {
                         const hasErrors = (val?.errors?.length || 0) > 0;
                         const hasWarnings = (val?.warnings?.length || 0) > 0;
                         const isPassed = !hasErrors;
+                        const isExpanded = expandedStepId === step.id;
 
                         return (
-                            <div key={step.id} className={cn("flex items-center justify-between p-3.5 rounded-xl border transition-all", hasErrors ? "border-rose-100 bg-rose-50/30" : "border-slate-100 bg-slate-50/30")}>
-                                <div className="flex items-center gap-3">
-                                    <span className={cn("w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black",
-                                        hasErrors ? "bg-rose-100 text-rose-600" : "bg-emerald-100 text-emerald-600")}>
-                                        {isPassed ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
-                                    </span>
-                                    <div>
-                                        <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider">{step.label}</span>
-                                        {hasErrors && <span className="text-[9px] text-rose-500 font-bold block mt-0.5">{val!.errors.join(', ')}</span>}
-                                        {!hasErrors && hasWarnings && <span className="text-[9px] text-amber-500 font-bold block mt-0.5">{val!.warnings.join(', ')}</span>}
+                            <div key={step.id} 
+                                onClick={() => toggleStep(step.id)}
+                                className={cn("p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-center", 
+                                    hasErrors ? "border-rose-100 bg-rose-50/30 hover:bg-rose-50/50" : "border-slate-100 bg-slate-50/30 hover:bg-slate-50/60")}>
+                                
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <span className={cn("w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black",
+                                            hasErrors ? "bg-rose-100 text-rose-600" : "bg-emerald-100 text-emerald-600")}>
+                                            {isPassed ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+                                        </span>
+                                        <div>
+                                            <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider">{step.label}</span>
+                                            {hasErrors && <span className="text-[9px] text-rose-500 font-bold block mt-0.5">{val!.errors.join(', ')}</span>}
+                                            {!hasErrors && hasWarnings && <span className="text-[9px] text-amber-500 font-bold block mt-0.5">{val!.warnings.join(', ')}</span>}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {hasErrors && (
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); setCurrentStep(step.id); }} 
+                                                className="text-[9px] font-black text-rose-600 uppercase tracking-wider hover:underline px-2 py-1 bg-rose-50 border border-rose-100 rounded-lg">
+                                                Fix →
+                                            </button>
+                                        )}
+                                        <ChevronDown className={cn("w-4 h-4 text-slate-400 transition-all duration-200", isExpanded && "rotate-180")} />
                                     </div>
                                 </div>
-                                {hasErrors && (
-                                    <button onClick={() => setCurrentStep(step.id)} className="text-[9px] font-black text-rose-600 uppercase tracking-wider hover:underline">Fix →</button>
-                                )}
+
+                                {isExpanded && renderStepSummary(step.id)}
                             </div>
                         );
                     })}
@@ -157,7 +378,7 @@ export const ReviewPublishStep: React.FC = () => {
                                                 </span>
                                             )}
                                             {ov.taxRateOverride !== undefined && (
-                                                <span className="px-1.5 py-0.5 bg-violet-50 text-violet-700 border border-violet-100 rounded font-mono text-[8px]">Tax: {ov.taxRateOverride}%</span>
+                                                <span className="px-1.5 py-0.5 bg-violet-50 text-violet-700 border-violet-100 rounded font-mono text-[8px]">Tax: {ov.taxRateOverride}%</span>
                                             )}
                                         </div>
                                     </div>

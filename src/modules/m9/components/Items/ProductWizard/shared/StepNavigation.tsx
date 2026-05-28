@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ArrowLeft, ArrowRight, Save, Rocket } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Save, Rocket, Check } from 'lucide-react';
 import { useWizardStore } from '../../../../state/wizardStore';
 import { WIZARD_STEPS } from '../../../../types/wizard';
 import { cn } from '@/utils';
@@ -9,23 +9,39 @@ import { cn } from '@/utils';
 interface StepNavigationProps {
     onSaveDraft: () => void;
     onPublish: () => void;
+    onUpdateStep: () => void;
 }
 
-export const StepNavigation: React.FC<StepNavigationProps> = ({ onSaveDraft, onPublish }) => {
+export const StepNavigation: React.FC<StepNavigationProps> = ({ onSaveDraft, onPublish, onUpdateStep }) => {
     const {
         currentStep, goToNextStep, goToPrevStep, canProceed,
-        validateStep, isSubmitting, isDirty
+        validateStep, isSubmitting, isDirty, formData, editingItemId
     } = useWizardStore();
 
-    const currentIdx = WIZARD_STEPS.findIndex(s => s.id === currentStep);
+    const [justSaved, setJustSaved] = React.useState(false);
+
+    const enabledSteps = WIZARD_STEPS.filter(step => {
+        if (step.id === 'VARIANTS' && !formData.enableVariants) return false;
+        if (step.id === 'MODIFIERS' && !formData.enableModifiers) return false;
+        if (step.id === 'ADDONS' && !formData.enableAddons) return false;
+        return true;
+    });
+
+    const currentIdx = enabledSteps.findIndex(s => s.id === currentStep);
     const isFirst = currentIdx === 0;
-    const isLast = currentIdx === WIZARD_STEPS.length - 1;
+    const isLast = currentIdx === enabledSteps.length - 1;
 
     const handleNext = () => {
         const result = validateStep(currentStep);
         if (result.errors.length === 0) {
             goToNextStep();
         }
+    };
+
+    const handleUpdate = () => {
+        onUpdateStep();
+        setJustSaved(true);
+        setTimeout(() => setJustSaved(false), 2000);
     };
 
     return (
@@ -45,22 +61,46 @@ export const StepNavigation: React.FC<StepNavigationProps> = ({ onSaveDraft, onP
 
             {/* Right side: Actions */}
             <div className="flex items-center gap-3">
+                {/* Visual feedback */}
+                {justSaved && (
+                    <span className="text-[9px] text-emerald-600 font-bold uppercase tracking-wider flex items-center gap-1 animate-in fade-in slide-in-from-right-2 duration-300">
+                        <Check className="w-3 h-3 text-emerald-500" strokeWidth={3} />
+                        Saved!
+                    </span>
+                )}
+
                 {/* Auto-save indicator */}
-                {isDirty && (
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tight flex items-center gap-1.5">
+                {isDirty && !justSaved && (
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tight flex items-center gap-1.5 animate-in fade-in duration-300">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                         Unsaved changes
                     </span>
                 )}
 
-                {/* Save Draft - always visible */}
+                {/* Save & Close (Saves draft and closes wizard) */}
                 <button
                     onClick={onSaveDraft}
                     disabled={isSubmitting}
                     className="flex items-center gap-2 px-5 py-3 border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
+                    title="Save draft and exit"
                 >
-                    <Save className="w-3.5 h-3.5 text-slate-400" />
-                    Save Draft
+                    Save & Close
+                </button>
+
+                {/* Update Step / Save Changes - active only when changes are made */}
+                <button
+                    onClick={handleUpdate}
+                    disabled={isSubmitting || !isDirty}
+                    className={cn(
+                        "flex items-center gap-2 px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm",
+                        isDirty
+                            ? "bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-500 active:scale-95"
+                            : "bg-slate-50 text-slate-350 border-slate-200 cursor-not-allowed shadow-none"
+                    )}
+                    title={isDirty ? "Save changes to this step immediately" : "No changes to save"}
+                >
+                    <Save className={cn("w-3.5 h-3.5", isDirty ? "text-emerald-100 animate-pulse" : "text-slate-300")} />
+                    {editingItemId ? 'Update Product' : 'Save Progress'}
                 </button>
 
                 {/* Next or Publish */}

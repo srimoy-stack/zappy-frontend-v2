@@ -7,7 +7,14 @@ import { useWizardStore } from '../../../../state/wizardStore';
 import { cn } from '@/utils';
 
 export const ProgressStepper: React.FC = () => {
-    const { currentStep, setCurrentStep, visitedSteps, stepValidations } = useWizardStore();
+    const { currentStep, setCurrentStep, visitedSteps, stepValidations, formData } = useWizardStore();
+
+    const enabledSteps = WIZARD_STEPS.filter(step => {
+        if (step.id === 'VARIANTS' && !formData.enableVariants) return false;
+        if (step.id === 'MODIFIERS' && !formData.enableModifiers) return false;
+        if (step.id === 'ADDONS' && !formData.enableAddons) return false;
+        return true;
+    });
 
     const getStepIcon = (stepId: WizardStepId) => {
         const validation = stepValidations[stepId];
@@ -26,7 +33,7 @@ export const ProgressStepper: React.FC = () => {
     return (
         <div className="w-full overflow-x-auto">
             <div className="flex items-center gap-1 bg-slate-50/80 p-1.5 rounded-2xl border border-slate-200/60 min-w-fit">
-                {WIZARD_STEPS.map((step, idx) => {
+                {enabledSteps.map((step, idx) => {
                     const isCurrent = currentStep === step.id;
                     const isVisited = visitedSteps.has(step.id);
                     const validation = stepValidations[step.id];
@@ -61,14 +68,14 @@ export const ProgressStepper: React.FC = () => {
                                     isValid && isVisited ? "bg-emerald-100 text-emerald-700" :
                                     "bg-slate-100 text-slate-400"
                                 )}>
-                                    {getStepIcon(step.id) || step.number}
+                                    {getStepIcon(step.id) || (idx + 1)}
                                 </span>
 
                                 {/* Step label */}
                                 <div className="text-left hidden lg:block">
                                     <span className={cn(
-                                        "text-[10px] font-black uppercase tracking-wider block leading-none",
-                                        isCurrent ? "text-slate-950" : "text-slate-500"
+                                        "text-xs font-semibold block leading-none",
+                                        isCurrent ? "text-slate-950" : "text-slate-600"
                                     )}>
                                         {step.label}
                                     </span>

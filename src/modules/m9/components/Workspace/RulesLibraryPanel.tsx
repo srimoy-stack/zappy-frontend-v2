@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
     Scale, Plus, Trash2, Edit3, Save, X, ChevronDown, ChevronUp,
     Search, Copy, Shield, ToggleLeft, ToggleRight, Zap
@@ -14,17 +14,30 @@ export const RulesLibraryPanel: React.FC = () => {
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [filterType, setFilterType] = useState<RuleType | 'ALL'>('ALL');
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = 4;
 
     // Create form state
     const [newName, setNewName] = useState('');
     const [newType, setNewType] = useState<RuleType>('TOPPING_EQUIVALENCY');
     const [newPriority, setNewPriority] = useState<RulePriority>('PRODUCT');
 
-    const filtered = rules.filter(r => {
+    const filtered = useMemo(() => rules.filter(r => {
         if (filterType !== 'ALL' && r.type !== filterType) return false;
         if (searchQuery && !r.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
         return true;
-    });
+    }), [rules, filterType, searchQuery]);
+
+    const totalPages = Math.ceil(filtered.length / pageSize);
+
+    const paginatedRules = useMemo(() => {
+        const start = (currentPage - 1) * pageSize;
+        return filtered.slice(start, start + pageSize);
+    }, [filtered, currentPage, pageSize]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, filterType, rules]);
 
     const handleCreate = () => {
         if (!newName.trim()) return;
@@ -146,12 +159,40 @@ export const RulesLibraryPanel: React.FC = () => {
                 </div>
             ) : (
                 <div className="space-y-3">
-                    {filtered.map(rule => (
+                    {paginatedRules.map(rule => (
                         <RuleCard key={rule.id} rule={rule} isExpanded={expandedId === rule.id}
                             onToggle={() => setExpandedId(expandedId === rule.id ? null : rule.id)}
                             onUpdate={(u) => updateRule(rule.id, u)} onDelete={() => { if (confirm(`Delete "${rule.name}"?`)) { deleteRule(rule.id); setExpandedId(null); } }}
                             onDuplicate={() => duplicateRule(rule.id)} />
                     ))}
+                </div>
+            )}
+
+            {/* Pagination */}
+            {totalPages > 0 && (
+                <div className="flex items-center justify-between border-t border-slate-100 pt-5 mt-2">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">
+                        Showing {filtered.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}–{Math.min(filtered.length, currentPage * pageSize)} of {filtered.length} Rules
+                    </span>
+                    <div className="flex items-center gap-2">
+                        <button
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            className="px-3.5 py-2 bg-white border border-slate-200 hover:border-slate-400 rounded-xl text-[10px] font-black uppercase text-slate-700 disabled:opacity-40 disabled:hover:border-slate-200 transition-all active:scale-95"
+                        >
+                            Previous
+                        </button>
+                        <span className="text-[10px] font-black text-slate-800 uppercase px-2">
+                            Page {currentPage} of {Math.max(1, totalPages)}
+                        </span>
+                        <button
+                            disabled={currentPage >= totalPages}
+                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                            className="px-3.5 py-2 bg-white border border-slate-200 hover:border-slate-400 rounded-xl text-[10px] font-black uppercase text-slate-700 disabled:opacity-40 disabled:hover:border-slate-200 transition-all active:scale-95"
+                        >
+                            Next
+                        </button>
+                    </div>
                 </div>
             )}
         </div>

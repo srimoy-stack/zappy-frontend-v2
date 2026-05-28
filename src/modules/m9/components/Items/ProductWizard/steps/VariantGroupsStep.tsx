@@ -1,6 +1,4 @@
-'use client';
-
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     DollarSign, Plus, Trash2, GripVertical, Layers,
     ChevronDown, ChevronUp, Check, Eye, X, Sparkles
@@ -8,6 +6,7 @@ import {
 import { useWizardStore } from '../../../../state/wizardStore';
 import { StepHeader, StepCard } from '../shared/StepHeader';
 import { FormField, TextInput, CurrencyInput } from '../shared/FormField';
+import { WizardSearch, WizardFilterChips, WizardPagination, paginateArray } from '../shared/WizardListControls';
 import { VARIANT_TEMPLATES, VariantTemplate } from '../../../../mock/templates';
 import { ItemVariantGroup, ItemVariant } from '../../../../types/items';
 import { cn } from '@/utils';
@@ -21,6 +20,18 @@ export const VariantGroupsStep: React.FC = () => {
     const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
     const [newGroupName, setNewGroupName] = useState('');
 
+    // Search, filter, pagination state
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterType, setFilterType] = useState('all');
+    const [currentPage, setCurrentPage] = useState(1);
+    const PAGE_SIZE = 6;
+
+    const FILTER_OPTIONS = [
+        { id: 'all', label: 'All' },
+        { id: 'single', label: 'Single Group' },
+        { id: 'multi', label: 'Multi Group' },
+    ];
+
     // Track which templates are already applied
     const appliedTemplateIds = new Set<string>();
     VARIANT_TEMPLATES.forEach(tpl => {
@@ -31,6 +42,25 @@ export const VariantGroupsStep: React.FC = () => {
             appliedTemplateIds.add(tpl.id);
         }
     });
+
+    // Filtered + searched templates
+    const filteredTemplates = useMemo(() => {
+        let result = VARIANT_TEMPLATES;
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase();
+            result = result.filter(t => t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q));
+        }
+        if (filterType === 'single') result = result.filter(t => t.groups.length === 1);
+        if (filterType === 'multi') result = result.filter(t => t.groups.length > 1);
+        return result;
+    }, [searchQuery, filterType]);
+
+    const totalPages = Math.ceil(filteredTemplates.length / PAGE_SIZE);
+    const paginatedTemplates = paginateArray(filteredTemplates, currentPage, PAGE_SIZE);
+
+    // Reset page when filter/search changes
+    const handleSearchChange = (v: string) => { setSearchQuery(v); setCurrentPage(1); };
+    const handleFilterChange = (v: string) => { setFilterType(v); setCurrentPage(1); };
 
     // Apply a template — adds its groups (with unique IDs to avoid conflicts)
     const applyTemplate = (template: VariantTemplate) => {
@@ -109,23 +139,7 @@ export const VariantGroupsStep: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            {/* Base Price */}
-            <StepCard>
-                <StepHeader
-                    icon={<DollarSign className="w-4.5 h-4.5 text-emerald-400" />}
-                    title="Base Product Price"
-                    subtitle="Anchor price — all variants adjust from this"
-                />
-                <div className="max-w-xs">
-                    <FormField label="Base Price" required error={errors.find(e => e.includes('Base product price'))}>
-                        <CurrencyInput
-                            value={formData.baseProductPrice || ''}
-                            onChange={(e) => updateFormData('baseProductPrice', parseFloat(e.target.value) || 0)}
-                            placeholder="9.99"
-                        />
-                    </FormField>
-                </div>
-            </StepCard>
+
 
             {/* Quick Pick — Template Categories */}
             <StepCard>
@@ -135,42 +149,72 @@ export const VariantGroupsStep: React.FC = () => {
                     subtitle="Click to preview, then apply pre-built variant categories"
                 />
 
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {VARIANT_TEMPLATES.map(tpl => {
-                        const isApplied = appliedTemplateIds.has(tpl.id);
-                        const isPreviewing = previewingTemplate === tpl.id;
-
-                        return (
-                            <button
-                                key={tpl.id}
-                                onClick={() => setPreviewingTemplate(isPreviewing ? null : tpl.id)}
-                                className={cn(
-                                    "relative p-4 rounded-2xl border-2 text-left transition-all group",
-                                    isPreviewing ? "border-slate-950 bg-slate-50 shadow-md scale-[1.02]" :
-                                    isApplied ? "border-emerald-300 bg-emerald-50/40" :
-                                    "border-slate-150 hover:border-slate-300 hover:bg-slate-50/30"
-                                )}
-                            >
-                                {isApplied && (
-                                    <div className="absolute top-2.5 right-2.5 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
-                                        <Check className="w-3 h-3 text-white" strokeWidth={3} />
-                                    </div>
-                                )}
-                                <span className="text-2xl block mb-2">{tpl.emoji}</span>
-                                <h4 className={cn(
-                                    "text-[10px] font-black uppercase tracking-wider mb-1",
-                                    isPreviewing ? "text-slate-950" : isApplied ? "text-emerald-700" : "text-slate-700"
-                                )}>
-                                    {tpl.name}
-                                </h4>
-                                <p className="text-[9px] text-slate-400 font-medium leading-relaxed">{tpl.description}</p>
-                                <div className="mt-2.5 flex items-center gap-1.5 text-[9px] text-slate-400 font-bold uppercase tracking-tight">
-                                    <Eye className="w-3 h-3" /> {tpl.groups.length} group{tpl.groups.length !== 1 ? 's' : ''} • {tpl.groups.reduce((s, g) => s + g.variants.length, 0)} options
-                                </div>
-                            </button>
-                        );
-                    })}
+                {/* Search + Filter bar */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
+                    <WizardSearch
+                        value={searchQuery}
+                        onChange={handleSearchChange}
+                        placeholder="Search variant templates..."
+                    />
+                    <WizardFilterChips
+                        options={FILTER_OPTIONS}
+                        activeId={filterType}
+                        onChange={handleFilterChange}
+                    />
                 </div>
+
+                {paginatedTemplates.length === 0 ? (
+                    <div className="text-center py-10 border-2 border-dashed border-slate-200 rounded-2xl">
+                        <span className="text-xs text-slate-400 font-semibold">No templates match your search</span>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {paginatedTemplates.map(tpl => {
+                            const isApplied = appliedTemplateIds.has(tpl.id);
+                            const isPreviewing = previewingTemplate === tpl.id;
+
+                            return (
+                                <button
+                                    key={tpl.id}
+                                    onClick={() => setPreviewingTemplate(isPreviewing ? null : tpl.id)}
+                                    className={cn(
+                                        "relative p-4 rounded-2xl border-2 text-left transition-all group",
+                                        isPreviewing ? "border-slate-950 bg-slate-50 shadow-md scale-[1.02]" :
+                                        isApplied ? "border-emerald-300 bg-emerald-50/40" :
+                                        "border-slate-150 hover:border-slate-300 hover:bg-slate-50/30"
+                                    )}
+                                >
+                                    {isApplied && (
+                                        <div className="absolute top-2.5 right-2.5 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
+                                            <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                                        </div>
+                                    )}
+                                    <span className="text-2xl block mb-2">{tpl.emoji}</span>
+                                    <h4 className={cn(
+                                        "text-xs font-bold mb-1",
+                                        isPreviewing ? "text-slate-950" : isApplied ? "text-emerald-700" : "text-slate-800"
+                                    )}>
+                                        {tpl.name}
+                                    </h4>
+                                    <p className="text-xs text-slate-500 font-medium leading-relaxed">{tpl.description}</p>
+                                    <div className="mt-2.5 flex items-center gap-1.5 text-xs text-slate-500 font-semibold">
+                                        <Eye className="w-3 h-3" /> {tpl.groups.length} group{tpl.groups.length !== 1 ? 's' : ''} • {tpl.groups.reduce((s, g) => s + g.variants.length, 0)} options
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {/* Pagination */}
+                <WizardPagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={filteredTemplates.length}
+                    pageSize={PAGE_SIZE}
+                    onPageChange={setCurrentPage}
+                    className="mt-4"
+                />
 
                 {/* Template Preview Panel */}
                 {previewingTemplate && (

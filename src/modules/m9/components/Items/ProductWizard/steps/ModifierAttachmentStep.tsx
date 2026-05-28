@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Settings2, Plus, Trash2, Check, Eye, X, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { useWizardStore } from '../../../../state/wizardStore';
 import { StepHeader, StepCard } from '../shared/StepHeader';
+import { WizardSearch, WizardFilterChips, WizardPagination, paginateArray } from '../shared/WizardListControls';
 import { MODIFIER_TEMPLATES, ModifierTemplate } from '../../../../mock/templates';
 import { ModifierGroup } from '../../../../types/items';
 import { cn } from '@/utils';
@@ -13,11 +14,22 @@ export const ModifierAttachmentStep: React.FC = () => {
     const [previewingTemplate, setPreviewingTemplate] = useState<string | null>(null);
     const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
 
+    // Search, filter, pagination state
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterType, setFilterType] = useState('all');
+    const [currentPage, setCurrentPage] = useState(1);
+    const PAGE_SIZE = 6;
+
+    const FILTER_OPTIONS = [
+        { id: 'all', label: 'All' },
+        { id: 'topping', label: 'Toppings' },
+        { id: 'other', label: 'Non-Topping' },
+    ];
+
     // Track applied templates by checking if their group names exist
     const currentGroupNames = new Set(formData.modifierAttachments.map(a => (a as any)._groupName || ''));
 
     // We store modifier groups directly on formData now since templates provide full groups
-    // Using a simpler "modifierGroups" model on the wizard
     const activeGroups: ModifierGroup[] = (formData as any).__modifierGroups || [];
 
     const setActiveGroups = (groups: ModifierGroup[]) => {
@@ -35,6 +47,24 @@ export const ModifierAttachmentStep: React.FC = () => {
         // Also persist the full group data for display
         (formData as any).__modifierGroups = groups;
     };
+
+    // Filtered + searched templates
+    const filteredTemplates = useMemo(() => {
+        let result = MODIFIER_TEMPLATES;
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase();
+            result = result.filter(t => t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q));
+        }
+        if (filterType === 'topping') result = result.filter(t => t.groups.some(g => g.isToppingGroup));
+        if (filterType === 'other') result = result.filter(t => t.groups.every(g => !g.isToppingGroup));
+        return result;
+    }, [searchQuery, filterType]);
+
+    const totalPages = Math.ceil(filteredTemplates.length / PAGE_SIZE);
+    const paginatedTemplates = paginateArray(filteredTemplates, currentPage, PAGE_SIZE);
+
+    const handleSearchChange = (v: string) => { setSearchQuery(v); setCurrentPage(1); };
+    const handleFilterChange = (v: string) => { setFilterType(v); setCurrentPage(1); };
 
     const applyTemplate = (template: ModifierTemplate) => {
         const stamp = Date.now();
@@ -65,34 +95,64 @@ export const ModifierAttachmentStep: React.FC = () => {
                     subtitle="Pre-built modifier categories — click to preview contents, then apply"
                 />
 
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {MODIFIER_TEMPLATES.map(tpl => {
-                        const isPreviewing = previewingTemplate === tpl.id;
-                        const totalOptions = tpl.groups.reduce((s, g) => s + g.options.length, 0);
-
-                        return (
-                            <button
-                                key={tpl.id}
-                                onClick={() => setPreviewingTemplate(isPreviewing ? null : tpl.id)}
-                                className={cn(
-                                    "relative p-4 rounded-2xl border-2 text-left transition-all group",
-                                    isPreviewing
-                                        ? "border-slate-950 bg-slate-50 shadow-md scale-[1.02]"
-                                        : "border-slate-150 hover:border-slate-300 hover:bg-slate-50/30"
-                                )}
-                            >
-                                <span className="text-2xl block mb-2">{tpl.emoji}</span>
-                                <h4 className={cn("text-[10px] font-black uppercase tracking-wider mb-1", isPreviewing ? "text-slate-950" : "text-slate-700")}>
-                                    {tpl.name}
-                                </h4>
-                                <p className="text-[9px] text-slate-400 font-medium leading-relaxed">{tpl.description}</p>
-                                <div className="mt-2.5 flex items-center gap-1.5 text-[9px] text-slate-400 font-bold uppercase tracking-tight">
-                                    <Eye className="w-3 h-3" /> {tpl.groups.length} group{tpl.groups.length !== 1 ? 's' : ''} • {totalOptions} options
-                                </div>
-                            </button>
-                        );
-                    })}
+                {/* Search + Filter bar */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
+                    <WizardSearch
+                        value={searchQuery}
+                        onChange={handleSearchChange}
+                        placeholder="Search modifier templates..."
+                    />
+                    <WizardFilterChips
+                        options={FILTER_OPTIONS}
+                        activeId={filterType}
+                        onChange={handleFilterChange}
+                    />
                 </div>
+
+                {paginatedTemplates.length === 0 ? (
+                    <div className="text-center py-10 border-2 border-dashed border-slate-200 rounded-2xl">
+                        <span className="text-xs text-slate-400 font-semibold">No templates match your search</span>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {paginatedTemplates.map(tpl => {
+                            const isPreviewing = previewingTemplate === tpl.id;
+                            const totalOptions = tpl.groups.reduce((s, g) => s + g.options.length, 0);
+
+                            return (
+                                <button
+                                    key={tpl.id}
+                                    onClick={() => setPreviewingTemplate(isPreviewing ? null : tpl.id)}
+                                    className={cn(
+                                        "relative p-4 rounded-2xl border-2 text-left transition-all group",
+                                        isPreviewing
+                                            ? "border-slate-950 bg-slate-50 shadow-md scale-[1.02]"
+                                            : "border-slate-150 hover:border-slate-300 hover:bg-slate-50/30"
+                                    )}
+                                >
+                                    <span className="text-2xl block mb-2">{tpl.emoji}</span>
+                                    <h4 className={cn("text-xs font-bold mb-1", isPreviewing ? "text-slate-950" : "text-slate-800")}>
+                                        {tpl.name}
+                                    </h4>
+                                    <p className="text-xs text-slate-500 font-medium leading-relaxed">{tpl.description}</p>
+                                    <div className="mt-2.5 flex items-center gap-1.5 text-xs text-slate-500 font-semibold">
+                                        <Eye className="w-3 h-3" /> {tpl.groups.length} group{tpl.groups.length !== 1 ? 's' : ''} • {totalOptions} options
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {/* Pagination */}
+                <WizardPagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={filteredTemplates.length}
+                    pageSize={PAGE_SIZE}
+                    onPageChange={setCurrentPage}
+                    className="mt-4"
+                />
 
                 {/* Template Preview Panel */}
                 {previewingTemplate && (() => {

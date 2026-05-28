@@ -45,6 +45,7 @@ interface WizardState {
 
     markAutoSaved: () => void;
     setSubmitting: (value: boolean) => void;
+    setDirty: (value: boolean) => void;
 }
 
 const DEFAULT_FORM_DATA: WizardFormData = {
@@ -55,6 +56,9 @@ const DEFAULT_FORM_DATA: WizardFormData = {
     description: '',
     imageUrl: '',
     tags: [],
+    enableVariants: true,
+    enableModifiers: true,
+    enableAddons: true,
     // Step 2
     categoryId: '',
     secondaryCategoryIds: [],
@@ -63,12 +67,15 @@ const DEFAULT_FORM_DATA: WizardFormData = {
     dietaryFlags: [],
     availabilitySchedule: null,
     channelVisibility: ['POS', 'ONLINE'],
+    channelOverrides: {},
     // Step 3
     baseProductPrice: 0,
     variantGroups: [],
     // Step 4
     modifierAttachments: [],
     // Step 5
+    addonAttachments: [],
+    // Step 6
     ruleAttachments: [],
     // Step 6
     isAvailable: true,
@@ -78,6 +85,7 @@ const DEFAULT_FORM_DATA: WizardFormData = {
     // Step 8
     scopeConfig: { scope: 'GLOBAL', targetedStoreIds: [] },
     storeOverrides: [],
+    comboSlots: [],
 };
 
 const EMPTY_VALIDATION: StepValidationResult = {
@@ -134,8 +142,6 @@ function validateStepData(stepId: WizardStepId, data: WizardFormData): StepValid
                     });
                 });
             }
-            if (data.baseProductPrice < 0) errors.push('Base product price cannot be negative');
-            if (data.baseProductPrice === 0) warnings.push('Base product price is $0.00');
             break;
         }
         case 'MODIFIERS': {
@@ -147,11 +153,17 @@ function validateStepData(stepId: WizardStepId, data: WizardFormData): StepValid
             });
             break;
         }
+        case 'ADDONS': {
+            // Optional step — always valid
+            break;
+        }
         case 'RULES': {
             // Optional step
             break;
         }
         case 'PRICING': {
+            if (data.baseProductPrice < 0) errors.push('Base product price cannot be negative');
+            if (data.baseProductPrice === 0) warnings.push('Base product price is $0.00');
             data.dynamicPricingRules.forEach(rule => {
                 if (!rule.name.trim()) errors.push('Dynamic pricing rule name is required');
                 if (rule.adjustmentValue === 0) warnings.push(`Rule "${rule.name}" has zero adjustment`);
@@ -174,7 +186,7 @@ function validateStepData(stepId: WizardStepId, data: WizardFormData): StepValid
     }
 
     const status: StepStatus = errors.length > 0 ? 'ERROR' : (
-        stepId === 'MODIFIERS' || stepId === 'RULES' || stepId === 'PRICING' || stepId === 'OVERRIDES'
+        stepId === 'MODIFIERS' || stepId === 'ADDONS' || stepId === 'RULES' || stepId === 'PRICING' || stepId === 'OVERRIDES'
             ? (warnings.length > 0 ? 'VALID' : 'VALID')
             : (errors.length === 0 ? 'VALID' : 'INCOMPLETE')
     );
@@ -225,10 +237,16 @@ export const useWizardStore = create<WizardState>((set, get) => {
         })),
 
         goToNextStep: () => {
-            const { currentStep } = get();
-            const currentIdx = WIZARD_STEPS.findIndex(s => s.id === currentStep);
-            if (currentIdx < WIZARD_STEPS.length - 1) {
-                const nextStep = WIZARD_STEPS[currentIdx + 1].id;
+            const { currentStep, formData } = get();
+            const enabledSteps = WIZARD_STEPS.filter(step => {
+                if (step.id === 'VARIANTS' && !formData.enableVariants) return false;
+                if (step.id === 'MODIFIERS' && !formData.enableModifiers) return false;
+                if (step.id === 'ADDONS' && !formData.enableAddons) return false;
+                return true;
+            });
+            const currentIdx = enabledSteps.findIndex(s => s.id === currentStep);
+            if (currentIdx < enabledSteps.length - 1) {
+                const nextStep = enabledSteps[currentIdx + 1].id;
                 set(state => ({
                     currentStep: nextStep,
                     visitedSteps: new Set([...state.visitedSteps, nextStep]),
@@ -237,10 +255,16 @@ export const useWizardStore = create<WizardState>((set, get) => {
         },
 
         goToPrevStep: () => {
-            const { currentStep } = get();
-            const currentIdx = WIZARD_STEPS.findIndex(s => s.id === currentStep);
+            const { currentStep, formData } = get();
+            const enabledSteps = WIZARD_STEPS.filter(step => {
+                if (step.id === 'VARIANTS' && !formData.enableVariants) return false;
+                if (step.id === 'MODIFIERS' && !formData.enableModifiers) return false;
+                if (step.id === 'ADDONS' && !formData.enableAddons) return false;
+                return true;
+            });
+            const currentIdx = enabledSteps.findIndex(s => s.id === currentStep);
             if (currentIdx > 0) {
-                set({ currentStep: WIZARD_STEPS[currentIdx - 1].id });
+                set({ currentStep: enabledSteps[currentIdx - 1].id });
             }
         },
 
@@ -308,7 +332,16 @@ export const useWizardStore = create<WizardState>((set, get) => {
             WIZARD_STEPS.forEach(step => {
                 const result = validateStepData(step.id, formData);
                 validations[step.id] = result;
-                if (step.isRequired && result.errors.length > 0) allValid = false;
+                
+                const isStepEnabled = !(
+                    (step.id === 'VARIANTS' && !formData.enableVariants) ||
+                    (step.id === 'MODIFIERS' && !formData.enableModifiers) ||
+                    (step.id === 'ADDONS' && !formData.enableAddons)
+                );
+
+                if (isStepEnabled && step.isRequired && result.errors.length > 0) {
+                    allValid = false;
+                }
             });
             set({ stepValidations: validations });
             return allValid;
@@ -326,5 +359,7 @@ export const useWizardStore = create<WizardState>((set, get) => {
         }),
 
         setSubmitting: (value) => set({ isSubmitting: value }),
+
+        setDirty: (value) => set({ isDirty: value }),
     };
 });

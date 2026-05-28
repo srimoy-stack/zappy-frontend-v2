@@ -1,9 +1,8 @@
-'use client';
-
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Scale, Plus, Check, X, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { useRulesStore, Rule, RULE_TYPE_META, RuleType, PRIORITY_ORDER, RulePriority } from '../../../../state/rulesStore';
 import { useWizardStore } from '../../../../state/wizardStore';
+import { WizardSearch, WizardFilterChips, WizardPagination, paginateArray } from '../shared/WizardListControls';
 import { cn } from '@/utils';
 
 export const RulesStep: React.FC = () => {
@@ -14,8 +13,89 @@ export const RulesStep: React.FC = () => {
     const [newType, setNewType] = useState<RuleType>('TOPPING_EQUIVALENCY');
     const [newPriority, setNewPriority] = useState<RulePriority>('PRODUCT');
 
+    // Expanded rule card state
+    const [expandedRuleId, setExpandedRuleId] = useState<string | null>(null);
+
+    // Search, filter, pagination state
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterType, setFilterType] = useState('all');
+    const [currentPage, setCurrentPage] = useState(1);
+    const PAGE_SIZE = 4;
+
+    const FILTER_OPTIONS = [
+        { id: 'all', label: 'All Rules' },
+        { id: 'topping', label: 'Topping Rules' },
+        { id: 'half_and_half', label: 'Half & Half' },
+        { id: 'other', label: 'Other Rules' },
+    ];
+
     const attachedRuleIds: string[] = (formData.ruleAttachments || []).map(r => r.ruleId);
     const activeRules = rules.filter(r => r.status === 'ACTIVE' || r.status === 'DRAFT');
+
+    // Helper to get rule parameters and briefs
+    const getRuleBriefText = (r: Rule): string => {
+        switch (r.type) {
+            case 'TOPPING_EQUIVALENCY':
+                return `Premium toppings count as ${r.premiumMultiplier || 2}x regular toppings when calculating limits.`;
+            case 'FREE_TOPPING_ALLOWANCE':
+                return `Includes ${r.includedToppings || 0} free toppings per ${r.countMethod === 'PER_PIZZA' ? 'pizza' : 'deal'}. Additional toppings charge: $${(r.extraToppingCharge || 0).toFixed(2)} each. Maximum of ${r.maxToppingsAllowed || 'unlimited'} toppings.`;
+            case 'MAXIMUM_TOPPING':
+                return `Limits regular equivalent toppings to ${r.maxRegularEquivalentUnits || 0} units and total physical items to ${r.maxPhysicalToppings || 0}. Premium multiplier is ${r.applyPremiumMultiplier ? 'applied' : 'ignored'}.`;
+            case 'HALF_AND_HALF':
+                return `Allows split toppings (Halves). Half toppings count as ${r.halfCountsAs || 0.5} units. Same toppings merge: ${r.sameToppingMergeLogic === 'COUNT_AS_ONE' ? 'Counts as One' : 'Counts Individually'}.`;
+            case 'PREMIUM_HALF_SIDE':
+                return `Applies premium topping surcharges proportionally to half-sides.`;
+            case 'NO_LEFT_RIGHT':
+                return `Disables split/half toppings strictly. All toppings must be full size.`;
+            case 'MUST_BUY_WITH':
+                return `Requires matching items from '${r.requiredCategory || 'Any'}' category. Min qty: ${r.minimumQuantity || 1}. Applicable channels: ${(r.applyToChannels || ['POS', 'ONLINE']).join(', ')}.`;
+            default:
+                return 'Custom defined rule constraints logic.';
+        }
+    };
+
+    const getRuleParams = (r: Rule) => {
+        const params: { label: string; value: string | number }[] = [];
+        params.push({ label: 'Priority', value: r.priority.replace(/_/g, ' ') });
+        if (r.premiumMultiplier !== undefined) params.push({ label: 'Multiplier', value: `${r.premiumMultiplier}x` });
+        if (r.includedToppings !== undefined) params.push({ label: 'Free Items', value: r.includedToppings });
+        if (r.extraToppingCharge !== undefined) params.push({ label: 'Extra Fee', value: `$${r.extraToppingCharge.toFixed(2)}` });
+        if (r.maxToppingsAllowed !== undefined) params.push({ label: 'Max Items', value: r.maxToppingsAllowed });
+        if (r.maxRegularEquivalentUnits !== undefined) params.push({ label: 'Max Equiv Units', value: r.maxRegularEquivalentUnits });
+        if (r.maxPhysicalToppings !== undefined) params.push({ label: 'Max Physical', value: r.maxPhysicalToppings });
+        if (r.halfCountsAs !== undefined) params.push({ label: 'Half Weight', value: r.halfCountsAs });
+        if (r.minimumQuantity !== undefined) params.push({ label: 'Min Qty', value: r.minimumQuantity });
+        return params;
+    };
+
+    // Search & Filter logic for available rules
+    const availableRules = useMemo(() => {
+        return activeRules.filter(r => !attachedRuleIds.includes(r.id));
+    }, [activeRules, attachedRuleIds]);
+
+    const filteredRules = useMemo(() => {
+        let result = availableRules;
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase();
+            result = result.filter(r => r.name.toLowerCase().includes(q) || RULE_TYPE_META[r.type].name.toLowerCase().includes(q));
+        }
+
+        if (filterType === 'topping') {
+            result = result.filter(r => ['TOPPING_EQUIVALENCY', 'FREE_TOPPING_ALLOWANCE', 'MAXIMUM_TOPPING'].includes(r.type));
+        } else if (filterType === 'half_and_half') {
+            result = result.filter(r => ['HALF_AND_HALF', 'PREMIUM_HALF_SIDE', 'NO_LEFT_RIGHT'].includes(r.type));
+        } else if (filterType === 'other') {
+            result = result.filter(r => !['TOPPING_EQUIVALENCY', 'FREE_TOPPING_ALLOWANCE', 'MAXIMUM_TOPPING', 'HALF_AND_HALF', 'PREMIUM_HALF_SIDE', 'NO_LEFT_RIGHT'].includes(r.type));
+        }
+
+        return result;
+    }, [availableRules, searchQuery, filterType]);
+
+    const totalPages = Math.ceil(filteredRules.length / PAGE_SIZE);
+    const paginatedRules = paginateArray(filteredRules, currentPage, PAGE_SIZE);
+
+    const handleSearchChange = (v: string) => { setSearchQuery(v); setCurrentPage(1); };
+    const handleFilterChange = (v: string) => { setFilterType(v); setCurrentPage(1); };
 
     const toggleRule = (ruleId: string) => {
         const current = [...(formData.ruleAttachments || [])];
@@ -127,55 +207,149 @@ export const RulesStep: React.FC = () => {
             {attachedRuleIds.length > 0 && (
                 <div className="space-y-2">
                     <span className="text-[9px] font-black text-emerald-600 uppercase tracking-wider">Attached to this product ({attachedRuleIds.length})</span>
-                    {attachedRuleIds.map(rid => {
-                        const r = rules.find(x => x.id === rid);
-                        if (!r) return null;
-                        const meta = RULE_TYPE_META[r.type];
-                        return (
-                            <div key={rid} className="flex items-center justify-between p-3 bg-emerald-50/50 border border-emerald-200 rounded-xl">
-                                <div className="flex items-center gap-3">
-                                    <span className="text-lg">{meta.emoji}</span>
-                                    <div>
-                                        <span className="text-[10px] font-black text-slate-900 uppercase tracking-wider">{r.name}</span>
-                                        <span className={cn("ml-2 px-1.5 py-0.5 rounded text-[8px] font-black uppercase border", meta.color)}>{meta.name}</span>
+                    <div className="space-y-2">
+                        {attachedRuleIds.map(rid => {
+                            const r = rules.find(x => x.id === rid);
+                            if (!r) return null;
+                            const meta = RULE_TYPE_META[r.type];
+                            const isExpanded = expandedRuleId === r.id;
+
+                            return (
+                                <div key={rid} className="border border-emerald-250 bg-emerald-50/20 rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-sm">
+                                    <div
+                                        onClick={() => setExpandedRuleId(isExpanded ? null : r.id)}
+                                        className="flex items-center justify-between p-4 cursor-pointer"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-xl">{meta.emoji}</span>
+                                            <div>
+                                                <span className="text-xs font-bold text-slate-900">{r.name}</span>
+                                                <span className={cn("ml-2 px-1.5 py-0.5 rounded text-[8px] font-black uppercase border", meta.color)}>{meta.name}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); toggleRule(rid); }}
+                                                className="p-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-500 rounded-lg transition-all"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                            {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                                        </div>
                                     </div>
+
+                                    {isExpanded && (
+                                        <div className="px-4 pb-4 pt-1 border-t border-slate-100 bg-white/40 animate-in slide-in-from-top-1 duration-150 space-y-3">
+                                            <p className="text-xs font-medium text-slate-600 mt-2 leading-relaxed">
+                                                {getRuleBriefText(r)}
+                                            </p>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {getRuleParams(r).map((param, idx) => (
+                                                    <span key={idx} className="px-2 py-1 bg-slate-100 border border-slate-200 rounded-lg text-[9px] font-bold text-slate-600">
+                                                        {param.label}: <span className="font-mono text-slate-800">{param.value}</span>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                                <button onClick={() => toggleRule(rid)} className="p-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-500 rounded-lg transition-all">
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
                 </div>
             )}
 
             {/* Available Rules Library */}
-            <div className="space-y-2">
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Available Rules Library ({activeRules.filter(r => !attachedRuleIds.includes(r.id)).length})</span>
-                {activeRules.filter(r => !attachedRuleIds.includes(r.id)).length === 0 ? (
+            <div className="space-y-4 pt-2">
+                <div className="flex flex-col gap-1">
+                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">
+                        Available Rules Library ({availableRules.length})
+                    </span>
+                </div>
+
+                {/* Search & Filters */}
+                {availableRules.length > 0 && (
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <WizardSearch
+                            value={searchQuery}
+                            onChange={handleSearchChange}
+                            placeholder="Search available rules..."
+                        />
+                        <WizardFilterChips
+                            options={FILTER_OPTIONS}
+                            activeId={filterType}
+                            onChange={handleFilterChange}
+                        />
+                    </div>
+                )}
+
+                {filteredRules.length === 0 ? (
                     <div className="text-center py-8 border-2 border-dashed border-slate-200 rounded-xl">
-                        <span className="text-[10px] text-slate-400 font-bold uppercase">All available rules are attached or create a new one above</span>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase">
+                            {availableRules.length === 0 ? 'All available rules are attached or create a new one above' : 'No rules match your search'}
+                        </span>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {activeRules.filter(r => !attachedRuleIds.includes(r.id)).map(r => {
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {paginatedRules.map(r => {
                             const meta = RULE_TYPE_META[r.type];
+                            const isExpanded = expandedRuleId === r.id;
+
                             return (
-                                <button key={r.id} onClick={() => toggleRule(r.id)}
-                                    className="flex items-center gap-3 p-3.5 bg-white border border-slate-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/30 transition-all text-left group">
-                                    <span className="text-lg">{meta.emoji}</span>
-                                    <div className="flex-1 min-w-0">
-                                        <span className="text-[10px] font-black text-slate-900 uppercase tracking-wider block truncate">{r.name}</span>
-                                        <span className="text-[8px] text-slate-400 font-bold uppercase">{meta.name} • {r.priority.replace(/_/g, ' ')}</span>
+                                <div
+                                    key={r.id}
+                                    className={cn(
+                                        "border rounded-2xl overflow-hidden transition-all duration-200 text-left bg-white hover:shadow-sm cursor-pointer",
+                                        isExpanded ? "border-slate-400" : "border-slate-200 hover:border-slate-350"
+                                    )}
+                                    onClick={() => setExpandedRuleId(isExpanded ? null : r.id)}
+                                >
+                                    <div className="flex items-center gap-3 p-3.5">
+                                        <span className="text-lg">{meta.emoji}</span>
+                                        <div className="flex-1 min-w-0">
+                                            <span className="text-xs font-bold text-slate-900 block truncate">{r.name}</span>
+                                            <span className="text-[8px] text-slate-400 font-bold uppercase">{meta.name} • {r.priority.replace(/_/g, ' ')}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); toggleRule(r.id); }}
+                                                className="p-1.5 bg-slate-50 hover:bg-emerald-100 hover:text-emerald-600 text-slate-500 rounded-lg transition-all"
+                                            >
+                                                <Plus className="w-3.5 h-3.5" />
+                                            </button>
+                                            {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                                        </div>
                                     </div>
-                                    <div className="p-1.5 bg-slate-50 group-hover:bg-emerald-100 group-hover:text-emerald-600 text-slate-400 rounded-lg transition-all">
-                                        <Plus className="w-3 h-3" />
-                                    </div>
-                                </button>
+
+                                    {isExpanded && (
+                                        <div className="px-4 pb-4 pt-1 border-t border-slate-100 bg-slate-50/30 animate-in slide-in-from-top-1 duration-150 space-y-3">
+                                            <p className="text-xs font-medium text-slate-600 mt-2 leading-relaxed">
+                                                {getRuleBriefText(r)}
+                                            </p>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {getRuleParams(r).map((param, idx) => (
+                                                    <span key={idx} className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[9px] font-bold text-slate-600">
+                                                        {param.label}: <span className="font-mono text-slate-800">{param.value}</span>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             );
                         })}
                     </div>
                 )}
+
+                {/* Pagination */}
+                <WizardPagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={filteredRules.length}
+                    pageSize={PAGE_SIZE}
+                    onPageChange={setCurrentPage}
+                    className="mt-2"
+                />
             </div>
         </div>
     );

@@ -17,10 +17,10 @@ export const StepHeader: React.FC<StepHeaderProps> = ({ icon, title, subtitle, b
                 {icon}
             </div>
             <div>
-                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider leading-none">
+                <h3 className="text-sm font-bold text-slate-900 leading-none">
                     {title}
                 </h3>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-1">
+                <p className="text-xs text-slate-500 font-semibold mt-1">
                     {subtitle}
                 </p>
             </div>
