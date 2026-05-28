@@ -7,6 +7,12 @@ export const ITEMS_REGISTRY: RegistryNode[] = [
         route: '/backoffice/items', routePrefix: '/backoffice', entitlementKey: 'items',
         isCore: false, isSystem: false, isBeta: false, status: 'active', showInSidebar: true, sidebarGroup: 'operations',
     },
+    {
+        id: 'menu-management', label: 'Menu Management', description: 'Configure master menus, store visibility, and section layouts',
+        icon: 'Menu', parentId: null, moduleKey: 'items', level: 'module', sortOrder: 4.5,
+        route: '/backoffice/items', routePrefix: '/backoffice', entitlementKey: 'items',
+        isCore: false, isSystem: false, isBeta: false, status: 'active', showInSidebar: true, sidebarGroup: 'operations',
+    },
     // ── Submodules
     { id: 'items.management', label: 'Item Management', parentId: 'items', moduleKey: 'items', level: 'submodule', sortOrder: 1, entitlementKey: 'items.management', isCore: false, isSystem: false, isBeta: false, status: 'active', showInSidebar: false },
     { id: 'items.categories', label: 'Categories', parentId: 'items', moduleKey: 'items', level: 'submodule', sortOrder: 2, entitlementKey: 'items.categories', isCore: false, isSystem: false, isBeta: false, status: 'active', showInSidebar: false },

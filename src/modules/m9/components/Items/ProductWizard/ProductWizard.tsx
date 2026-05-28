@@ -98,6 +98,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ onClose, editItem 
         baseProductPrice: formData.baseProductPrice,
         dietaryFlags: formData.dietaryFlags,
         channelVisibility: formData.channelVisibility,
+        availabilitySchedule: formData.availabilitySchedule,
         variantGroups: formData.variantGroups,
         modifierAttachments: formData.modifierAttachments,
         modifierGroups: editItem?.modifierGroups || [],
@@ -161,7 +162,17 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ onClose, editItem 
     }, [buildItemPayload, editingItemId, validateAllSteps, createItem, updateItem, publishDraft, resetForm, onClose, setSubmitting]);
 
     const handleClose = () => {
-        if (isDirty && !confirm('You have unsaved changes. Are you sure you want to leave?')) return;
+        if (isDirty) {
+            const action = confirm('You have unsaved changes. Click OK to save and close, or Cancel to stay.');
+            if (!action) return;
+            // Auto-save before closing
+            const payload = buildItemPayload();
+            if (editingItemId) {
+                updateItem(editingItemId, payload);
+            } else {
+                createItem(payload);
+            }
+        }
         resetForm();
         onClose();
     };

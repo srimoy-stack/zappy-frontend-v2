@@ -43,7 +43,11 @@ const AssignCategoryDropdown: React.FC<AssignCategoryDropdownProps> = ({ onClose
     const [newCatName, setNewCatName] = useState('');
     const [newCatDesc, setNewCatDesc] = useState('');
     const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
+    const [expandedDay, setExpandedDay] = useState<Record<string, string | null>>({});
+    const [productSearch, setProductSearch] = useState('');
+    const [showProductDropdown, setShowProductDropdown] = useState(false);
     const selectedProducts = items.filter(item => selectedProductIds.has(item.id));
+    const unselectedProducts = items.filter(item => !selectedProductIds.has(item.id) && item.name.toLowerCase().includes(productSearch.toLowerCase()));
 
     // Channel visibility and scheduling
     const [defaultAllChannels, setDefaultAllChannels] = useState(true);
@@ -178,7 +182,9 @@ const AssignCategoryDropdown: React.FC<AssignCategoryDropdownProps> = ({ onClose
                     dayOfWeek: day as any,
                     startTime: cs.customDays[day].startTime,
                     endTime: cs.customDays[day].endTime,
-                }))
+                })),
+                startDate: cs?.startDate || undefined,
+                endDate: cs?.endDate || undefined
             };
         });
 
@@ -228,7 +234,7 @@ const AssignCategoryDropdown: React.FC<AssignCategoryDropdownProps> = ({ onClose
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
             <div
                 ref={ref}
-                className="w-[580px] bg-white rounded-3xl border border-slate-200 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-200"
+                className="w-[920px] max-w-[95vw] bg-white rounded-3xl border border-slate-200 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-200"
             >
                 {/* Header */}
                 <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between flex-shrink-0">
@@ -256,7 +262,12 @@ const AssignCategoryDropdown: React.FC<AssignCategoryDropdownProps> = ({ onClose
                                 return (
                                     <button
                                         key={p.id}
-                                        onClick={() => setExpandedProductId(isExpanded ? null : p.id)}
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            setExpandedProductId(isExpanded ? null : p.id);
+                                        }}
                                         className={cn(
                                             "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase transition-all border",
                                             isExpanded 
@@ -271,6 +282,53 @@ const AssignCategoryDropdown: React.FC<AssignCategoryDropdownProps> = ({ onClose
                             })}
                         </div>
 
+                        {/* Add more products */}
+                        <div className="relative mt-2">
+                            <button
+                                onClick={() => setShowProductDropdown(!showProductDropdown)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase border-2 border-dashed border-slate-300 text-slate-500 hover:border-indigo-400 hover:text-indigo-600 transition-all"
+                            >
+                                <Plus className="w-3.5 h-3.5" /> Add Product
+                            </button>
+                            {showProductDropdown && (
+                                <div className="absolute left-0 top-full mt-1 w-72 bg-white rounded-xl border border-slate-200 shadow-xl z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                                    <div className="p-2 border-b border-slate-100">
+                                        <input
+                                            type="text"
+                                            value={productSearch}
+                                            onChange={(e) => setProductSearch(e.target.value)}
+                                            placeholder="Search products..."
+                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-slate-900 placeholder:text-slate-300"
+                                            autoFocus
+                                        />
+                                    </div>
+                                    <div className="max-h-40 overflow-y-auto">
+                                        {unselectedProducts.slice(0, 10).map(p => (
+                                            <button
+                                                key={p.id}
+                                                onClick={() => {
+                                                    (selectedProductIds as any).add?.(p.id);
+                                                    toggleItemSelection(p.id);
+                                                    setShowProductDropdown(false);
+                                                    setProductSearch('');
+                                                }}
+                                                className="w-full px-3 py-2.5 flex items-center gap-2 text-left hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-b-0"
+                                            >
+                                                <Package className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                                                <div className="flex-1 min-w-0">
+                                                    <span className="text-[10px] font-bold text-slate-800 uppercase tracking-wide block truncate">{p.name}</span>
+                                                    <span className="text-[8px] text-slate-400 font-bold">{p.sku || p.id}</span>
+                                                </div>
+                                            </button>
+                                        ))}
+                                        {unselectedProducts.length === 0 && (
+                                            <div className="px-3 py-4 text-center text-[10px] text-slate-400 font-bold uppercase">No products found</div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                         {expandedProductId && (() => {
                             const p = selectedProducts.find(item => item.id === expandedProductId);
                             if (!p) return null;
@@ -279,10 +337,10 @@ const AssignCategoryDropdown: React.FC<AssignCategoryDropdownProps> = ({ onClose
                                     <div className="flex items-start justify-between">
                                         <div>
                                             <h4 className="text-[11px] font-black text-slate-800 uppercase tracking-wide">{p.name}</h4>
-                                            <span className="text-[8px] font-bold text-slate-450 uppercase">{p.sku || 'No SKU'} • {p.type || 'SINGLE'}</span>
+                                            <span className="text-[8px] font-bold text-slate-450 uppercase">{p.sku || 'No SKU'} • {p.productType || 'SINGLE'}</span>
                                         </div>
                                         <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
-                                            ${p.price?.toFixed(2) || '0.00'}
+                                            ${p.baseProductPrice?.toFixed(2) || '0.00'}
                                         </span>
                                     </div>
                                     {p.description ? (
@@ -346,7 +404,9 @@ const AssignCategoryDropdown: React.FC<AssignCategoryDropdownProps> = ({ onClose
                                                 allDays: s.allDays,
                                                 allDaysStartTime: s.allDaysStartTime || '09:00',
                                                 allDaysEndTime: s.allDaysEndTime || '22:00',
-                                                customDays: customDaysMap
+                                                customDays: customDaysMap,
+                                                startDate: s.startDate || '',
+                                                endDate: s.endDate || ''
                                             };
                                         });
                                         setChannelSchedulesMap(scheds);
@@ -437,6 +497,39 @@ const AssignCategoryDropdown: React.FC<AssignCategoryDropdownProps> = ({ onClose
                                             {/* Date/Time pickers */}
                                             {isChecked && (
                                                 <div className="space-y-3.5 pt-3 border-t border-slate-100 animate-in fade-in duration-150">
+                                                    {/* Active Date Range (Optional) */}
+                                                    <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-200/60">
+                                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-2">
+                                                            <Calendar className="w-3.5 h-3.5 text-indigo-500" /> Active Date Range (Optional)
+                                                        </span>
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <div className="space-y-1">
+                                                                <span className="text-[8px] font-black text-slate-400 uppercase block">Start Date</span>
+                                                                <input
+                                                                    type="date"
+                                                                    value={cs.startDate || ''}
+                                                                    onChange={(e) => setChannelSchedulesMap(prev => ({
+                                                                        ...prev,
+                                                                        [ch.id]: { ...prev[ch.id], startDate: e.target.value }
+                                                                    }))}
+                                                                    className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-700 outline-none focus:border-indigo-500 transition-colors"
+                                                                />
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <span className="text-[8px] font-black text-slate-400 uppercase block">End Date</span>
+                                                                <input
+                                                                    type="date"
+                                                                    value={cs.endDate || ''}
+                                                                    onChange={(e) => setChannelSchedulesMap(prev => ({
+                                                                        ...prev,
+                                                                        [ch.id]: { ...prev[ch.id], endDate: e.target.value }
+                                                                    }))}
+                                                                    className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-700 outline-none focus:border-indigo-500 transition-colors"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
                                                     {/* Day type toggle */}
                                                     <div className="flex items-center gap-4">
                                                         <button
@@ -490,51 +583,76 @@ const AssignCategoryDropdown: React.FC<AssignCategoryDropdownProps> = ({ onClose
                                                             />
                                                         </div>
                                                     ) : (
-                                                        /* If Custom Days */
-                                                        <div className="space-y-3">
-                                                            {/* Circular Day Badges M T W T F S S */}
-                                                            <div className="flex justify-between gap-1.5">
-                                                                {DAYS_OF_WEEK.map(d => {
-                                                                    const dayActive = !!cs.customDays[d.key];
-                                                                    return (
+                                                        /* If Custom Days — Accordion Style */
+                                                        <div className="space-y-1.5">
+                                                            {DAYS_OF_WEEK.map(d => {
+                                                                const dayActive = !!cs.customDays[d.key];
+                                                                const isExpanded = expandedDay[ch.id] === d.key;
+                                                                return (
+                                                                    <div key={d.key} className="rounded-xl border border-slate-100 overflow-hidden">
                                                                         <button
-                                                                            key={d.key}
-                                                                            onClick={() => toggleCustomDayOfWeek(ch.id, d.key)}
+                                                                            onClick={() => {
+                                                                                if (!dayActive) {
+                                                                                    toggleCustomDayOfWeek(ch.id, d.key);
+                                                                                    setExpandedDay(prev => ({ ...prev, [ch.id]: d.key }));
+                                                                                } else {
+                                                                                    setExpandedDay(prev => ({ ...prev, [ch.id]: isExpanded ? null : d.key }));
+                                                                                }
+                                                                            }}
                                                                             className={cn(
-                                                                                "w-8 h-8 rounded-full border text-[10px] font-black uppercase transition-all flex items-center justify-center",
-                                                                                dayActive
-                                                                                    ? "bg-indigo-600 text-white border-indigo-600 shadow-md transform scale-105"
-                                                                                    : "bg-white text-slate-400 border-slate-200 hover:bg-slate-50 hover:border-slate-350"
+                                                                                "w-full flex items-center justify-between px-3 py-2 transition-all",
+                                                                                dayActive ? "bg-indigo-50" : "bg-white hover:bg-slate-50"
                                                                             )}
-                                                                            title={d.key}
                                                                         >
-                                                                            {d.label}
+                                                                            <div className="flex items-center gap-2.5">
+                                                                                <div className={cn(
+                                                                                    "w-7 h-7 rounded-lg text-[10px] font-black uppercase flex items-center justify-center transition-all",
+                                                                                    dayActive ? "bg-indigo-600 text-white shadow-sm" : "bg-slate-100 text-slate-400"
+                                                                                )}>
+                                                                                    {d.label}
+                                                                                </div>
+                                                                                <span className={cn("text-[10px] font-black uppercase tracking-wider", dayActive ? "text-indigo-700" : "text-slate-400")}>
+                                                                                    {d.key}
+                                                                                </span>
+                                                                                {dayActive && cs.customDays[d.key] && (
+                                                                                    <span className="text-[9px] font-mono text-slate-500 ml-1">
+                                                                                        {cs.customDays[d.key].startTime} – {cs.customDays[d.key].endTime}
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                            <div className="flex items-center gap-1.5">
+                                                                                {dayActive && (
+                                                                                    <button
+                                                                                        onClick={(e) => { e.stopPropagation(); toggleCustomDayOfWeek(ch.id, d.key); }}
+                                                                                        className="text-[8px] font-black text-rose-500 hover:text-rose-700 uppercase px-1.5 py-0.5 hover:bg-rose-50 rounded transition-all"
+                                                                                    >
+                                                                                        Remove
+                                                                                    </button>
+                                                                                )}
+                                                                                <ChevronDown className={cn("w-3.5 h-3.5 text-slate-400 transition-transform", isExpanded && "rotate-180")} />
+                                                                            </div>
                                                                         </button>
-                                                                    );
-                                                                })}
-                                                            </div>
-
-                                                            {/* Selected Custom Days Time Config List in a roomy 2-column Grid */}
-                                                            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pt-1 pr-1">
-                                                                {Object.keys(cs.customDays).map(day => (
-                                                                    <div key={day} className="flex items-center gap-2 bg-white px-3 py-2 border border-slate-200 rounded-xl shadow-sm animate-in slide-in-from-top-1 duration-150">
-                                                                        <span className="text-[9px] font-black text-indigo-600 uppercase w-10 flex-shrink-0">{day}</span>
-                                                                        <input
-                                                                            type="time"
-                                                                            value={cs.customDays[day].startTime}
-                                                                            onChange={(e) => handleCustomTimeChange(ch.id, day, 'startTime', e.target.value)}
-                                                                            className="flex-1 px-1.5 py-1 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:border-slate-900"
-                                                                        />
-                                                                        <span className="text-[8px] font-bold text-slate-450 uppercase">to</span>
-                                                                        <input
-                                                                            type="time"
-                                                                            value={cs.customDays[day].endTime}
-                                                                            onChange={(e) => handleCustomTimeChange(ch.id, day, 'endTime', e.target.value)}
-                                                                            className="flex-1 px-1.5 py-1 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:border-slate-900"
-                                                                        />
+                                                                        {dayActive && isExpanded && (
+                                                                            <div className="flex items-center gap-2 px-3 py-2.5 bg-white border-t border-slate-100 animate-in slide-in-from-top-1 duration-150">
+                                                                                <span className="text-[9px] font-black text-slate-400 uppercase w-12 flex-shrink-0">Hours</span>
+                                                                                <input
+                                                                                    type="time"
+                                                                                    value={cs.customDays[d.key]?.startTime || '09:00'}
+                                                                                    onChange={(e) => handleCustomTimeChange(ch.id, d.key, 'startTime', e.target.value)}
+                                                                                    className="flex-1 px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:border-indigo-500"
+                                                                                />
+                                                                                <span className="text-[9px] font-black text-slate-400 uppercase">to</span>
+                                                                                <input
+                                                                                    type="time"
+                                                                                    value={cs.customDays[d.key]?.endTime || '22:00'}
+                                                                                    onChange={(e) => handleCustomTimeChange(ch.id, d.key, 'endTime', e.target.value)}
+                                                                                    className="flex-1 px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:border-indigo-500"
+                                                                                />
+                                                                            </div>
+                                                                        )}
                                                                     </div>
-                                                                ))}
-                                                            </div>
+                                                                );
+                                                            })}
                                                         </div>
                                                     )}
                                                 </div>
@@ -576,13 +694,39 @@ interface AssignDropdownProps {
 
 const AssignDropdown: React.FC<AssignDropdownProps> = ({ type, onClose, selectedProductIds }) => {
     const { items, updateItem } = useCatalogStore();
-    const { clearSelection } = useBulkOperationsStore();
+    const { clearSelection, toggleItemSelection } = useBulkOperationsStore();
     const ref = useRef<HTMLDivElement>(null);
 
     const list = type === 'store' ? STORES : CHANNELS;
     const [checked, setChecked] = useState<string[]>([]);
-    const [scheduleDate, setScheduleDate] = useState('');
-    const [scheduleTime, setScheduleTime] = useState('');
+    
+    // Detailed schedules per store/channel selection
+    const [schedulesMap, setSchedulesMap] = useState<Record<string, {
+        allDays: boolean;
+        allDaysStartTime: string;
+        allDaysEndTime: string;
+        customDays: Record<string, { startTime: string; endTime: string }>;
+        startDate?: string;
+        endDate?: string;
+    }>>({});
+
+    const [expandedDay, setExpandedDay] = useState<Record<string, string | null>>({});
+    const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
+    const [productSearch, setProductSearch] = useState('');
+    const [showProductDropdown, setShowProductDropdown] = useState(false);
+
+    const selectedProducts = items.filter(item => selectedProductIds.has(item.id));
+    const unselectedProducts = items.filter(item => !selectedProductIds.has(item.id) && item.name.toLowerCase().includes(productSearch.toLowerCase()));
+
+    const DAYS_OF_WEEK = [
+        { key: 'MON', label: 'M' },
+        { key: 'TUE', label: 'T' },
+        { key: 'WED', label: 'W' },
+        { key: 'THU', label: 'T' },
+        { key: 'FRI', label: 'F' },
+        { key: 'SAT', label: 'S' },
+        { key: 'SUN', label: 'S' },
+    ] as const;
 
     useEffect(() => {
         const handleClick = (e: MouseEvent) => {
@@ -593,11 +737,123 @@ const AssignDropdown: React.FC<AssignDropdownProps> = ({ type, onClose, selected
     }, [onClose]);
 
     const toggle = (id: string) => {
-        setChecked(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+        setChecked(prev => {
+            const isAdding = !prev.includes(id);
+            const next = isAdding ? [...prev, id] : prev.filter(x => x !== id);
+            
+            if (isAdding && !schedulesMap[id]) {
+                setSchedulesMap(s => ({
+                    ...s,
+                    [id]: {
+                        allDays: true,
+                        allDaysStartTime: '09:00',
+                        allDaysEndTime: '22:00',
+                        customDays: {
+                            MON: { startTime: '09:00', endTime: '22:00' },
+                            TUE: { startTime: '09:00', endTime: '22:00' },
+                            WED: { startTime: '09:00', endTime: '22:00' },
+                            THU: { startTime: '09:00', endTime: '22:00' },
+                            FRI: { startTime: '09:00', endTime: '22:00' },
+                            SAT: { startTime: '09:00', endTime: '22:00' },
+                            SUN: { startTime: '09:00', endTime: '22:00' },
+                        }
+                    }
+                }));
+            }
+            return next;
+        });
+    };
+
+    const toggleAllDaysForSchedule = (id: string) => {
+        setSchedulesMap(prev => {
+            const current = prev[id] || {
+                allDays: true,
+                allDaysStartTime: '09:00',
+                allDaysEndTime: '22:00',
+                customDays: {}
+            };
+            return {
+                ...prev,
+                [id]: {
+                    ...current,
+                    allDays: !current.allDays
+                }
+            };
+        });
+    };
+
+    const toggleCustomDayOfWeek = (id: string, day: string) => {
+        setSchedulesMap(prev => {
+            const current = prev[id] || {
+                allDays: false,
+                allDaysStartTime: '09:00',
+                allDaysEndTime: '22:00',
+                customDays: {}
+            };
+            const nextDays = { ...current.customDays };
+            if (nextDays[day]) {
+                delete nextDays[day];
+            } else {
+                nextDays[day] = { startTime: '09:00', endTime: '22:00' };
+            }
+            return {
+                ...prev,
+                [id]: {
+                    ...current,
+                    customDays: nextDays
+                }
+            };
+        });
+    };
+
+    const handleCustomTimeChange = (id: string, day: string, field: 'startTime' | 'endTime', val: string) => {
+        setSchedulesMap(prev => {
+            const current = prev[id];
+            if (!current) return prev;
+            return {
+                ...prev,
+                [id]: {
+                    ...current,
+                    customDays: {
+                        ...current.customDays,
+                        [day]: {
+                            ...current.customDays[day],
+                            [field]: val
+                        }
+                    }
+                }
+            };
+        });
     };
 
     const selectAll = () => {
-        setChecked(prev => prev.length === list.length ? [] : list.map(l => l.id));
+        if (checked.length === list.length) {
+            setChecked([]);
+        } else {
+            const allIds = list.map(l => l.id);
+            setChecked(allIds);
+            allIds.forEach(id => {
+                if (!schedulesMap[id]) {
+                    setSchedulesMap(s => ({
+                        ...s,
+                        [id]: {
+                            allDays: true,
+                            allDaysStartTime: '09:00',
+                            allDaysEndTime: '22:00',
+                            customDays: {
+                                MON: { startTime: '09:00', endTime: '22:00' },
+                                TUE: { startTime: '09:00', endTime: '22:00' },
+                                WED: { startTime: '09:00', endTime: '22:00' },
+                                THU: { startTime: '09:00', endTime: '22:00' },
+                                FRI: { startTime: '09:00', endTime: '22:00' },
+                                SAT: { startTime: '09:00', endTime: '22:00' },
+                                SUN: { startTime: '09:00', endTime: '22:00' },
+                            }
+                        }
+                    }));
+                }
+            });
+        }
     };
 
     const handleAssign = () => {
@@ -607,24 +863,36 @@ const AssignDropdown: React.FC<AssignDropdownProps> = ({ type, onClose, selected
             const product = items.find(i => i.id === itemId);
             if (!product) return;
 
+            // Pick schedule details from the first selected target to use as default item availabilitySchedule
+            const targetId = checked[0];
+            const activeSched = schedulesMap[targetId];
+            const customDaysList = activeSched?.allDays ? undefined : Object.keys(activeSched?.customDays || {});
+
+            const schedulePayload = activeSched ? {
+                days: activeSched.allDays ? ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] : customDaysList,
+                timeStart: activeSched.allDays ? activeSched.allDaysStartTime : activeSched.customDays[customDaysList?.[0] || 'MON']?.startTime,
+                timeEnd: activeSched.allDays ? activeSched.allDaysEndTime : activeSched.customDays[customDaysList?.[0] || 'MON']?.endTime
+            } : undefined;
+
             if (type === 'store') {
                 const existing = product.scopeConfig?.targetedStoreIds || [];
                 const merged = Array.from(new Set([...existing, ...checked]));
                 updateItem(itemId, {
-                    scopeConfig: { scope: merged.length > 0 ? 'STORE_SPECIFIC' as const : 'GLOBAL' as const, targetedStoreIds: merged }
+                    scopeConfig: { scope: merged.length > 0 ? 'STORE_SPECIFIC' as const : 'GLOBAL' as const, targetedStoreIds: merged },
+                    availabilitySchedule: schedulePayload
                 });
             } else {
                 const existing = product.channelVisibility || [];
                 const merged = Array.from(new Set([...existing, ...checked]));
-                updateItem(itemId, { channelVisibility: merged });
+                updateItem(itemId, { 
+                    channelVisibility: merged,
+                    availabilitySchedule: schedulePayload
+                });
             }
         });
 
-        const label = type === 'store' ? 'store(s)' : 'channel(s)';
-        const scheduled = scheduleDate && scheduleTime
-            ? `\nScheduled for: ${scheduleDate} at ${scheduleTime}`
-            : '';
-        alert(`Assigned ${checked.length} ${label} to ${selectedProductIds.size} product(s).${scheduled}`);
+        const label = type === 'store' ? 'Store(s)' : 'Channel(s)';
+        alert(`Successfully assigned ${checked.length} ${label} and visibility schedules to ${selectedProductIds.size} products!`);
         clearSelection();
         onClose();
     };
@@ -632,99 +900,369 @@ const AssignDropdown: React.FC<AssignDropdownProps> = ({ type, onClose, selected
     const allChecked = checked.length === list.length;
 
     return (
-        <div
-            ref={ref}
-            className="absolute top-full left-0 mt-2 w-80 bg-white rounded-2xl border border-slate-200 shadow-2xl z-[60] animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden"
-        >
-            {/* Header */}
-            <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">
-                    {type === 'store' ? '🏪 Assign to Stores' : '📡 Assign Channels'}
-                </span>
-                <button onClick={onClose} className="p-1 hover:bg-slate-200 rounded-lg transition-colors">
-                    <X className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-            </div>
-
-            {/* Select All */}
-            <button
-                onClick={selectAll}
-                className={cn(
-                    "w-full px-4 py-2.5 flex items-center gap-3 border-b border-slate-100 transition-colors text-left",
-                    allChecked ? "bg-emerald-50" : "hover:bg-slate-50"
-                )}
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div
+                ref={ref}
+                className="w-[920px] max-w-[95vw] bg-white rounded-3xl border border-slate-200 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-200"
             >
-                <div className={cn(
-                    "w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                    allChecked ? "bg-emerald-500 border-emerald-500" : "border-slate-300"
-                )}>
-                    {allChecked && <CheckCircle2 className="w-3 h-3 text-white" />}
+                {/* Header */}
+                <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between flex-shrink-0">
+                    <span className="text-[12px] font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                        {type === 'store' ? (
+                            <>🏪 Bulk Store Deployment & Scheduling</>
+                        ) : (
+                            <>📡 Bulk Channel Visibility & Scheduling</>
+                        )}
+                    </span>
+                    <button onClick={onClose} className="p-1.5 hover:bg-slate-200 rounded-lg transition-colors">
+                        <X className="w-4 h-4 text-slate-450" />
+                    </button>
                 </div>
-                <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider">
-                    Assign to All {type === 'store' ? 'Stores' : 'Channels'}
-                </span>
-            </button>
 
-            {/* List */}
-            <div className="max-h-48 overflow-y-auto">
-                {list.map(item => {
-                    const isChecked = checked.includes(item.id);
-                    return (
-                        <button
-                            key={item.id}
-                            onClick={() => toggle(item.id)}
-                            className={cn(
-                                "w-full px-4 py-2.5 flex items-center gap-3 transition-colors text-left border-b border-slate-50 last:border-b-0",
-                                isChecked ? "bg-emerald-50/50" : "hover:bg-slate-50"
+                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                    {/* Selected Products Context */}
+                    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                                Target Products ({selectedProducts.length})
+                            </span>
+                            <span className="text-[8px] text-slate-455 uppercase font-black tracking-wider">Click to view details</span>
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-2">
+                            {selectedProducts.map(p => {
+                                const isExpanded = expandedProductId === p.id;
+                                return (
+                                    <button
+                                        key={p.id}
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            setExpandedProductId(isExpanded ? null : p.id);
+                                        }}
+                                        className={cn(
+                                            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase transition-all border",
+                                            isExpanded 
+                                                ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm" 
+                                                : "bg-white border-slate-200 text-slate-700 hover:border-indigo-400 hover:bg-slate-50/50"
+                                        )}
+                                    >
+                                        <Package className="w-3.5 h-3.5 text-slate-400" />
+                                        {p.name}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Add more products */}
+                        <div className="relative mt-2">
+                            <button
+                                onClick={() => setShowProductDropdown(!showProductDropdown)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase border-2 border-dashed border-slate-300 text-slate-500 hover:border-indigo-400 hover:text-indigo-600 transition-all"
+                            >
+                                <Plus className="w-3.5 h-3.5" /> Add Product
+                            </button>
+                            {showProductDropdown && (
+                                <div className="absolute left-0 top-full mt-1 w-72 bg-white rounded-xl border border-slate-200 shadow-xl z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                                    <div className="p-2 border-b border-slate-100">
+                                        <input
+                                            type="text"
+                                            value={productSearch}
+                                            onChange={(e) => setProductSearch(e.target.value)}
+                                            placeholder="Search products..."
+                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-slate-900 placeholder:text-slate-300"
+                                            autoFocus
+                                        />
+                                    </div>
+                                    <div className="max-h-40 overflow-y-auto">
+                                        {unselectedProducts.slice(0, 10).map(p => (
+                                            <button
+                                                key={p.id}
+                                                onClick={() => {
+                                                    (selectedProductIds as any).add?.(p.id);
+                                                    toggleItemSelection(p.id);
+                                                    setShowProductDropdown(false);
+                                                    setProductSearch('');
+                                                }}
+                                                className="w-full px-3 py-2.5 flex items-center gap-2 text-left hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-b-0"
+                                            >
+                                                <Package className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                                                <div className="flex-1 min-w-0">
+                                                    <span className="text-[10px] font-bold text-slate-800 uppercase tracking-wide block truncate">{p.name}</span>
+                                                    <span className="text-[8px] text-slate-400 font-bold">{p.sku || p.id}</span>
+                                                </div>
+                                            </button>
+                                        ))}
+                                        {unselectedProducts.length === 0 && (
+                                            <div className="px-3 py-4 text-center text-[10px] text-slate-400 font-bold uppercase">No products found</div>
+                                        )}
+                                    </div>
+                                </div>
                             )}
-                        >
-                            <div className={cn(
-                                "w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                                isChecked ? "bg-emerald-500 border-emerald-500" : "border-slate-300"
-                            )}>
-                                {isChecked && <CheckCircle2 className="w-3 h-3 text-white" />}
-                            </div>
-                            <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">{item.name}</span>
-                        </button>
-                    );
-                })}
-            </div>
+                        </div>
 
-            {/* Schedule Section */}
-            <div className="px-4 py-3 border-t border-slate-100 bg-slate-50/30 space-y-2">
-                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                    <Calendar className="w-3 h-3" /> Schedule Assignment (Optional)
-                </span>
-                <div className="flex items-center gap-2">
-                    <input
-                        type="date"
-                        value={scheduleDate}
-                        onChange={(e) => setScheduleDate(e.target.value)}
-                        className="flex-1 px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-700 outline-none focus:border-slate-900 transition-colors"
-                    />
-                    <input
-                        type="time"
-                        value={scheduleTime}
-                        onChange={(e) => setScheduleTime(e.target.value)}
-                        className="w-28 px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-700 outline-none focus:border-slate-900 transition-colors"
-                    />
+                        {expandedProductId && (() => {
+                            const p = selectedProducts.find(item => item.id === expandedProductId);
+                            if (!p) return null;
+                            return (
+                                <div className="mt-2.5 p-3.5 bg-white border border-slate-150 rounded-xl space-y-2 animate-in slide-in-from-top-1 duration-200 shadow-sm">
+                                    <div className="flex items-start justify-between">
+                                        <div>
+                                            <h4 className="text-[11px] font-black text-slate-800 uppercase tracking-wide">{p.name}</h4>
+                                            <span className="text-[8px] font-bold text-slate-450 uppercase">{p.sku || 'No SKU'} • {p.productType || 'SINGLE'}</span>
+                                        </div>
+                                        <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+                                            ${p.baseProductPrice?.toFixed(2) || '0.00'}
+                                        </span>
+                                    </div>
+                                    {p.description ? (
+                                        <p className="text-[10px] text-slate-600 font-medium leading-relaxed bg-slate-50 p-2 rounded-lg border border-slate-100/50">
+                                            {p.description}
+                                        </p>
+                                    ) : (
+                                        <p className="text-[9px] text-slate-400 italic">No description provided for this product.</p>
+                                    )}
+                                </div>
+                            );
+                        })()}
+                    </div>
+
+                    {/* Target Selection & Custom Schedule Toggles */}
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                Select target {type === 'store' ? 'stores' : 'channels'} to configure
+                            </span>
+                            <button
+                                onClick={selectAll}
+                                className="text-[9px] font-black text-indigo-650 hover:text-indigo-850 uppercase tracking-wider transition-colors"
+                            >
+                                {allChecked ? 'Deselect All' : 'Select All'}
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            {list.map(target => {
+                                const isChecked = checked.includes(target.id);
+                                const cs = schedulesMap[target.id] || {
+                                    allDays: true,
+                                    allDaysStartTime: '09:00',
+                                    allDaysEndTime: '22:00',
+                                    customDays: {}
+                                };
+
+                                return (
+                                    <div key={target.id} className="border border-slate-100 rounded-3xl p-4 bg-slate-50/20 shadow-sm space-y-4">
+                                        <button
+                                            onClick={() => toggle(target.id)}
+                                            className="w-full flex items-center justify-between text-left"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={cn(
+                                                    "w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all",
+                                                    isChecked ? "bg-indigo-500 border-indigo-500" : "border-slate-300"
+                                                )}>
+                                                    {isChecked && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                                                </div>
+                                                <div>
+                                                    <span className="text-[11px] font-black text-slate-800 uppercase tracking-wider block">{target.name}</span>
+                                                    <span className="text-[8px] text-slate-400 font-bold uppercase block">{target.id}</span>
+                                                </div>
+                                            </div>
+                                            {isChecked && (
+                                                <span className="text-[8px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 uppercase tracking-wider">
+                                                    Configured
+                                                </span>
+                                            )}
+                                        </button>
+
+                                        {/* If active, unfold complete date range & scheduler */}
+                                        {isChecked && (
+                                            <div className="space-y-4 pl-1.5 pt-3 border-l-2 border-indigo-100 animate-in fade-in slide-in-from-top-1 duration-200">
+                                                
+                                                {/* Active Date Range (Optional) */}
+                                                <div className="bg-slate-50/50 p-3.5 rounded-xl border border-slate-200/60">
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-2">
+                                                        <Calendar className="w-3.5 h-3.5 text-indigo-500" /> Active Date Range (Optional)
+                                                    </span>
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <div className="space-y-1">
+                                                            <span className="text-[8px] font-black text-slate-400 uppercase block">Start Date</span>
+                                                            <input
+                                                                type="date"
+                                                                value={cs.startDate || ''}
+                                                                onChange={(e) => setSchedulesMap(prev => ({
+                                                                    ...prev,
+                                                                    [target.id]: { ...prev[target.id], startDate: e.target.value }
+                                                                }))}
+                                                                className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-700 outline-none focus:border-indigo-500 transition-colors"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <span className="text-[8px] font-black text-slate-400 uppercase block">End Date</span>
+                                                            <input
+                                                                type="date"
+                                                                value={cs.endDate || ''}
+                                                                onChange={(e) => setSchedulesMap(prev => ({
+                                                                    ...prev,
+                                                                    [target.id]: { ...prev[target.id], endDate: e.target.value }
+                                                                }))}
+                                                                className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-700 outline-none focus:border-indigo-500 transition-colors"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Day type toggle */}
+                                                <div className="flex items-center gap-4">
+                                                    <button
+                                                        onClick={() => toggleAllDaysForSchedule(target.id)}
+                                                        className="flex items-center gap-2 text-left"
+                                                    >
+                                                        <div className={cn(
+                                                            "w-3.5 h-3.5 rounded-full border flex items-center justify-center flex-shrink-0",
+                                                            cs.allDays ? "border-emerald-500 bg-emerald-500" : "border-slate-300"
+                                                        )}>
+                                                            {cs.allDays && <div className="w-2.5 h-2.5 bg-white rounded-full animate-in zoom-in-50" />}
+                                                        </div>
+                                                        <span className="text-[9px] font-black text-slate-600 uppercase tracking-wider">All Days</span>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => toggleAllDaysForSchedule(target.id)}
+                                                        className="flex items-center gap-2 text-left"
+                                                    >
+                                                        <div className={cn(
+                                                            "w-3.5 h-3.5 rounded-full border flex items-center justify-center flex-shrink-0",
+                                                            !cs.allDays ? "border-indigo-500 bg-indigo-500" : "border-slate-300"
+                                                        )}>
+                                                            {!cs.allDays && <div className="w-2.5 h-2.5 bg-white rounded-full animate-in zoom-in-50" />}
+                                                        </div>
+                                                        <span className="text-[9px] font-black text-slate-600 uppercase tracking-wider">Custom Days</span>
+                                                    </button>
+                                                </div>
+
+                                                {/* If All Days */}
+                                                {cs.allDays ? (
+                                                    <div className="flex items-center gap-2 bg-white px-3 py-2 border border-slate-200 rounded-xl shadow-sm">
+                                                        <span className="text-[9px] font-black text-slate-400 uppercase w-16 flex-shrink-0">Every Day</span>
+                                                        <input
+                                                            type="time"
+                                                            value={cs.allDaysStartTime}
+                                                            onChange={(e) => setSchedulesMap(prev => ({
+                                                                ...prev,
+                                                                [target.id]: { ...prev[target.id], allDaysStartTime: e.target.value }
+                                                            }))}
+                                                            className="flex-1 px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:border-indigo-500"
+                                                        />
+                                                        <span className="text-[9px] font-black text-slate-400 uppercase">to</span>
+                                                        <input
+                                                            type="time"
+                                                            value={cs.allDaysEndTime}
+                                                            onChange={(e) => setSchedulesMap(prev => ({
+                                                                ...prev,
+                                                                [target.id]: { ...prev[target.id], allDaysEndTime: e.target.value }
+                                                            }))}
+                                                            className="flex-1 px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:border-indigo-500"
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    /* If Custom Days — Accordion Style */
+                                                    <div className="space-y-1.5">
+                                                        {DAYS_OF_WEEK.map(d => {
+                                                            const dayActive = !!cs.customDays[d.key];
+                                                            const isExpanded = expandedDay[target.id] === d.key;
+                                                            return (
+                                                                <div key={d.key} className="rounded-xl border border-slate-100 overflow-hidden">
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            if (!dayActive) {
+                                                                                toggleCustomDayOfWeek(target.id, d.key);
+                                                                                setExpandedDay(prev => ({ ...prev, [target.id]: d.key }));
+                                                                            } else {
+                                                                                setExpandedDay(prev => ({ ...prev, [target.id]: isExpanded ? null : d.key }));
+                                                                            }
+                                                                        }}
+                                                                        className={cn(
+                                                                            "w-full flex items-center justify-between px-3 py-2 transition-all",
+                                                                            dayActive ? "bg-indigo-50" : "bg-white hover:bg-slate-50"
+                                                                        )}
+                                                                    >
+                                                                        <div className="flex items-center gap-2.5">
+                                                                            <div className={cn(
+                                                                                "w-7 h-7 rounded-lg text-[10px] font-black uppercase flex items-center justify-center transition-all",
+                                                                                dayActive ? "bg-indigo-600 text-white shadow-sm" : "bg-slate-100 text-slate-400"
+                                                                            )}>
+                                                                                {d.label}
+                                                                            </div>
+                                                                            <span className={cn("text-[10px] font-black uppercase tracking-wider", dayActive ? "text-indigo-700" : "text-slate-400")}>
+                                                                                {d.key}
+                                                                            </span>
+                                                                            {dayActive && cs.customDays[d.key] && (
+                                                                                <span className="text-[9px] font-mono text-slate-500 ml-1">
+                                                                                    {cs.customDays[d.key].startTime} – {cs.customDays[d.key].endTime}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="flex items-center gap-1.5">
+                                                                            {dayActive && (
+                                                                                <button
+                                                                                    onClick={(e) => { e.stopPropagation(); toggleCustomDayOfWeek(target.id, d.key); }}
+                                                                                    className="text-[8px] font-black text-rose-500 hover:text-rose-700 uppercase px-1.5 py-0.5 hover:bg-rose-50 rounded transition-all"
+                                                                                >
+                                                                                    Remove
+                                                                                </button>
+                                                                            )}
+                                                                            <ChevronDown className={cn("w-3.5 h-3.5 text-slate-400 transition-transform", isExpanded && "rotate-180")} />
+                                                                        </div>
+                                                                    </button>
+                                                                    {dayActive && isExpanded && (
+                                                                        <div className="flex items-center gap-2 px-3 py-2.5 bg-white border-t border-slate-100 animate-in slide-in-from-top-1 duration-150">
+                                                                            <span className="text-[9px] font-black text-slate-400 uppercase w-12 flex-shrink-0">Hours</span>
+                                                                            <input
+                                                                                type="time"
+                                                                                value={cs.customDays[d.key]?.startTime || '09:00'}
+                                                                                onChange={(e) => handleCustomTimeChange(target.id, d.key, 'startTime', e.target.value)}
+                                                                                className="flex-1 px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:border-indigo-500"
+                                                                            />
+                                                                            <span className="text-[9px] font-black text-slate-400 uppercase">to</span>
+                                                                            <input
+                                                                                type="time"
+                                                                                value={cs.customDays[d.key]?.endTime || '22:00'}
+                                                                                onChange={(e) => handleCustomTimeChange(target.id, d.key, 'endTime', e.target.value)}
+                                                                                className="flex-1 px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:border-indigo-500"
+                                                                            />
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            {/* Apply Button */}
-            <div className="px-4 py-3 border-t border-slate-100">
-                <button
-                    onClick={handleAssign}
-                    disabled={checked.length === 0}
-                    className={cn(
-                        "w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                        checked.length > 0
-                            ? "bg-slate-950 text-white hover:bg-slate-900 shadow-md"
-                            : "bg-slate-100 text-slate-400 cursor-not-allowed"
-                    )}
-                >
-                    Assign {checked.length > 0 ? `(${checked.length} selected)` : ''}
-                </button>
+                {/* Apply Button */}
+                <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex-shrink-0">
+                    <button
+                        onClick={handleAssign}
+                        disabled={checked.length === 0}
+                        className={cn(
+                            "w-full py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all",
+                            checked.length > 0
+                                ? "bg-slate-950 text-white hover:bg-slate-900 shadow-md"
+                                : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                        )}
+                    >
+                        Apply Assignment & Visibility
+                    </button>
+                </div>
             </div>
         </div>
     );
@@ -1253,7 +1791,7 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ onEdit, onView }) =>
                 </div>
 
                 {/* Pagination */}
-                {totalPages > 1 && (
+                {totalPages >= 1 && (
                     <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
                         <span className="text-xs font-medium text-slate-500">
                             Page {currentPage} of {totalPages} · {processedItems.length} products

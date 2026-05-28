@@ -5,12 +5,30 @@ import {
     ChevronLeft, Edit3, Target, Sparkles, Package, Eye,
     DollarSign, Percent, Lock, Unlock, FileText, Calendar,
     Layers, ToggleLeft, ToggleRight, Building2, Beaker,
-    ShieldAlert, BadgeAlert, CheckCircle, RefreshCw, Clock, History
+    ShieldAlert, BadgeAlert, CheckCircle, RefreshCw, Clock, History,
+    Scale, MapPin, Store, Globe, TrendingUp, Puzzle, Hash,
+    ToggleRight as ToggleOn, Utensils, Tag
 } from 'lucide-react';
 import { Item } from '../../types/items';
 import { mockCategories } from '../../mock/items';
 import { VARIANT_TEMPLATES, MODIFIER_TEMPLATES } from '../../mock/templates';
+import { useRulesStore, RULE_TYPE_META } from '../../state/rulesStore';
 import { cn } from '@/utils';
+
+const STORES = [
+    { id: 'store-chicago', name: 'Chicago Loop Outlet', city: 'Chicago', address: '233 S Wacker Dr, Chicago, IL 60606' },
+    { id: 'store-newyork', name: 'Manhattan Broad Ave', city: 'New York', address: '1271 Avenue of the Americas, New York, NY 10020' },
+    { id: 'store-miami', name: 'Miami Beach Center', city: 'Miami', address: '1100 Lincoln Rd, Miami Beach, FL 33139' },
+];
+
+const CHANNELS = [
+    { id: 'POS', label: 'Point of Sale' },
+    { id: 'ONLINE', label: 'Online Ordering' },
+    { id: 'KIOSK', label: 'Kiosk' },
+    { id: 'UBER', label: 'Uber Eats' },
+    { id: 'DOORDASH', label: 'DoorDash' },
+    { id: 'SKIP', label: 'SkipTheDishes' },
+];
 
 interface ProductViewScreenProps {
     item: Item;
@@ -19,6 +37,8 @@ interface ProductViewScreenProps {
 }
 
 export const ProductViewScreen: React.FC<ProductViewScreenProps> = ({ item, onClose, onEdit }) => {
+    const { rules } = useRulesStore();
+
     // Find category name
     const category = mockCategories.find(c => c.id === item.categoryId);
     const secondaryCategories = (item.secondaryCategoryIds || [])
@@ -33,6 +53,15 @@ export const ProductViewScreen: React.FC<ProductViewScreenProps> = ({ item, onCl
     const modifierGroupsCount = item.modifierGroups?.length || 0;
     const modifierAttachmentsCount = item.modifierAttachments?.length || 0;
     const overridesCount = item.storeOverrides?.length || item.storeOverridesResolver?.length || 0;
+
+    // Deployed stores
+    const scopeConfig = item.scopeConfig || { scope: 'GLOBAL', targetedStoreIds: [] };
+    const deployedStores = scopeConfig.scope === 'GLOBAL'
+        ? STORES
+        : STORES.filter(s => (scopeConfig.targetedStoreIds || []).includes(s.id));
+
+    // Active channels
+    const activeChannels = item.channelVisibility || ['POS', 'ONLINE'];
 
     return (
         <div className="space-y-8 animate-in fade-in duration-300">
@@ -417,6 +446,188 @@ export const ProductViewScreen: React.FC<ProductViewScreenProps> = ({ item, onCl
                             </>
                         );
                     })()}
+
+                    {/* Section 4: Channel Visibility & Pricing */}
+                    <div className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-sm space-y-6">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                            <div className="flex items-center gap-3">
+                                <Globe className="w-4 h-4 text-sky-500" />
+                                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Channel Visibility & Pricing Configuration</h3>
+                            </div>
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                {activeChannels.length} Channel(s) Active
+                            </span>
+                        </div>
+
+                        <div className="space-y-4">
+                            {/* Active Channels */}
+                            <div>
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Active Sales Channels</span>
+                                <div className="flex flex-wrap gap-2">
+                                    {CHANNELS.map(ch => {
+                                        const isActive = activeChannels.includes(ch.id);
+                                        return (
+                                            <div key={ch.id} className={cn(
+                                                "px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider border flex items-center gap-2",
+                                                isActive ? "bg-slate-950 text-white border-slate-950" : "bg-slate-50 text-slate-300 border-slate-100 line-through"
+                                            )}>
+                                                {isActive ? <CheckCircle className="w-3 h-3 text-emerald-400" /> : <BadgeAlert className="w-3 h-3" />}
+                                                {ch.label}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Base Pricing */}
+                            <div className="grid grid-cols-3 gap-4 pt-3 border-t border-slate-50">
+                                <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Base Price</span>
+                                    <span className="text-sm font-mono font-black text-slate-900 block mt-1">${(item.baseProductPrice || 0).toFixed(2)}</span>
+                                </div>
+                                <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Tax Rate</span>
+                                    <span className="text-sm font-mono font-black text-slate-900 block mt-1">{item.taxRate ?? 5.0}%</span>
+                                </div>
+                                <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Availability</span>
+                                    <span className={cn("text-sm font-black block mt-1", item.isAvailable ? "text-emerald-600" : "text-rose-600")}>
+                                        {item.isAvailable ? '● LIVE' : '● OFFLINE'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Section 5: Rules & Constraints */}
+                    <div className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-sm space-y-6">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                            <div className="flex items-center gap-3">
+                                <Scale className="w-4 h-4 text-amber-500" />
+                                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Attached Rules & Constraints</h3>
+                            </div>
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                {rules.filter(r => r.status === 'ACTIVE').length} Rule(s) in Library
+                            </span>
+                        </div>
+
+                        {rules.filter(r => r.status === 'ACTIVE').length > 0 ? (
+                            <div className="space-y-3">
+                                {rules.filter(r => r.status === 'ACTIVE').map(rule => {
+                                    const meta = RULE_TYPE_META[rule.type];
+                                    return (
+                                        <div key={rule.id} className="border border-slate-100 rounded-2xl p-4 bg-slate-50/30 flex items-start gap-3">
+                                            <span className="text-lg mt-0.5">{meta.emoji}</span>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="text-[10px] font-black text-slate-900 uppercase tracking-wider">{rule.name}</span>
+                                                    <span className={cn("px-1.5 py-0.5 rounded text-[8px] font-black uppercase border", meta.color)}>{meta.name}</span>
+                                                    <span className="text-[8px] font-bold text-slate-400 uppercase bg-slate-100 px-1.5 py-0.5 rounded">{rule.priority.replace(/_/g, ' ')}</span>
+                                                </div>
+                                                <p className="text-[9px] text-slate-500 font-medium mt-1 leading-relaxed">{meta.description}</p>
+                                                <div className="flex flex-wrap gap-1.5 mt-2">
+                                                    {rule.premiumMultiplier !== undefined && (
+                                                        <span className="px-2 py-0.5 bg-white border border-slate-200 rounded text-[8px] font-bold text-slate-600">Multiplier: <span className="font-mono text-slate-800">{rule.premiumMultiplier}x</span></span>
+                                                    )}
+                                                    {rule.includedToppings !== undefined && (
+                                                        <span className="px-2 py-0.5 bg-white border border-slate-200 rounded text-[8px] font-bold text-slate-600">Free Items: <span className="font-mono text-slate-800">{rule.includedToppings}</span></span>
+                                                    )}
+                                                    {rule.maxToppingsAllowed !== undefined && (
+                                                        <span className="px-2 py-0.5 bg-white border border-slate-200 rounded text-[8px] font-bold text-slate-600">Max Items: <span className="font-mono text-slate-800">{rule.maxToppingsAllowed}</span></span>
+                                                    )}
+                                                    {rule.halfCountsAs !== undefined && (
+                                                        <span className="px-2 py-0.5 bg-white border border-slate-200 rounded text-[8px] font-bold text-slate-600">Half Weight: <span className="font-mono text-slate-800">{rule.halfCountsAs}</span></span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="text-center py-8">
+                                <Scale className="w-8 h-8 text-slate-200 mx-auto mb-2" />
+                                <span className="text-[10px] text-slate-400 font-bold uppercase block">No business rules attached to this product</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Section 6: Store Assignment & Deployment Details */}
+                    <div className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-sm space-y-6">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                            <div className="flex items-center gap-3">
+                                <Store className="w-4 h-4 text-violet-500" />
+                                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Store Assignment & Deployment Map</h3>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className={cn(
+                                    "text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded",
+                                    scopeConfig.scope === 'STORE_SPECIFIC' ? "bg-violet-50 text-violet-700" : "bg-emerald-50 text-emerald-700"
+                                )}>
+                                    {scopeConfig.scope === 'GLOBAL' ? 'Global' : 'Store-Specific'}
+                                </span>
+                                <span className="text-[9px] font-black text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
+                                    {deployedStores.length} Store(s)
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            {deployedStores.map(store => {
+                                const override = item.storeOverrides?.find(o => o.storeId === store.id);
+                                return (
+                                    <div key={store.id} className="border border-slate-100 rounded-2xl p-4 bg-slate-50/30 space-y-3">
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex items-start gap-3">
+                                                <div className="p-2 bg-slate-950 rounded-xl mt-0.5">
+                                                    <Building2 className="w-4 h-4 text-emerald-400" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-wider">{store.name}</h4>
+                                                    <div className="flex items-center gap-1 mt-1">
+                                                        <MapPin className="w-3 h-3 text-slate-400" />
+                                                        <span className="text-[9px] text-slate-500 font-medium">{store.address}</span>
+                                                    </div>
+                                                    <span className="text-[8px] text-slate-400 font-bold uppercase mt-0.5 block">{store.city} • Store ID: {store.id}</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col items-end gap-1">
+                                                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded text-[8px] font-black uppercase">Deployed</span>
+                                                {override && (
+                                                    <span className="px-2 py-0.5 bg-violet-50 text-violet-700 border border-violet-100 rounded text-[8px] font-black uppercase">Has Overrides</span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Store override details */}
+                                        {override && (
+                                            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100">
+                                                {override.price !== undefined && (
+                                                    <div className="bg-white border border-slate-100 rounded-lg p-2">
+                                                        <span className="text-[8px] font-black text-slate-400 uppercase block">Custom Price</span>
+                                                        <span className="text-xs font-mono font-black text-emerald-700">${override.price.toFixed(2)}</span>
+                                                    </div>
+                                                )}
+                                                {override.isAvailable !== undefined && (
+                                                    <div className="bg-white border border-slate-100 rounded-lg p-2">
+                                                        <span className="text-[8px] font-black text-slate-400 uppercase block">Availability</span>
+                                                        <span className={cn("text-xs font-black", override.isAvailable ? "text-emerald-700" : "text-rose-700")}>
+                                                            {override.isAvailable ? 'Available' : 'Blocked'}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {!override.price && !override.isAvailable && (
+                                                    <div className="bg-white border border-slate-100 rounded-lg p-2 col-span-3">
+                                                        <span className="text-[8px] font-black text-slate-400 uppercase block">Inheriting master configuration</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Right Columns (Deployments, Pricing, Overrides, Recipe COGS) */}
@@ -451,83 +662,76 @@ export const ProductViewScreen: React.FC<ProductViewScreenProps> = ({ item, onCl
                         </div>
                     </div>
 
-                    {/* Scope Config & Store Overrides */}
+                    {/* Availability Schedule */}
                     <div className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-sm space-y-6">
-                        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                            <div className="flex items-center gap-3">
-                                <Building2 className="w-4 h-4 text-emerald-500" />
-                                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Deployment Scope</h3>
-                            </div>
-                            <span className={cn(
-                                "text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded",
-                                item.scopeConfig?.scope === 'STORE_SPECIFIC' ? "bg-violet-50 text-violet-700" : "bg-emerald-50 text-emerald-700"
-                            )}>
-                                {item.scopeConfig?.scope || 'GLOBAL'}
-                            </span>
+                        <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                            <Calendar className="w-4 h-4 text-amber-500" />
+                            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Availability Schedule</h3>
                         </div>
 
                         <div className="space-y-4">
-                            {item.scopeConfig?.scope === 'STORE_SPECIFIC' ? (
-                                <div className="space-y-2">
-                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Deploying to specific Stores ({item.scopeConfig.targetedStoreIds?.length || 0})</span>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {(item.scopeConfig.targetedStoreIds || []).map(id => {
-                                            const storeName = id === 'store-chicago' ? 'Chicago Outlet' : id === 'store-newyork' ? 'NYC Ave' : 'Miami Beach';
-                                            return (
-                                                <span key={id} className="px-2.5 py-1 bg-slate-950 text-white rounded-lg text-[9px] font-black uppercase tracking-wider">
-                                                    {storeName}
-                                                </span>
-                                            );
-                                        })}
-                                    </div>
+                            {/* Days */}
+                            <div>
+                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-2">Active Days</span>
+                                <div className="flex gap-1.5">
+                                    {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map(day => {
+                                        const schedule = item.availabilitySchedule;
+                                        const isActive = !schedule?.days || schedule.days.length === 0 || schedule.days.includes(day);
+                                        return (
+                                            <span key={day} className={cn(
+                                                "w-9 h-8 flex items-center justify-center rounded-lg text-[8px] font-black uppercase",
+                                                isActive ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-300 line-through"
+                                            )}>
+                                                {day}
+                                            </span>
+                                        );
+                                    })}
                                 </div>
-                            ) : (
-                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight leading-relaxed">
-                                    This product is deployed globally and propagates to all active franchise locations by default.
-                                </p>
-                            )}
+                            </div>
 
-                            {/* Store Overrides List */}
-                            <div className="border-t border-slate-100 pt-4 space-y-3.5">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Store Custom Overrides</span>
-                                    <span className="text-[9px] font-black text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
-                                        {overridesCount} Active
+                            {/* Time Window */}
+                            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-50">
+                                <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-100">
+                                    <span className="text-[8px] font-black text-slate-400 uppercase block">From</span>
+                                    <span className="text-xs font-mono font-black text-slate-900">
+                                        {item.availabilitySchedule?.timeStart || '00:00'}
                                     </span>
                                 </div>
-
-                                {item.storeOverrides && item.storeOverrides.length > 0 ? (
-                                    <div className="space-y-2">
-                                        {item.storeOverrides.map(o => {
-                                            const storeName = o.storeId === 'store-chicago' ? 'Chicago Outlet' : o.storeId === 'store-newyork' ? 'Manhattan Ave' : 'Miami Beach';
-                                            return (
-                                                <div key={o.storeId} className="bg-slate-50 border border-slate-100 p-3 rounded-xl flex items-center justify-between">
-                                                    <span className="text-[9px] font-black text-slate-800 uppercase">{storeName}</span>
-                                                    <div className="flex items-center gap-2">
-                                                        {o.price !== undefined && (
-                                                            <span className="text-[9px] font-mono font-black text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
-                                                                ${o.price.toFixed(2)}
-                                                            </span>
-                                                        )}
-                                                        {o.isAvailable !== undefined && (
-                                                            <span className={cn(
-                                                                "text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border",
-                                                                o.isAvailable ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-rose-50 text-rose-700 border-rose-100"
-                                                            )}>
-                                                                {o.isAvailable ? 'Avail' : 'Block'}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                ) : (
-                                    <p className="text-[9px] text-slate-400 font-bold uppercase italic tracking-tight">
-                                        No active location overrides exist. All locations inherit master specifications.
-                                    </p>
-                                )}
+                                <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-100">
+                                    <span className="text-[8px] font-black text-slate-400 uppercase block">Until</span>
+                                    <span className="text-xs font-mono font-black text-slate-900">
+                                        {item.availabilitySchedule?.timeEnd || '23:59'}
+                                    </span>
+                                </div>
                             </div>
+
+                            {/* Dietary Flags */}
+                            {item.dietaryFlags && item.dietaryFlags.length > 0 && (
+                                <div className="pt-2 border-t border-slate-50">
+                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-2">Dietary Flags</span>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {item.dietaryFlags.map(flag => (
+                                            <span key={flag} className="px-2 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg text-[8px] font-black uppercase">
+                                                {flag}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Tags */}
+                            {item.tags && item.tags.length > 0 && (
+                                <div className="pt-2 border-t border-slate-50">
+                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-2">Product Tags</span>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {item.tags.map(tag => (
+                                            <span key={tag} className="px-2 py-1 bg-slate-100 text-slate-600 rounded-lg text-[8px] font-bold uppercase">
+                                                {tag}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 

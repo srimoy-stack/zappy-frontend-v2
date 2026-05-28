@@ -14,6 +14,8 @@ export interface CategoryChannelSchedule {
     allDaysStartTime?: string;      // e.g. '09:00'
     allDaysEndTime?: string;        // e.g. '22:00'
     customDays?: CustomDaySchedule[];
+    startDate?: string;
+    endDate?: string;
 }
 
 export interface Category {
@@ -161,6 +163,11 @@ export interface Item {
 
     isAvailable: boolean;
     taxRate?: number;
+    availabilitySchedule?: {
+        days?: string[];
+        timeStart?: string;
+        timeEnd?: string;
+    } | null;
     
     // Operational scopes, rules, and publishing
     scopeConfig?: ProductScopeConfig;

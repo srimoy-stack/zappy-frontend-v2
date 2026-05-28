@@ -6,7 +6,7 @@ import {
     Package, Layers, Settings2, Plus, Search, Edit3,
     TrendingUp, Target, Filter, ArrowUpRight, Star, Flame,
     Lock, Unlock, ShieldAlert, Sparkles, Eye, Trash2, Play, Copy, Archive,
-    ChevronLeft, Boxes, Puzzle, X
+    ChevronLeft, Boxes, Puzzle, X, Leaf
 } from 'lucide-react';
 import { VARIANT_TEMPLATES, MODIFIER_TEMPLATES, ADDON_TEMPLATES } from '../mock/templates';
 import { useTemplateStore } from '../state/templateStore';
@@ -40,6 +40,8 @@ import { RulesLibraryPanel } from '../components/Workspace/RulesLibraryPanel';
 import { TemplateLibraryView } from '../components/Workspace/TemplateLibraryView';
 import { CatalogTable } from '../components/CatalogTable/CatalogTable';
 import { Scale } from 'lucide-react';
+import { DietaryInfoPanel } from '../components/Workspace/DietaryInfoPanel';
+import { CategoriesPanel } from '../components/Workspace/CategoriesPanel';
 
 export const ItemsPage: React.FC = () => {
     const { items, selectItem, selectedItemId, createItem } = useCatalogStore();
@@ -107,8 +109,10 @@ export const ItemsPage: React.FC = () => {
 
                                 // { id: 'POOLS', label: 'Pools', icon: Settings2 },
                                 { id: 'RULES', label: 'Rules Library', icon: Scale },
-                                { id: 'PUBLISH', label: 'Publish', icon: ShieldAlert },
-                                { id: 'SYNC', label: 'Sync', icon: Sparkles },
+                                // { id: 'PUBLISH', label: 'Publish', icon: ShieldAlert },
+                                // { id: 'SYNC', label: 'Sync', icon: Sparkles },
+                                { id: 'DIETARY', label: 'Dietary Info', icon: Leaf },
+                                { id: 'CATEGORIES', label: 'Categories', icon: Layers },
                             ] as const).map(tab => {
                                 const Icon = tab.icon;
                                 return (
@@ -334,6 +338,12 @@ export const ItemsPage: React.FC = () => {
 
                     {/* Mutation Audit logs timeline Tab Workspace */}
                     {activePanel === 'AUDIT' && <AuditTimelinePanel />}
+
+                    {/* Dietary Info Tab Workspace */}
+                    {activePanel === 'DIETARY' && <DietaryInfoPanel />}
+
+                    {/* Categories Tab Workspace */}
+                    {activePanel === 'CATEGORIES' && <CategoriesPanel />}
             </div>
         </div>
     );

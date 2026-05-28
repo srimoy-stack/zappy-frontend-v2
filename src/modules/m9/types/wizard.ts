@@ -96,6 +96,8 @@ export interface AvailabilitySchedule {
     timeEnd: string;
     startDate?: string;
     endDate?: string;
+    allDays?: boolean;
+    customDays?: Record<string, { startTime: string; endTime: string }>;
 }
 
 export interface DynamicPricingEntry {

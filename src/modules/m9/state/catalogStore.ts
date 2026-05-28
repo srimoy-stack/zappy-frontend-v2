@@ -16,6 +16,7 @@ interface CatalogState {
     setCategories: (categories: Category[]) => void;
     addCategory: (category: Category) => void;
     updateCategory: (id: string, updates: Partial<Category>) => void;
+    deleteCategory: (id: string) => void;
     selectItem: (id: string | null) => void;
     createItem: (itemData: Partial<Item>) => Item;
     updateItem: (id: string, updates: Partial<Item>) => void;
@@ -95,9 +96,29 @@ export const useCatalogStore = create<CatalogState>((set, get) => {
         }
     };
 
+    const getCachedCategories = (): Category[] => {
+        if (typeof window !== 'undefined') {
+            const cached = localStorage.getItem('zyappy_catalog_categories_drafts');
+            if (cached) {
+                try {
+                    return JSON.parse(cached);
+                } catch (e) {
+                    console.error('Failed to parse cached catalog categories:', e);
+                }
+            }
+        }
+        return mockCategories;
+    };
+
+    const persistCategories = (categories: Category[]) => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('zyappy_catalog_categories_drafts', JSON.stringify(categories));
+        }
+    };
+
     return {
         items: getCachedItems(),
-        categories: mockCategories,
+        categories: getCachedCategories(),
         selectedItemId: null,
         isLoading: false,
         syncQueue: [],
@@ -108,16 +129,27 @@ export const useCatalogStore = create<CatalogState>((set, get) => {
             persistDrafts(items);
         },
 
-        setCategories: (categories) => set({ categories }),
+        setCategories: (categories) => {
+            set({ categories });
+            persistCategories(categories);
+        },
 
         addCategory: (category) => {
-            set(state => ({ categories: [...state.categories, category] }));
+            const updated = [...get().categories, category];
+            set({ categories: updated });
+            persistCategories(updated);
         },
 
         updateCategory: (id, updates) => {
-            set(state => ({
-                categories: state.categories.map(c => c.id === id ? { ...c, ...updates } : c)
-            }));
+            const updated = get().categories.map(c => c.id === id ? { ...c, ...updates } : c);
+            set({ categories: updated });
+            persistCategories(updated);
+        },
+
+        deleteCategory: (id) => {
+            const updated = get().categories.filter(c => c.id !== id);
+            set({ categories: updated });
+            persistCategories(updated);
         },
 
         selectItem: (id) => set({ selectedItemId: id }),

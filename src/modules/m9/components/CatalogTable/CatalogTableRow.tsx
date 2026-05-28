@@ -193,15 +193,29 @@ export const CatalogTableRow: React.FC<CatalogTableRowProps> = ({
             </td>
 
             {/* Added to Menu */}
-            <td className="px-4 py-4 text-center">
-                <span className={cn(
-                    "px-2.5 py-0.5 rounded-full text-[10px] font-bold border",
-                    item.isAvailable 
-                        ? "bg-emerald-50 text-emerald-800 border-emerald-250" 
-                        : "bg-slate-100 text-slate-650 border-slate-300"
-                )}>
-                    {item.isAvailable ? 'Active' : 'Inactive'}
-                </span>
+            <td className="px-4 py-4 text-xs font-bold text-slate-900">
+                {(() => {
+                    const categoryName = categories.find(c => c.id === item.categoryId)?.name;
+                    const secondaryCount = item.secondaryCategoryIds?.length || 0;
+                    const totalMenus = (categoryName ? 1 : 0) + secondaryCount;
+
+                    if (!categoryName && secondaryCount === 0) {
+                        return <span className="text-slate-400 font-semibold">—</span>;
+                    }
+
+                    return (
+                        <div className="flex flex-col gap-0.5">
+                            <span className="text-slate-900 truncate max-w-[100px]" title={categoryName}>
+                                {categoryName || 'Uncategorized'}
+                            </span>
+                            {totalMenus > 1 && (
+                                <span className="text-[9px] font-bold text-slate-400">
+                                    +{secondaryCount} more
+                                </span>
+                            )}
+                        </div>
+                    );
+                })()}
             </td>
 
             {/* Added to Store */}

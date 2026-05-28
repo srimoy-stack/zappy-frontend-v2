@@ -11,6 +11,8 @@ export type WorkspacePanel =
     | 'OVERRIDES' 
     | 'SYNC' 
     | 'RECOVERY' 
+    | 'DIETARY'
+    | 'CATEGORIES'
     | 'AUDIT';
 
 interface WorkspaceNavState {
