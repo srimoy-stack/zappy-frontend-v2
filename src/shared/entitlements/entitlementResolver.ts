@@ -195,6 +195,7 @@ export function resolveVisibleNodes(
             const allowedBrandAdminModules = [
                 'home',
                 'items',
+                'menu-management',
                 'users',
                 'email-campaigns',
                 'ai-call-analytics',

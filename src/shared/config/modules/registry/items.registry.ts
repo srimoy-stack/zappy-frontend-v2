@@ -9,8 +9,8 @@ export const ITEMS_REGISTRY: RegistryNode[] = [
     },
     {
         id: 'menu-management', label: 'Menu Management', description: 'Configure master menus, store visibility, and section layouts',
-        icon: 'Menu', parentId: null, moduleKey: 'items', level: 'module', sortOrder: 4.5,
-        route: '/backoffice/items', routePrefix: '/backoffice', entitlementKey: 'items',
+        icon: 'Menu', parentId: null, moduleKey: 'menu-management', level: 'module', sortOrder: 4.5,
+        route: '/backoffice/menu-management', routePrefix: '/backoffice', entitlementKey: 'menu-management',
         isCore: false, isSystem: false, isBeta: false, status: 'active', showInSidebar: true, sidebarGroup: 'operations',
     },
     // ── Submodules

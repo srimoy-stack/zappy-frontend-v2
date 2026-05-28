@@ -34,7 +34,7 @@ interface AssignCategoryDropdownProps {
 
 const AssignCategoryDropdown: React.FC<AssignCategoryDropdownProps> = ({ onClose, selectedProductIds }) => {
     const { items, categories, addCategory, updateCategory, updateItem } = useCatalogStore();
-    const { clearSelection } = useBulkOperationsStore();
+    const { clearSelection, toggleItemSelection } = useBulkOperationsStore();
     const ref = useRef<HTMLDivElement>(null);
 
     // Form mode: select existing or create new
@@ -59,6 +59,8 @@ const AssignCategoryDropdown: React.FC<AssignCategoryDropdownProps> = ({ onClose
         allDaysStartTime: string;
         allDaysEndTime: string;
         customDays: Record<string, { startTime: string; endTime: string }>;
+        startDate?: string;
+        endDate?: string;
     }>>({});
 
     const DAYS_OF_WEEK = [
