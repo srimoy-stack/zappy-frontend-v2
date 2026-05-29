@@ -136,7 +136,7 @@ export default function StoreDetailPage() {
         setStoreUsers(usersData);
     };
 
-    const handleCreateUser = async (user: { name: string; email: string; role: string; status: string; isManager: boolean }) => {
+    const handleCreateUser = async (user: { name: string; email: string; phone?: string; role: string; status: string; isManager: boolean }) => {
         await storeService.createStoreUser(resolvedTenantId, storeId, user);
         const usersData = await storeService.getStoreUsers(resolvedTenantId, storeId);
         setStoreUsers(usersData);
@@ -178,9 +178,9 @@ export default function StoreDetailPage() {
                     <AlertTriangle className="w-14 h-14 text-rose-300 mx-auto mb-4" />
                     <h3 className="text-lg font-black text-slate-900 mb-2">Store Not Found</h3>
                     <p className="text-sm text-slate-500 font-medium mb-6">{error || 'The store could not be loaded.'}</p>
-                    <button onClick={() => router.push('/backoffice/settings')}
+                    <button onClick={() => router.push('/backoffice/settings/stores')}
                         className="px-6 py-3 bg-slate-900 text-white rounded-xl text-xs font-black hover:bg-slate-800 transition-all">
-                        Back to Settings
+                        Back to Store Management
                     </button>
                 </div>
             </div>
@@ -191,13 +191,10 @@ export default function StoreDetailPage() {
         <div className="max-w-[1600px] mx-auto space-y-6 pb-32 px-2 pt-2">
             {/* Breadcrumb */}
             <nav className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
-                <button onClick={() => router.push('/backoffice/settings')}
+                <button onClick={() => router.push('/backoffice/settings/stores')}
                     className="hover:text-slate-700 transition-colors flex items-center gap-1">
-                    <ArrowLeft size={12} /> Settings
+                    <ArrowLeft size={12} /> Store Management
                 </button>
-                <ChevronRight size={12} />
-                <button onClick={() => router.push('/backoffice/settings')}
-                    className="hover:text-slate-700 transition-colors">Stores</button>
                 <ChevronRight size={12} />
                 <span className="text-slate-700 font-bold">{store.name}</span>
             </nav>

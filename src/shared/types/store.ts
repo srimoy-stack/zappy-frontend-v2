@@ -389,6 +389,7 @@ export interface StoreUser {
     id: string;
     name: string;
     email: string;
+    phone?: string;
     role: string;
     status: 'Active' | 'Inactive' | 'Pending';
     isManager: boolean;

@@ -186,6 +186,7 @@ export interface Menu {
     // ── Schedule
     schedule: MenuSchedule;
     storeSchedules?: Record<string, MenuSchedule>;
+    storeChannelMatrix?: Record<string, Record<MenuChannelType, boolean>>;
 
     // ── Operational Metadata
     versionMetadata: MenuVersionMetadata;

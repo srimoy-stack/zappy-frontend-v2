@@ -129,7 +129,7 @@ export const MenuManagementPage: React.FC = () => {
 
     const { categories } = useCatalogStore();
     const { openBuilder, isOpen: isBuilderOpen } = useMenuBuilderStore();
-    const { openWizard, isOpen: isWizardOpen } = useMenuCreationStore();
+    const { openWizard, openWizardForEdit, isOpen: isWizardOpen } = useMenuCreationStore();
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
@@ -355,7 +355,10 @@ export const MenuManagementPage: React.FC = () => {
                             onDuplicate={duplicateMenu}
                             onDelete={handleDelete}
                             onSync={triggerSync}
-                            onView={id => openBuilder(id)}
+                            onView={id => {
+                                const menu = menus.find(m => m.id === id);
+                                if (menu) openWizardForEdit(menu);
+                            }}
                         />
                     ))}
                 </div>

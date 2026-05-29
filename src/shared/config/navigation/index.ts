@@ -63,6 +63,7 @@ function toNavItem(resolved: ResolvedNavItem): NavItem {
         href: resolved.href,
         icon: resolveIcon(resolved.icon),
         entitlementId: resolved.entitlementKey,
+        children: resolved.children?.map(toNavItem),
     };
 }
 

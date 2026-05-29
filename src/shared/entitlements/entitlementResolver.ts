@@ -158,7 +158,7 @@ export function resolveVisibleNodes(
             if (!hasPermission) return null;
         }
 
-        return {
+        const resolved: ResolvedNavItem = {
             id: node.id,
             label: node.label,
             href: node.route || '',
@@ -166,11 +166,34 @@ export function resolveVisibleNodes(
             entitlementKey: node.entitlementKey,
             accessLevel: access as 'full' | 'read-only',
         };
+
+        if (node.id === 'settings') {
+            resolved.children = [
+                {
+                    id: 'settings.business',
+                    label: 'Business Settings',
+                    href: '/backoffice/settings',
+                    icon: 'Building2',
+                    entitlementKey: 'settings.business',
+                    accessLevel: 'full',
+                },
+                {
+                    id: 'settings.stores',
+                    label: 'Store Management',
+                    href: '/backoffice/settings/stores',
+                    icon: 'Store',
+                    entitlementKey: 'settings.stores',
+                    accessLevel: 'full',
+                }
+            ];
+        }
+
+        return resolved;
     };
 
     // 2. Bypass/Temporary implementation helper (shows everything with 'full' access)
     const resolveBypassNode = (node: typeof sidebarNodes[0]): ResolvedNavItem => {
-        return {
+        const resolved: ResolvedNavItem = {
             id: node.id,
             label: node.label,
             href: node.route || '',
@@ -178,6 +201,29 @@ export function resolveVisibleNodes(
             entitlementKey: node.entitlementKey,
             accessLevel: 'full',
         };
+
+        if (node.id === 'settings') {
+            resolved.children = [
+                {
+                    id: 'settings.business',
+                    label: 'Business Settings',
+                    href: '/backoffice/settings',
+                    icon: 'Building2',
+                    entitlementKey: 'settings.business',
+                    accessLevel: 'full',
+                },
+                {
+                    id: 'settings.stores',
+                    label: 'Store Management',
+                    href: '/backoffice/settings/stores',
+                    icon: 'Store',
+                    entitlementKey: 'settings.stores',
+                    accessLevel: 'full',
+                }
+            ];
+        }
+
+        return resolved;
     };
 
     // 3. Resolve nodes based on role and configuration

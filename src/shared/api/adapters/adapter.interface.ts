@@ -40,7 +40,7 @@ export interface ApiAdapter {
     getStorePageData(tenantId: string, storeId: string): Promise<StorePageData>;
     getStoreUsers(tenantId: string, storeId: string): Promise<StoreUser[]>;
     assignStoreManager(tenantId: string, storeId: string, userId: string): Promise<void>;
-    createStoreUser(tenantId: string, storeId: string, user: { name: string; email: string; role: string; status: string; isManager: boolean }): Promise<StoreUser>;
+    createStoreUser(tenantId: string, storeId: string, user: { name: string; email: string; phone?: string; role: string; status: string; isManager: boolean }): Promise<StoreUser>;
 
     // ─── Users ───────────────────────────────────────────
     getUsers(params?: { page?: number; pageSize?: number; userType?: UserType; roleId?: string; status?: string }): Promise<PaginatedResponse<User>>;

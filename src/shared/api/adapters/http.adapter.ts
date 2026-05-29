@@ -486,6 +486,7 @@ export const httpAdapter: ApiAdapter = {
                 id: String(u.id),
                 name: u.full_name || '',
                 email: u.email || '',
+                phone: u.phone || '',
                 role: u.role_name || u.role || '',
                 status: u.is_active ? 'Active' : 'Inactive',
                 isManager: u.role_name?.toLowerCase().includes('manager') || false,
@@ -501,13 +502,13 @@ export const httpAdapter: ApiAdapter = {
         console.warn('[HTTP] assignStoreManager: Not implemented in FastAPI backend');
     },
 
-    async createStoreUser(tenantId: string, storeId: string, user: { name: string; email: string; role: string; status: string; isManager: boolean }): Promise<StoreUser> {
+    async createStoreUser(tenantId: string, storeId: string, user: { name: string; email: string; phone?: string; role: string; status: string; isManager: boolean }): Promise<StoreUser> {
         const brandSlug = tenantId;
         const storeSlug = storeId;
         const payload = {
             full_name: user.name,
             email: user.email,
-            phone: '',
+            phone: user.phone || '',
             role_name: user.role,
             is_active: user.status === 'Active',
             is_manager: user.isManager,
@@ -518,6 +519,7 @@ export const httpAdapter: ApiAdapter = {
             id: String(data.id),
             name: data.full_name || '',
             email: data.email || '',
+            phone: data.phone || '',
             role: data.role_name || data.role?.name || '',
             status: data.is_active ? 'Active' : 'Inactive',
             isManager: data.is_manager || data.role_name?.toLowerCase().includes('manager') || false,

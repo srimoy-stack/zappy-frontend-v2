@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useAuth } from '@/shared/contexts/AuthContext';
 import {
     Store as StoreIcon, ChevronLeft, ChevronRight, Loader2,
     Building2, Zap, Clock, Truck, ShoppingBag, CreditCard,
-    CheckCircle2, ArrowLeft, AlertTriangle,
+    CheckCircle2, ArrowLeft,
 } from 'lucide-react';
 import { cn } from '@/utils';
 import type { CreateStoreDTO } from '@/shared/types/store';
@@ -18,6 +19,16 @@ import { WizardStepDelivery } from './wizard/WizardStepDelivery';
 import { WizardStepPickupDineIn } from './wizard/WizardStepPickupDineIn';
 import { WizardStepPaymentsTax } from './wizard/WizardStepPaymentsTax';
 import { WizardStepReview } from './wizard/WizardStepReview';
+import {
+    validateStoreName,
+    validateStoreCode,
+    validateStoreEmail,
+    validateStorePhone,
+    validateStoreAddress,
+    validateStorePostalCode,
+    validateCoordinates,
+    validateDeliveryRadius
+} from '../../utils/storeValidation';
 
 // ─── Steps ──────────────────────────────────────────────────────────────────
 
@@ -35,15 +46,35 @@ const STEPS = [
 
 function validateBasicInfo(d: StoreWizardData): Record<string, string> {
     const e: Record<string, string> = {};
-    if (!d.name || d.name.trim().length < 3) e.name = 'Store name must be at least 3 characters';
+    
+    const nameErr = validateStoreName(d.name);
+    if (nameErr) e.name = nameErr;
+
+    const codeErr = validateStoreCode(d.code);
+    if (codeErr) e.code = codeErr;
+
+    const emailErr = validateStoreEmail(d.email);
+    if (emailErr) e.email = emailErr;
+
+    const phoneErr = validateStorePhone(d.phone);
+    if (phoneErr) e.phone = phoneErr;
+
+    const addressErr = validateStoreAddress(d.address);
+    if (addressErr) e.address = addressErr;
+
+    const postalErr = validateStorePostalCode(d.postalCode);
+    if (postalErr) e.postalCode = postalErr;
+
     if (!d.city || d.city.trim().length < 2) e.city = 'City is required';
     if (!d.province) e.province = 'Province/State is required';
     if (!d.timezone) e.timezone = 'Timezone is required';
-    if (d.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) e.email = 'Enter a valid email address';
-    if (d.phone && !/^[+\d\s()-]{7,20}$/.test(d.phone)) e.phone = 'Enter a valid phone number';
-    if (d.postalCode && !/^[A-Za-z0-9\s-]{3,10}$/.test(d.postalCode)) e.postalCode = 'Enter a valid postal code';
-    if (d.latitude && (isNaN(Number(d.latitude)) || Number(d.latitude) < -90 || Number(d.latitude) > 90)) e.latitude = 'Latitude must be -90 to 90';
-    if (d.longitude && (isNaN(Number(d.longitude)) || Number(d.longitude) < -180 || Number(d.longitude) > 180)) e.longitude = 'Longitude must be -180 to 180';
+
+    if (d.latitude || d.longitude) {
+        const coordErrors = validateCoordinates(d.latitude, d.longitude);
+        if (coordErrors.latitude) e.latitude = coordErrors.latitude;
+        if (coordErrors.longitude) e.longitude = coordErrors.longitude;
+    }
+
     return e;
 }
 
@@ -66,8 +97,10 @@ function validateHours(d: StoreWizardData): Record<string, string> {
 function validateDelivery(d: StoreWizardData): Record<string, string> {
     const e: Record<string, string> = {};
     if (!d.enableDelivery) return e; // Skip if delivery not enabled
-    const radius = parseFloat(d.deliveryRadius);
-    if (isNaN(radius) || radius <= 0 || radius > 100) e.deliveryRadius = 'Delivery radius must be 0.1–100 km';
+    
+    const radiusErr = validateDeliveryRadius(d.deliveryRadius);
+    if (radiusErr) e.deliveryRadius = radiusErr;
+
     const minOrder = parseFloat(d.deliveryMinOrder);
     if (isNaN(minOrder) || minOrder < 0) e.deliveryMinOrder = 'Minimum order must be ≥ $0';
     const baseFee = parseFloat(d.deliveryBaseFee);
@@ -147,14 +180,31 @@ interface StoreOnboardingWizardProps {
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export function StoreOnboardingWizard({ tenantId, onCancel, onSubmit }: StoreOnboardingWizardProps) {
+    const { user } = useAuth();
     const [step, setStep] = useState(0);
     const [data, setData] = useState<StoreWizardData>(DEFAULT_WIZARD_DATA);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     const update = useCallback((field: keyof StoreWizardData, value: any) => {
-        setData(prev => ({ ...prev, [field]: value }));
-        setErrors(prev => { const n = { ...prev }; delete n[field]; return n; });
+        setData(prev => {
+            const next = { ...prev, [field]: value };
+            if (field === 'name') {
+                // Dynamic slugification to generate high-quality store codes
+                next.code = value
+                    .toUpperCase()
+                    .replace(/[^A-Z0-9]/g, '-')
+                    .replace(/-+/g, '-')
+                    .replace(/^-|-$/g, '');
+            }
+            return next;
+        });
+        setErrors(prev => {
+            const n = { ...prev };
+            delete n[field];
+            if (field === 'name') delete n.code;
+            return n;
+        });
     }, []);
 
     const validateStep = (): boolean => {
@@ -190,7 +240,7 @@ export function StoreOnboardingWizard({ tenantId, onCancel, onSubmit }: StoreOnb
                 longitude: data.longitude ? parseFloat(data.longitude) : undefined,
 
                 managerId: null as any,
-                ownerId: null as any,
+                ownerId: user?.id ? parseInt(user.id) : null as any,
 
                 // Services / Channels
                 enablePickup: data.enablePickup,
@@ -282,145 +332,134 @@ export function StoreOnboardingWizard({ tenantId, onCancel, onSubmit }: StoreOnb
 
     const currentStep = STEPS[step] as (typeof STEPS)[number];
     const progress = ((step + 1) / STEPS.length) * 100;
-    const hasErrors = Object.keys(errors).length > 0;
+
 
     return (
-        <div className="animate-in fade-in slide-in-from-bottom-6 duration-500">
-            {/* ── Header Bar ─────────────────────────────────────────── */}
-            <div className="flex items-center justify-between mb-6">
+        <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-400 space-y-8">
+            {/* ── Header ──────────────────────────────────────────────── */}
+            <div className="flex items-center justify-between pb-6 border-b border-slate-100">
                 <div className="flex items-center gap-4">
                     <button onClick={onCancel}
-                        className="p-2.5 hover:bg-slate-100 rounded-xl transition-colors text-slate-400 hover:text-slate-900">
+                        className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-950">
                         <ArrowLeft size={18} />
                     </button>
                     <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-200">
-                            <StoreIcon size={18} />
+                        <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white">
+                            <StoreIcon size={17} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-black text-slate-900 tracking-tight">New Store Setup</h2>
-                            <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">
+                            <h2 className="text-lg font-semibold text-slate-900">New Store Setup</h2>
+                            <p className="text-[12px] text-slate-500 mt-0.5">
                                 Step {step + 1} of {STEPS.length} — {currentStep.label}
                             </p>
                         </div>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <span className="text-xs font-bold text-slate-500 hidden md:block">
+                    <span className="text-[13px] text-slate-500 hidden md:block">
                         {data.name || 'Untitled Store'}
                     </span>
-                    <span className="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-lg text-[9px] font-black uppercase border border-amber-200">
+                    <span className="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-md text-[10px] font-semibold uppercase border border-amber-200">
                         Draft
                     </span>
                 </div>
             </div>
 
-            {/* ── Progress Bar ────────────────────────────────────────── */}
-            <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mb-8">
-                <div className="h-full bg-emerald-500 rounded-full transition-all duration-700 ease-out" style={{ width: `${progress}%` }} />
-            </div>
-
-            {/* ── Validation Error Banner ─────────────────────────────── */}
-            {hasErrors && (
-                <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <AlertTriangle size={16} className="text-rose-500 shrink-0 mt-0.5" />
-                    <div>
-                        <p className="text-xs font-black text-rose-700 mb-1">Please fix the following errors:</p>
-                        <ul className="space-y-0.5">
-                            {Object.entries(errors).map(([key, msg]) => (
-                                <li key={key} className="text-[11px] text-rose-600 font-medium">• {msg}</li>
-                            ))}
-                        </ul>
-                    </div>
-                </div>
-            )}
-
-            <div className="flex gap-8">
-                {/* ── Sidebar Steps ───────────────────────────────────── */}
-                <aside className="w-60 shrink-0 hidden lg:block">
-                    <div className="sticky top-4 space-y-1.5">
+            {/* ── Progress Steps ───────────────────────────────────────── */}
+            <div className="hidden lg:block bg-white border border-slate-200 rounded-xl overflow-hidden">
+                <nav aria-label="Progress">
+                    <ol role="list" className="flex w-full">
                         {STEPS.map((s, i) => {
                             const Icon = s.icon;
                             const done = i < step;
                             const active = i === step;
+                            const isLast = i === STEPS.length - 1;
                             return (
-                                <button key={s.id}
-                                    onClick={() => { if (i < step) setStep(i); }}
-                                    disabled={i > step}
-                                    className={cn(
-                                        'w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all',
-                                        active ? 'bg-slate-900 text-white shadow-lg shadow-slate-200' :
-                                            done ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 cursor-pointer' :
-                                                'text-slate-400 cursor-not-allowed'
-                                    )}>
-                                    <div className={cn(
-                                        'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
-                                        active ? 'bg-white/20' : done ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-50'
-                                    )}>
-                                        {done ? <CheckCircle2 size={13} /> : <Icon size={13} />}
-                                    </div>
-                                    <div className="min-w-0">
-                                        <span className="text-[11px] font-black block truncate">{s.label}</span>
-                                        <span className={cn('text-[9px] font-medium block truncate',
-                                            active ? 'text-slate-300' : done ? 'text-emerald-500' : 'text-slate-400'
-                                        )}>{s.desc}</span>
-                                    </div>
-                                </button>
+                                <li key={s.id} className={cn("relative flex-1", !isLast && "border-r border-slate-100")}>
+                                    <button
+                                        onClick={() => { if (i < step) setStep(i); }}
+                                        disabled={i > step}
+                                        className={cn(
+                                            "flex items-center justify-center gap-2.5 w-full py-4 px-3 text-center transition-colors outline-none focus:outline-none focus-visible:bg-slate-50 disabled:cursor-default",
+                                            active ? "bg-slate-50" : "bg-white hover:bg-slate-50/50"
+                                        )}
+                                    >
+                                        <span className={cn(
+                                            "flex h-7 w-7 items-center justify-center rounded-lg border transition-all shrink-0",
+                                            active ? "bg-slate-900 border-slate-900 text-white" :
+                                                done ? "bg-emerald-50 border-emerald-400 text-emerald-600" :
+                                                    "border-slate-200 text-slate-400 bg-white"
+                                        )}>
+                                            {done ? <CheckCircle2 size={13} /> : <Icon size={13} />}
+                                        </span>
+                                        <span className={cn(
+                                            "text-[11px] font-medium whitespace-nowrap hidden xl:block",
+                                            active ? "text-slate-900" : done ? "text-emerald-700" : "text-slate-400"
+                                        )}>
+                                            {s.label}
+                                        </span>
+                                    </button>
+                                    {active && (
+                                        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-emerald-500" />
+                                    )}
+                                </li>
                             );
                         })}
-                    </div>
-                </aside>
+                    </ol>
+                </nav>
+            </div>
 
-                {/* ── Content ─────────────────────────────────────────── */}
-                <div className="flex-1 min-w-0">
-                    {/* Step Title */}
-                    <div className="mb-6">
-                        <h3 className="text-2xl font-black text-slate-900 tracking-tight">{currentStep.label}</h3>
-                        <p className="text-sm text-slate-500 font-medium mt-1">{currentStep.desc}</p>
-                    </div>
 
-                    {/* Step Content */}
-                    <div className="mb-8">
-                        {step === 0 && <WizardStepBasicInfo data={data} errors={errors} update={update} isEdit={false} />}
-                        {step === 1 && <WizardStepServices data={data} update={update} />}
-                        {step === 2 && <WizardStepHours data={data} update={update} />}
-                        {step === 3 && <WizardStepDelivery data={data} update={update} />}
-                        {step === 4 && <WizardStepPickupDineIn data={data} update={update} />}
-                        {step === 5 && <WizardStepPaymentsTax data={data} update={update} />}
-                        {step === 6 && <WizardStepReview data={data} />}
-                    </div>
 
-                    {/* ── Action Bar ──────────────────────────────────── */}
-                    <div className="flex items-center justify-between pt-6 border-t border-slate-100">
-                        <button onClick={goBack}
-                            className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-50 transition-all shadow-sm">
-                            <ChevronLeft size={14} />
-                            {step === 0 ? 'Cancel' : 'Back'}
-                        </button>
+            {/* ── Content Card ─────────────────────────────────────────── */}
+            <div className="w-full bg-white border border-slate-200 rounded-xl">
+                {/* Step Header */}
+                <div className="px-8 pt-8 pb-6 border-b border-slate-100">
+                    <h3 className="text-lg font-semibold text-slate-900">{currentStep.label}</h3>
+                    <p className="text-[13px] text-slate-500 mt-1">{currentStep.desc}</p>
+                </div>
 
-                        <div className="flex items-center gap-3">
-                            {/* Mobile dot indicators */}
-                            <div className="flex items-center gap-1.5 lg:hidden">
-                                {STEPS.map((_, i) => (
-                                    <div key={i} className={cn('w-2 h-2 rounded-full transition-all',
-                                        i === step ? 'w-6 bg-slate-900' : i < step ? 'bg-emerald-400' : 'bg-slate-200'
-                                    )} />
-                                ))}
-                            </div>
+                {/* Step Content */}
+                <div className="px-8 py-8">
+                    {step === 0 && <WizardStepBasicInfo data={data} errors={errors} update={update} isEdit={false} />}
+                    {step === 1 && <WizardStepServices data={data} update={update} />}
+                    {step === 2 && <WizardStepHours data={data} update={update} />}
+                    {step === 3 && <WizardStepDelivery data={data} update={update} />}
+                    {step === 4 && <WizardStepPickupDineIn data={data} update={update} />}
+                    {step === 5 && <WizardStepPaymentsTax data={data} update={update} />}
+                    {step === 6 && <WizardStepReview data={data} />}
+                </div>
 
-                            {step < STEPS.length - 1 ? (
-                                <button onClick={goNext}
-                                    className="flex items-center gap-2 px-8 py-3 bg-slate-900 text-white rounded-xl text-xs font-black hover:bg-slate-800 transition-all shadow-lg shadow-slate-200">
-                                    Next <ChevronRight size={14} />
-                                </button>
-                            ) : (
-                                <button onClick={handleSubmit} disabled={isSubmitting}
-                                    className="flex items-center gap-2 px-10 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 transition-all disabled:opacity-50 shadow-lg shadow-emerald-200">
-                                    {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                                    {isSubmitting ? 'Creating...' : 'Create Store'}
-                                </button>
-                            )}
+                {/* Action Bar */}
+                <div className="flex items-center justify-between px-8 py-5 border-t border-slate-100 bg-slate-50/40 rounded-b-xl">
+                    <button onClick={goBack}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[13px] font-medium hover:bg-slate-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2">
+                        <ChevronLeft size={14} />
+                        {step === 0 ? 'Cancel' : 'Back'}
+                    </button>
+
+                    <div className="flex items-center gap-3">
+                        {/* Mobile/Tablet dot indicators */}
+                        <div className="flex items-center gap-1.5 lg:hidden">
+                            {STEPS.map((_, i) => (
+                                <div key={i} className={cn('h-1.5 rounded-full transition-all',
+                                    i === step ? 'w-5 bg-slate-900' : i < step ? 'w-1.5 bg-emerald-400' : 'w-1.5 bg-slate-200'
+                                )} />
+                            ))}
                         </div>
+
+                        {step < STEPS.length - 1 ? (
+                            <button onClick={goNext}
+                                className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-lg text-[13px] font-medium hover:bg-slate-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2">
+                                Next <ChevronRight size={14} />
+                            </button>
+                        ) : (
+                            <button onClick={handleSubmit} disabled={isSubmitting}
+                                className="flex items-center gap-2 px-7 py-2.5 bg-emerald-600 text-white rounded-lg text-[13px] font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2">
+                                {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                                {isSubmitting ? 'Creating…' : 'Create Store'}
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>

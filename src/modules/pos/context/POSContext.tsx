@@ -4,6 +4,9 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { POSType, OrderChannel, POSSession, POSContextType, POSStore, POSTable, POSCartItem } from '../types/pos';
 import { POSCustomer, mockPOSUsers, mockStores, VALID_STORE_PINS, VALID_CALL_CENTER_USERS, mockPOSTables, mockPOSCustomers } from '../mock/posData';
 import { useRouter, useSearchParams } from 'next/navigation';
+import axios from 'axios';
+import { env } from '@/shared/config/env';
+import { setAccessToken, setRefreshToken } from '@/shared/utils/tokenManager';
 
 const POSContext = createContext<POSContextType | undefined>(undefined);
 
@@ -159,28 +162,93 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             throw new Error('Offline: No previous session found on this device');
         }
 
-        // Online authentication
-        let userId: string | undefined;
+        let user: POSUser;
+        let accessibleStores: POSStore[] = [];
 
-        if (type === 'STORE') {
-            if (!credentials.pin) throw new Error('PIN is required');
-            userId = VALID_STORE_PINS[credentials.pin];
-        } else {
-            if (!credentials.email || !credentials.password) throw new Error('Email and Password are required');
-            const userAuth = VALID_CALL_CENTER_USERS[credentials.email];
-            if (userAuth && userAuth.password === credentials.password) {
-                userId = userAuth.userId;
+        if (env.apiMode === 'live') {
+            const loginEmail = type === 'STORE' ? 'sample_cashier@yopmail.com' : credentials.email;
+            const loginPassword = type === 'STORE' ? credentials.pin : credentials.password;
+
+            if (!loginEmail || !loginPassword) {
+                throw new Error('Credentials are required');
             }
+
+            try {
+                console.log('--- START POS LOGIN ---', { type, credentials, apiBaseUrl: env.apiBaseUrl });
+                // 1. Authenticate cashier
+                const loginRes = await axios.post(`${env.apiBaseUrl}/pos/cashier_login`, {
+                    email: loginEmail,
+                    password: loginPassword
+                });
+                console.log('loginRes response:', loginRes.status, loginRes.data);
+
+                const { access_token, refresh_token } = loginRes.data;
+                if (!access_token) {
+                    throw new Error('Auth token not received from server');
+                }
+
+                // 2. Set tokens
+                setAccessToken(access_token);
+                setRefreshToken(refresh_token || null);
+
+                // 3. Fetch user profile
+                const meRes = await axios.get(`${env.apiBaseUrl}/api/auth/me`, {
+                    headers: { Authorization: `Bearer ${access_token}` }
+                });
+                console.log('meRes response:', meRes.status, meRes.data);
+
+                const meData = meRes.data;
+                user = {
+                    id: String(meData.id),
+                    name: meData.full_name || 'Cashier',
+                    role: meData.role || 'POS_cashier',
+                    accessibleStores: meData.store_id ? [meData.store_id] : []
+                };
+
+                // Create POS store object
+                if (meData.store_id) {
+                    accessibleStores = [{
+                        id: meData.store_id,
+                        name: meData.brand_name || 'Assigned Store',
+                        address: meData.store_slug || 'Store Address'
+                    }];
+                } else {
+                    accessibleStores = mockStores; // Fallback
+                }
+
+            } catch (err: any) {
+                console.error('POS cashier login integration failed:', err);
+                if (err.response) {
+                    console.error('Response error data:', err.response.status, err.response.data);
+                }
+                const errorMsg = err.response?.data?.message || err.response?.data?.frontend_error?.message || err.message || 'Login failed';
+                throw new Error(errorMsg);
+            }
+        } else {
+            // Online authentication (mock mode)
+            let userId: string | undefined;
+
+            if (type === 'STORE') {
+                if (!credentials.pin) throw new Error('PIN is required');
+                userId = VALID_STORE_PINS[credentials.pin];
+            } else {
+                if (!credentials.email || !credentials.password) throw new Error('Email and Password are required');
+                const userAuth = VALID_CALL_CENTER_USERS[credentials.email];
+                if (userAuth && userAuth.password === credentials.password) {
+                    userId = userAuth.userId;
+                }
+            }
+
+            if (!userId) {
+                throw new Error('Invalid credentials');
+            }
+
+            const mockUser = mockPOSUsers.find(u => u.id === userId);
+            if (!mockUser) throw new Error('User not found');
+            user = mockUser;
+            accessibleStores = mockStores.filter(s => user.accessibleStores.includes(s.id));
         }
 
-        if (!userId) {
-            throw new Error('Invalid credentials');
-        }
-
-        const user = mockPOSUsers.find(u => u.id === userId);
-        if (!user) throw new Error('User not found');
-
-        const accessibleStores = mockStores.filter(s => user.accessibleStores.includes(s.id));
         if (accessibleStores.length === 0) throw new Error('User has no assigned stores');
 
         const initialSession: POSSession = {

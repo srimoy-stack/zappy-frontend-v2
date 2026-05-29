@@ -11,7 +11,7 @@ import {
     ShoppingCart, TrendingUp, FileText, DollarSign, Package,
     Users, UserCircle, Globe, Monitor, Tv, Mail, Phone,
     Warehouse, Settings, Plug, Home, LayoutGrid, Shield,
-    Building2, MoreHorizontal, Menu,
+    Building2, MoreHorizontal, Menu, Store,
 } from 'lucide-react';
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -36,6 +36,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
     Building2,
     MoreHorizontal,
     Menu,
+    Store,
 };
 
 /**

@@ -97,6 +97,21 @@ export function normalizeRole(raw: any): Role {
 
 // ─── Store ──────────────────────────────────────────────────────────────────
 
+function mapStoreStatus(status: string | undefined, isActive?: boolean): Store['status'] {
+    if (status) {
+        const lower = status.toLowerCase();
+        if (lower === 'active') return 'Active';
+        if (lower === 'inactive') return 'Inactive';
+        if (lower === 'draft') return 'Draft';
+        if (lower === 'pending') return 'Pending';
+        if (lower === 'coming_soon' || lower === 'comingsoon') return 'ComingSoon';
+        if (lower === 'temporarily_closed') return 'TemporarilyClosed';
+    }
+    // Fallback to is_active boolean
+    if (isActive !== undefined) return isActive ? 'Active' : 'Inactive';
+    return 'Draft';
+}
+
 export function normalizeStore(raw: any): Store {
     return {
         id: String(raw.id),
@@ -113,7 +128,7 @@ export function normalizeStore(raw: any): Store {
         secondaryPhone: raw.secondary_phone || undefined,
         email: raw.email || undefined,
         website: raw.website || undefined,
-        status: raw.is_active ? 'Active' : 'Inactive',
+        status: mapStoreStatus(raw.status, raw.is_active),
         businessType: raw.business_type || undefined,
         storeNumber: raw.store_number || undefined,
         language: raw.language || undefined,

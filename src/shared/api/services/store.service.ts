@@ -38,7 +38,7 @@ export const storeService = {
     assignManager: (tenantId: string, storeId: string, userId: string) =>
         api.assignStoreManager(tenantId, storeId, userId),
 
-    createStoreUser: (tenantId: string, storeId: string, user: { name: string; email: string; role: string; status: string; isManager: boolean }) =>
+    createStoreUser: (tenantId: string, storeId: string, user: { name: string; email: string; phone?: string; role: string; status: string; isManager: boolean }) =>
         api.createStoreUser(tenantId, storeId, user),
 };
 

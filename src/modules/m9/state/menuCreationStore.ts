@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type {
     Menu, MenuSection, MenuItemOverride, MenuChannelType,
     MenuDaySchedule, MenuSchedule, MenuStoreAssignment,
-    MenuChannelAssignment, SectionType
+    MenuChannelAssignment, SectionType, MenuPublishStatus
 } from '../types/menu';
 import { useMenuStore } from './menuStore';
 import { useCatalogStore } from './catalogStore';
@@ -10,7 +10,7 @@ import { useCatalogStore } from './catalogStore';
 export type CreationStep =
     | 'BASIC_DETAILS'
     | 'CATEGORY_COMPOSITION'
-    | 'PRODUCT_COMPOSITION'
+    | 'PLACEMENT_CONFIG'
     | 'STORE_DEPLOYMENT'
     | 'CHANNEL_MATRIX'
     | 'SCHEDULING'
@@ -31,8 +31,14 @@ export interface MenuCreationFormData {
     name: string;
     description: string;
     primaryChannel: MenuChannelType;
+    publishStatus: MenuPublishStatus;
     tags: string[];
     isDefault: boolean;
+
+    // Support Contact Details
+    supportEmail: string;
+    supportPhone: string;
+    supportPhoneCountry: 'US' | 'CA';
 
     // References and metadata
     selectedCategoryIds: string[];
@@ -65,12 +71,14 @@ interface MenuCreationState {
     currentStep: CreationStep;
     formData: MenuCreationFormData;
     isDirty: boolean;
+    editMenuId: string | null;
 
     // Preview Drawer
     previewTarget: { type: 'category' | 'item'; id: string } | null;
 
     // Actions
     openWizard: () => void;
+    openWizardForEdit: (menu: Menu) => void;
     closeWizard: () => void;
     setStep: (step: CreationStep) => void;
     nextStep: () => void;
@@ -119,8 +127,12 @@ const INITIAL_FORM_DATA = (): MenuCreationFormData => ({
     name: '',
     description: '',
     primaryChannel: 'POS',
+    publishStatus: 'DRAFT',
     tags: [],
     isDefault: false,
+    supportEmail: '',
+    supportPhone: '',
+    supportPhoneCountry: 'CA', // Default to Canada as required
     selectedCategoryIds: [],
     categorySections: {},
     storeScope: 'ALL_STORES',
@@ -138,6 +150,7 @@ export const useMenuCreationStore = create<MenuCreationState>((set, get) => ({
     formData: INITIAL_FORM_DATA(),
     isDirty: false,
     previewTarget: null,
+    editMenuId: null,
 
     openWizard: () => {
         set({
@@ -145,12 +158,64 @@ export const useMenuCreationStore = create<MenuCreationState>((set, get) => ({
             currentStep: 'BASIC_DETAILS',
             formData: INITIAL_FORM_DATA(),
             isDirty: false,
+            editMenuId: null,
             previewTarget: null
         });
     },
 
+    openWizardForEdit: (menu) => {
+        const categorySections: Record<string, any> = {};
+        menu.sections.forEach(sec => {
+            categorySections[sec.catalogCategoryId] = {
+                sectionType: sec.sectionType || 'STANDARD',
+                displayName: sec.displayName || '',
+                description: sec.description || '',
+                isVisible: sec.isVisible !== false,
+                includedItemIds: sec.includedItemIds || [],
+                excludedItemIds: sec.excludedItemIds || [],
+                featuredItemIds: sec.featuredItemIds || []
+            };
+        });
+
+        const storeScope = menu.storeAssignment.scope === 'ALL_STORES' ? 'ALL_STORES' : 'SPECIFIC_STORES';
+        const selectedStoreIds = menu.storeAssignment.targetStoreIds || [];
+
+        // Try parsing menu's metadata if present or default
+        const supportEmail = (menu as any).supportEmail || '';
+        const supportPhone = (menu as any).supportPhone || '';
+        const supportPhoneCountry = (menu as any).supportPhoneCountry || 'CA';
+
+        set({
+            isOpen: true,
+            currentStep: 'BASIC_DETAILS',
+            editMenuId: menu.id,
+            isDirty: false,
+            previewTarget: null,
+            formData: {
+                name: menu.name,
+                description: menu.description || '',
+                primaryChannel: menu.primaryChannel,
+                publishStatus: menu.publishStatus || 'DRAFT',
+                tags: [],
+                isDefault: menu.isDefault || false,
+                supportEmail,
+                supportPhone,
+                supportPhoneCountry,
+                selectedCategoryIds: menu.sections.map(s => s.catalogCategoryId),
+                categorySections,
+                storeScope,
+                selectedStoreIds,
+                regionFilter: 'ALL',
+                storeChannelMatrix: menu.storeChannelMatrix || {},
+                globalSchedule: menu.schedule || DEFAULT_SCHEDULE(),
+                storeSchedules: menu.storeSchedules || {},
+                scheduleOverrides: []
+            }
+        });
+    },
+
     closeWizard: () => {
-        set({ isOpen: false });
+        set({ isOpen: false, editMenuId: null });
     },
 
     setStep: (step) => {
@@ -161,7 +226,7 @@ export const useMenuCreationStore = create<MenuCreationState>((set, get) => ({
         const steps: CreationStep[] = [
             'BASIC_DETAILS',
             'CATEGORY_COMPOSITION',
-            'PRODUCT_COMPOSITION',
+            'PLACEMENT_CONFIG',
             'STORE_DEPLOYMENT',
             'CHANNEL_MATRIX',
             'SCHEDULING',
@@ -177,7 +242,7 @@ export const useMenuCreationStore = create<MenuCreationState>((set, get) => ({
         const steps: CreationStep[] = [
             'BASIC_DETAILS',
             'CATEGORY_COMPOSITION',
-            'PRODUCT_COMPOSITION',
+            'PLACEMENT_CONFIG',
             'STORE_DEPLOYMENT',
             'CHANNEL_MATRIX',
             'SCHEDULING',
@@ -452,7 +517,7 @@ export const useMenuCreationStore = create<MenuCreationState>((set, get) => ({
     },
 
     submitMenu: () => {
-        const { formData } = get();
+        const { formData, editMenuId } = get();
         const now = new Date().toISOString();
 
         // Map section records
@@ -497,25 +562,44 @@ export const useMenuCreationStore = create<MenuCreationState>((set, get) => ({
             syncState: 'IDLE'
         }));
 
-        // Trigger insertion into Menu store
-        useMenuStore.getState().createMenu({
-            name: formData.name,
-            description: formData.description,
-            primaryChannel: formData.primaryChannel,
-            publishStatus: 'DRAFT',
-            syncState: 'IDLE',
-            channels,
-            storeAssignment,
-            sections,
-            productIds,
-            itemOverrides: [],
-            schedule: formData.globalSchedule,
-            storeSchedules: formData.storeSchedules,
-            isDefault: formData.isDefault,
-            isLocked: false,
-            isArchived: false
-        });
+        if (editMenuId) {
+            useMenuStore.getState().updateMenu(editMenuId, {
+                name: formData.name,
+                description: formData.description,
+                primaryChannel: formData.primaryChannel,
+                publishStatus: formData.publishStatus,
+                channels,
+                storeAssignment,
+                sections,
+                productIds,
+                schedule: formData.globalSchedule,
+                storeSchedules: formData.storeSchedules,
+                storeChannelMatrix: formData.storeChannelMatrix,
+                isDefault: formData.isDefault,
+                isLocked: false,
+                isArchived: false
+            });
+        } else {
+            useMenuStore.getState().createMenu({
+                name: formData.name,
+                description: formData.description,
+                primaryChannel: formData.primaryChannel,
+                publishStatus: formData.publishStatus,
+                syncState: 'IDLE',
+                channels,
+                storeAssignment,
+                sections,
+                productIds,
+                itemOverrides: [],
+                schedule: formData.globalSchedule,
+                storeSchedules: formData.storeSchedules,
+                storeChannelMatrix: formData.storeChannelMatrix,
+                isDefault: formData.isDefault,
+                isLocked: false,
+                isArchived: false
+            });
+        }
 
-        set({ isOpen: false, isDirty: false });
+        set({ isOpen: false, isDirty: false, editMenuId: null });
     }
 }));

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    Building2, Store as StoreIcon, Settings, Activity, LayoutGrid, Users, Shield,
+    Building2, Settings, Activity, LayoutGrid, Users, Shield,
     MessageSquare, FileText,
 } from 'lucide-react';
 
@@ -19,21 +19,11 @@ import type { Store } from '@/shared/types/store';
 import {
     OverviewTab,
     ModulesTab,
-    StoresTab,
     UsersTab,
     RolesTab,
     AuditTab,
 } from '@/modules/platform/components/tenantDetail';
 import { BrandCommunicationTab } from '@/modules/platform/components/tenantDetail/BrandCommunicationTab';
-
-// ─── Top-Level Tab Config ───────────────────────────────────────────────────
-
-type TopTab = 'brand' | 'stores';
-
-const TOP_TABS: { id: TopTab; label: string; icon: any }[] = [
-    { id: 'brand', label: 'Brand Settings', icon: Building2 },
-    { id: 'stores', label: 'Stores', icon: StoreIcon },
-];
 
 // ─── Brand Settings Sub-Tab Config ──────────────────────────────────────────
 
@@ -79,8 +69,6 @@ const MOCK_BRAND: Brand = {
     onboardingProgress: 100,
 };
 
-
-
 const MOCK_USERS = [
     { id: 'u-1', name: 'John Doe', email: 'john@acmepizza.com', userType: UserType.BRAND_ADMIN, role: 'Brand Admin', storeAccess: 'All Locations', storeIds: [] as string[], status: 'Active' as const, lastLogin: '2026-05-07', createdAt: '2025-06-15' },
     { id: 'u-2', name: 'Sarah Chen', email: 'sarah@acmepizza.com', userType: UserType.MANAGER, role: 'Store Manager', storeAccess: 'Downtown Toronto', storeIds: ['store-01'], status: 'Active' as const, lastLogin: '2026-05-07', createdAt: '2025-07-05' },
@@ -96,12 +84,9 @@ const MOCK_AUDIT = [
     { id: 'a-5', event: 'ENTITLEMENT_CHANGED', actor: 'Platform Admin', timestamp: '2025-08-10T14:00:00Z', details: 'Module "Email Campaigns" enabled for tenant.', payload: { moduleId: 'email-campaigns', action: 'enabled' } },
 ];
 
-// ─── Component ──────────────────────────────────────────────────────────────
-
-export default function SettingsPage() {
+export default function BusinessSettingsPage() {
     const { tenantId } = useAuth();
     const router = useRouter();
-    const [topTab, setTopTab] = useState<TopTab>('brand');
     const [brandSubTab, setBrandSubTab] = useState<BrandSubTab>('overview');
     const [brand, setBrand] = useState<Brand | null>(null);
     const [users, setUsers] = useState<typeof MOCK_USERS>([]);
@@ -114,7 +99,6 @@ export default function SettingsPage() {
             if (!tenantId) {
                 setBrand(MOCK_BRAND);
                 setUsers(MOCK_USERS);
-                // Fetch stores from API even with mock brand
                 try {
                     const apiStores = await storeService.list(MOCK_BRAND.id);
                     setStores(apiStores);
@@ -125,19 +109,14 @@ export default function SettingsPage() {
 
             setLoading(true);
             try {
-                // Fetch tenant via the official service (which uses the correct adapter and endpoint)
                 const tenantData = await tenantService.get(tenantId);
-                
-                // Keep the same state update
                 setBrand(tenantData);
 
-                // Fetch stores from API
                 try {
                     const apiStores = await storeService.list(tenantId);
                     setStores(apiStores);
                 } catch { setStores([]); }
 
-                // Map users from API
                 const rawUsers = (tenantData as any).users;
                 if (rawUsers) {
                     setUsers(rawUsers.map((u: any) => ({
@@ -185,7 +164,7 @@ export default function SettingsPage() {
                     </div>
                     <div className="h-10 w-full bg-slate-100 rounded" />
                     <div className="grid grid-cols-4 gap-4">
-                        {[1,2,3,4].map(i => <div key={i} className="h-24 bg-slate-100 rounded-xl" />)}
+                        {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-slate-100 rounded-xl" />)}
                     </div>
                     <div className="h-64 bg-slate-50 rounded-xl" />
                 </div>
@@ -200,147 +179,87 @@ export default function SettingsPage() {
             {/* Header */}
             <div className="flex items-center gap-5 border-b border-slate-100 pb-6">
                 <div className="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center shadow-xl">
-                    <Settings className="w-7 h-7 text-emerald-400" />
+                    <Building2 className="w-7 h-7 text-emerald-400" />
                 </div>
                 <div>
-                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">Settings</h1>
+                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">Business Settings</h1>
                     <p className="text-xs text-slate-500 font-medium mt-0.5">
-                        Manage your brand configuration, stores, and business operations
+                        Manage your brand configuration, identity, and business operations
                     </p>
                 </div>
             </div>
 
-            {/* ── Top-Level Tabs ──────────────────────────────────────────── */}
-            <div className="border-b border-slate-200">
-                <div className="flex items-center gap-1 overflow-x-auto">
-                    {TOP_TABS.map(tab => {
-                        const Icon = tab.icon;
-                        const isActive = topTab === tab.id;
-                        return (
-                            <button
-                                key={tab.id}
-                                onClick={() => setTopTab(tab.id)}
-                                className={cn(
-                                    'flex items-center gap-2 px-6 py-4 text-sm font-black uppercase tracking-widest border-b-3 transition-all whitespace-nowrap',
-                                    isActive
-                                        ? 'text-slate-900 border-slate-900'
-                                        : 'text-slate-400 border-transparent hover:text-slate-600 hover:border-slate-200'
-                                )}
-                            >
-                                <Icon size={16} />
-                                {tab.label}
-                            </button>
-                        );
-                    })}
+            {/* Sub-tabs and Sub-tab Content */}
+            <div className="space-y-4">
+                <div className="border-b border-slate-100">
+                    <div className="flex items-center gap-1 overflow-x-auto">
+                        {BRAND_SUB_TABS.map(tab => {
+                            const Icon = tab.icon;
+                            const isActive = brandSubTab === tab.id;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setBrandSubTab(tab.id)}
+                                    className={cn(
+                                        'flex items-center gap-2 px-4 py-3 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all whitespace-nowrap',
+                                        isActive
+                                            ? 'text-emerald-700 border-emerald-600'
+                                            : 'text-slate-400 border-transparent hover:text-slate-600 hover:border-slate-200'
+                                    )}
+                                >
+                                    <Icon size={13} />
+                                    {tab.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Sub-tab Content */}
+                <div className="pt-2">
+                    {brandSubTab === 'overview' && (
+                        <OverviewTab
+                            brand={brand}
+                            tenantId={resolvedTenantId}
+                            onBrandUpdate={(updates) => setBrand(prev => prev ? ({ ...prev, ...updates }) : prev)}
+                        />
+                    )}
+                    {brandSubTab === 'modules' && (
+                        <ModulesTab
+                            tenantId={resolvedTenantId}
+                            initialPaths={brand.enabledModules || []}
+                            readOnly
+                        />
+                    )}
+                    {brandSubTab === 'users' && (
+                        <UsersTab
+                            tenantId={resolvedTenantId}
+                            users={users}
+                            stores={stores.map(s => ({ id: s.id, name: s.name }))}
+                        />
+                    )}
+                    {brandSubTab === 'roles' && (
+                        <RolesTab tenantId={resolvedTenantId} />
+                    )}
+                    {brandSubTab === 'communication' && (
+                        <BrandCommunicationTab
+                            tenantId={resolvedTenantId}
+                            campaignEmailConfig={brand.communicationConfig?.email ? {
+                                provider: brand.communicationConfig.email.provider,
+                                senderEmail: brand.communicationConfig.email.senderEmail,
+                                senderName: brand.communicationConfig.email.senderName,
+                            } : undefined}
+                            config={brand.communicationConfig}
+                        />
+                    )}
+                    {brandSubTab === 'audit' && (
+                        <AuditTab
+                            tenantId={resolvedTenantId}
+                            events={MOCK_AUDIT}
+                        />
+                    )}
                 </div>
             </div>
-
-            {/* ── Brand Settings Tab Content ──────────────────────────────── */}
-            {topTab === 'brand' && (
-                <div className="space-y-4">
-                    {/* Sub-tabs */}
-                    <div className="border-b border-slate-100">
-                        <div className="flex items-center gap-1 overflow-x-auto">
-                            {BRAND_SUB_TABS.map(tab => {
-                                const Icon = tab.icon;
-                                const isActive = brandSubTab === tab.id;
-                                return (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => setBrandSubTab(tab.id)}
-                                        className={cn(
-                                            'flex items-center gap-2 px-4 py-3 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all whitespace-nowrap',
-                                            isActive
-                                                ? 'text-emerald-700 border-emerald-600'
-                                                : 'text-slate-400 border-transparent hover:text-slate-600 hover:border-slate-200'
-                                        )}
-                                    >
-                                        <Icon size={13} />
-                                        {tab.label}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    {/* Sub-tab Content */}
-                    <div className="pt-2">
-                        {brandSubTab === 'overview' && (
-                            <OverviewTab
-                                brand={brand}
-                                tenantId={resolvedTenantId}
-                                onBrandUpdate={(updates) => setBrand(prev => prev ? ({ ...prev, ...updates }) : prev)}
-                            />
-                        )}
-                        {brandSubTab === 'modules' && (
-                            <ModulesTab
-                                tenantId={resolvedTenantId}
-                                initialPaths={brand.enabledModules || []}
-                                readOnly
-                            />
-                        )}
-                        {brandSubTab === 'users' && (
-                            <UsersTab
-                                tenantId={resolvedTenantId}
-                                users={users}
-                                stores={stores.map(s => ({ id: s.id, name: s.name }))}
-                            />
-                        )}
-                        {brandSubTab === 'roles' && (
-                            <RolesTab tenantId={resolvedTenantId} />
-                        )}
-                        {brandSubTab === 'communication' && (
-                            <BrandCommunicationTab
-                                tenantId={resolvedTenantId}
-                                campaignEmailConfig={brand.communicationConfig?.email ? {
-                                    provider: brand.communicationConfig.email.provider,
-                                    senderEmail: brand.communicationConfig.email.senderEmail,
-                                    senderName: brand.communicationConfig.email.senderName,
-                                } : undefined}
-                                config={brand.communicationConfig}
-                            />
-                        )}
-                        {brandSubTab === 'audit' && (
-                            <AuditTab
-                                tenantId={resolvedTenantId}
-                                events={MOCK_AUDIT}
-                            />
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {topTab === 'stores' && (
-                <div className="pt-2">
-                    <StoresTab
-                        tenantId={resolvedTenantId}
-                        stores={stores}
-                        maxStores={brand.maxStores || 50}
-                        onViewStore={(storeId) => router.push(`/backoffice/settings/stores/${storeId}`)}
-                        onConfigureStore={(storeId) => router.push(`/backoffice/settings/stores/${storeId}`)}
-                        onCreateStore={async (dto) => {
-                            await storeService.create(resolvedTenantId, dto);
-                            const refreshed = await storeService.list(resolvedTenantId);
-                            setStores(refreshed);
-                        }}
-                        onUpdateStore={async (storeId, dto) => {
-                            await storeService.update(resolvedTenantId, storeId, dto);
-                            const refreshed = await storeService.list(resolvedTenantId);
-                            setStores(refreshed);
-                        }}
-                        onSuspendStore={async (storeId) => {
-                            await storeService.suspend(resolvedTenantId, storeId);
-                            const refreshed = await storeService.list(resolvedTenantId);
-                            setStores(refreshed);
-                        }}
-                        onReactivateStore={async (storeId) => {
-                            await storeService.activate(resolvedTenantId, storeId);
-                            const refreshed = await storeService.list(resolvedTenantId);
-                            setStores(refreshed);
-                        }}
-                    />
-                </div>
-            )}
         </div>
     );
 }

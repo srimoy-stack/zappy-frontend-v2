@@ -30,13 +30,14 @@ const L = 'text-[10px] font-black text-slate-600 uppercase tracking-widest';
 interface UserFormProps {
     title: string;
     initial?: Partial<StoreUser>;
-    onSave: (data: { name: string; email: string; role: string; status: StoreUser['status']; isManager: boolean }) => Promise<void>;
+    onSave: (data: { name: string; email: string; phone: string; role: string; status: StoreUser['status']; isManager: boolean }) => Promise<void>;
     onCancel: () => void;
 }
 
 function UserFormPanel({ title, initial, onSave, onCancel }: UserFormProps) {
     const [name, setName] = useState(initial?.name || '');
     const [email, setEmail] = useState(initial?.email || '');
+    const [phone, setPhone] = useState(initial?.phone || '');
     const [role, setRole] = useState(initial?.role || 'Cashier');
     const [status, setStatus] = useState<StoreUser['status']>(initial?.status || 'Active');
     const [isManager, setIsManager] = useState(initial?.isManager || false);
@@ -47,11 +48,17 @@ function UserFormPanel({ title, initial, onSave, onCancel }: UserFormProps) {
         const errs: Record<string, string> = {};
         if (!name.trim()) errs.name = 'Name is required';
         if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) errs.email = 'Valid email required';
+        
+        const digits = phone.replace(/\D/g, '');
+        if (digits.length < 10) {
+            errs.phone = 'Phone number must contain a 10-digit local number';
+        }
+
         setErrors(errs);
         if (Object.keys(errs).length > 0) return;
 
         setSaving(true);
-        try { await onSave({ name, email, role, status, isManager }); }
+        try { await onSave({ name, email, phone, role, status, isManager }); }
         finally { setSaving(false); }
     };
 
@@ -66,7 +73,7 @@ function UserFormPanel({ title, initial, onSave, onCancel }: UserFormProps) {
                 </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
                     <label className={L}>Full Name <span className="text-rose-500">*</span></label>
                     <input value={name} onChange={e => setName(e.target.value)} placeholder="John Smith" className={cn(I, errors.name && 'border-rose-300')} />
@@ -76,6 +83,11 @@ function UserFormPanel({ title, initial, onSave, onCancel }: UserFormProps) {
                     <label className={L}>Email <span className="text-rose-500">*</span></label>
                     <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="john@store.com" className={cn(I, errors.email && 'border-rose-300')} />
                     {errors.email && <p className="text-[10px] text-rose-500 font-bold">{errors.email}</p>}
+                </div>
+                <div className="space-y-1.5">
+                    <label className={L}>Phone Number <span className="text-rose-500">*</span></label>
+                    <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="(555) 555-5555" className={cn(I, errors.phone && 'border-rose-300')} />
+                    {errors.phone && <p className="text-[10px] text-rose-500 font-bold">{errors.phone}</p>}
                 </div>
             </div>
 
@@ -138,14 +150,14 @@ export function StoreUsersTab({ users: initialUsers, onAssignManager, onCreateUs
         finally { setPromoting(null); }
     };
 
-    const handleCreate = async (data: { name: string; email: string; role: string; status: StoreUser['status']; isManager: boolean }) => {
+    const handleCreate = async (data: { name: string; email: string; phone: string; role: string; status: StoreUser['status']; isManager: boolean }) => {
         if (onCreateUser) await onCreateUser(data);
         const newUser: StoreUser = { id: `user-${Date.now()}`, ...data, createdAt: new Date().toISOString() };
         setUsers(prev => [...prev, newUser]);
         setShowForm(null);
     };
 
-    const handleUpdate = async (data: { name: string; email: string; role: string; status: StoreUser['status']; isManager: boolean }) => {
+    const handleUpdate = async (data: { name: string; email: string; phone: string; role: string; status: StoreUser['status']; isManager: boolean }) => {
         if (editingUser) {
             if (onUpdateUser) await onUpdateUser(editingUser.id, data);
             setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, ...data } : u));

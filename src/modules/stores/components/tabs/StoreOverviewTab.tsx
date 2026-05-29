@@ -12,6 +12,13 @@ import type { Store, StoreDetailConfig, StoreUser, StorePageData, CreateStoreDTO
 import { evaluateGoLiveReadiness } from '@/shared/types/store';
 import { StoreStatusBadge } from '../shared/StoreStatusBadge';
 import { GoLiveChecklist } from '../shared/GoLiveChecklist';
+import {
+    validateStoreName,
+    validateStoreEmail,
+    validateStorePhone,
+    validateStoreAddress,
+    validateStorePostalCode
+} from '../../utils/storeValidation';
 
 interface StoreOverviewTabProps {
     store: Store;
@@ -25,9 +32,10 @@ interface StoreOverviewTabProps {
 
 // ─── Helper Forms components ──────────────────────────────────────────────────
 
-function EditField({ label, value, onChange, type = 'text', placeholder, disabled, mono }: {
+function EditField({ label, value, onChange, type = 'text', placeholder, disabled, mono, error }: {
     label: string; value: string; onChange: (v: string) => void;
     type?: string; placeholder?: string; disabled?: boolean; mono?: boolean;
+    error?: string;
 }) {
     return (
         <div className="space-y-1.5 text-left">
@@ -35,9 +43,11 @@ function EditField({ label, value, onChange, type = 'text', placeholder, disable
             <input type={type} value={value} onChange={e => onChange(e.target.value)}
                 placeholder={placeholder} disabled={disabled}
                 className={cn(
-                    "w-full px-4 py-3 bg-slate-50 border-2 border-slate-50 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:border-slate-950 focus:border-2 outline-none transition-all",
+                    "w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:border-slate-950 focus:border-2 outline-none transition-all",
+                    error ? "border-rose-500 focus:border-rose-500 bg-rose-50/20" : "border-slate-50",
                     disabled && "opacity-50 cursor-not-allowed", mono && "font-mono"
                 )} />
+            {error && <span className="text-[11px] font-semibold text-rose-500 block mt-0.5">{error}</span>}
         </div>
     );
 }
@@ -155,8 +165,10 @@ export function StoreOverviewTab({ store, config, users, pageData, onPublish, is
     // Edit state
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [errors, setErrors] = useState<Record<string, string>>({});
 
     const [name, setName] = useState(store.name);
+    const [storeCode, setStoreCode] = useState(store.code || '');
     const [address, setAddress] = useState(store.address || '');
     const [city, setCity] = useState(store.city || '');
     const [province, setProvince] = useState(store.province || '');
@@ -165,9 +177,13 @@ export function StoreOverviewTab({ store, config, users, pageData, onPublish, is
     const [phone, setPhone] = useState(store.phone || '');
     const [email, setEmail] = useState(store.email || '');
     const [businessType, setBusinessType] = useState(store.businessType || 'single_store');
+    const [currency, setCurrency] = useState(store.currency || 'USD');
+    const [paymentTerms, setPaymentTerms] = useState(store.paymentTerms || 'net_15');
+    const [country, setCountry] = useState(store.country || 'Canada');
 
     useEffect(() => {
         setName(store.name);
+        setStoreCode(store.code || '');
         setAddress(store.address || '');
         setCity(store.city || '');
         setProvince(store.province || '');
@@ -176,14 +192,73 @@ export function StoreOverviewTab({ store, config, users, pageData, onPublish, is
         setPhone(store.phone || '');
         setEmail(store.email || '');
         setBusinessType(store.businessType || 'single_store');
-    }, [store]);
+        setCurrency(store.currency || 'USD');
+        setPaymentTerms(store.paymentTerms || 'net_15');
+        setCountry(store.country || 'Canada');
+        setErrors({});
+    }, [store, isEditing]);
+
+    const isDirty = name !== store.name ||
+        storeCode !== (store.code || '') ||
+        address !== (store.address || '') ||
+        city !== (store.city || '') ||
+        province !== (store.province || '') ||
+        postalCode !== (store.postalCode || '') ||
+        timezone !== (store.timezone || '') ||
+        phone !== (store.phone || '') ||
+        email !== (store.email || '') ||
+        businessType !== (store.businessType || 'single_store') ||
+        currency !== (store.currency || 'USD') ||
+        paymentTerms !== (store.paymentTerms || 'net_15') ||
+        country !== (store.country || 'Canada');
+
+    const handleCancel = () => {
+        if (isDirty) {
+            if (!confirm('You have unsaved changes. Are you sure you want to discard them?')) {
+                return;
+            }
+        }
+        setIsEditing(false);
+    };
 
     const handleSave = async () => {
         if (!onSaveGeneral) return;
+
+        const e: Record<string, string> = {};
+        const nameErr = validateStoreName(name);
+        if (nameErr) e.name = nameErr;
+
+        const codeErr = validateStoreCode(storeCode);
+        if (codeErr) e.code = codeErr;
+
+        const emailErr = validateStoreEmail(email);
+        if (emailErr) e.email = emailErr;
+
+        const phoneErr = validateStorePhone(phone);
+        if (phoneErr) e.phone = phoneErr;
+
+        const addressErr = validateStoreAddress(address);
+        if (addressErr) e.address = addressErr;
+
+        const postalErr = validateStorePostalCode(postalCode);
+        if (postalErr) e.postalCode = postalErr;
+
+        if (!city || city.trim().length < 2) e.city = 'City is required';
+        if (!province) e.province = 'Province/State is required';
+        if (!timezone) e.timezone = 'Timezone is required';
+        if (!country) e.country = 'Country is required';
+
+        if (Object.keys(e).length > 0) {
+            setErrors(e);
+            return;
+        }
+
+        setErrors({});
         setIsSaving(true);
         try {
             await onSaveGeneral({
                 name,
+                storeCode: storeCode.trim().toUpperCase(),
                 address,
                 city,
                 province,
@@ -192,6 +267,9 @@ export function StoreOverviewTab({ store, config, users, pageData, onPublish, is
                 phone,
                 email,
                 businessType,
+                currency,
+                paymentTerms,
+                country,
             });
             setIsEditing(false);
         } catch (err) {
@@ -270,7 +348,7 @@ export function StoreOverviewTab({ store, config, users, pageData, onPublish, is
                             Edit Store Details
                         </h3>
                         <div className="flex items-center gap-2">
-                            <button onClick={() => setIsEditing(false)} disabled={isSaving}
+                            <button onClick={handleCancel} disabled={isSaving}
                                 className="px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-xs font-bold transition-all disabled:opacity-50">
                                 Cancel
                             </button>
@@ -287,15 +365,15 @@ export function StoreOverviewTab({ store, config, users, pageData, onPublish, is
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                        <EditField label="Store Name" value={name} onChange={setName} placeholder="e.g. Downtown Toronto" disabled={isSaving} />
-                        <EditField label="Store Code" value={store.code} onChange={() => {}} disabled={true} mono={true} placeholder="e.g. STORE-001" />
+                        <EditField label="Store Name" value={name} onChange={setName} placeholder="e.g. Downtown Toronto" disabled={isSaving} error={errors.name} />
+                        <EditField label="Store Code" value={storeCode} onChange={setStoreCode} disabled={isSaving} error={errors.code} mono={true} placeholder="e.g. STORE-001" />
                         <SelectField label="Business Type" value={businessType} onChange={(val) => setBusinessType(val as any)} disabled={isSaving}
                             options={[
                                 { value: 'single_store', label: 'Single Store' },
                                 { value: 'multi_store', label: 'Multi-Store Branch' }
                             ]} />
-                        <EditField label="Phone Number" value={phone} onChange={setPhone} placeholder="e.g. +1 555 0100" disabled={isSaving} />
-                        <EditField label="Email Address" value={email} onChange={setEmail} placeholder="e.g. store@example.com" disabled={isSaving} />
+                        <EditField label="Phone Number" value={phone} onChange={setPhone} placeholder="e.g. (555) 555-5555" disabled={isSaving} error={errors.phone} />
+                        <EditField label="Email Address" value={email} onChange={setEmail} placeholder="e.g. store@example.com" disabled={isSaving} error={errors.email} />
                         <SelectField label="Timezone" value={timezone} onChange={setTimezone} disabled={isSaving}
                             options={[
                                 { value: 'America/Toronto', label: 'America/Toronto (EST)' },
@@ -308,9 +386,9 @@ export function StoreOverviewTab({ store, config, users, pageData, onPublish, is
                                 { value: 'America/Edmonton', label: 'America/Edmonton (MST)' },
                             ]} />
                         <div className="md:col-span-2 lg:col-span-3">
-                            <EditField label="Street Address" value={address} onChange={setAddress} placeholder="e.g. 123 Main St, Unit 4" disabled={isSaving} />
+                            <EditField label="Street Address" value={address} onChange={setAddress} placeholder="e.g. 123 Main St, Unit 4" disabled={isSaving} error={errors.address} />
                         </div>
-                        <EditField label="City" value={city} onChange={setCity} placeholder="e.g. Toronto" disabled={isSaving} />
+                        <EditField label="City" value={city} onChange={setCity} placeholder="e.g. Toronto" disabled={isSaving} error={errors.city} />
                         <SelectField label="Province" value={province} onChange={setProvince} disabled={isSaving}
                             options={[
                                 { value: 'Ontario', label: 'Ontario' },
@@ -322,7 +400,7 @@ export function StoreOverviewTab({ store, config, users, pageData, onPublish, is
                                 { value: 'Nova Scotia', label: 'Nova Scotia' },
                                 { value: 'New Brunswick', label: 'New Brunswick' },
                             ]} />
-                        <EditField label="Postal Code" value={postalCode} onChange={setPostalCode} placeholder="e.g. M5V 2N2" disabled={isSaving} mono={true} />
+                        <EditField label="Postal Code" value={postalCode} onChange={setPostalCode} placeholder="e.g. M5V 2N2" disabled={isSaving} mono={true} error={errors.postalCode} />
                     </div>
                 </section>
             ) : (
@@ -469,6 +547,69 @@ export function StoreOverviewTab({ store, config, users, pageData, onPublish, is
                         )}
                     </section>
                 </div>
+            )}
+
+            {/* ── Recent Orders ────────────────────────────────────────── */}
+            {pageData?.recent_orders && pageData.recent_orders.length > 0 && (
+                <section className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm text-left">
+                    <SectionHeader color="bg-emerald-500" icon={ShoppingBag} title="Recent Orders" />
+                    <div className="overflow-x-auto -mx-8 px-8">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-slate-100">
+                                    <th className="pb-3 text-[10px] font-black text-slate-400 uppercase tracking-wider">Order No</th>
+                                    <th className="pb-3 text-[10px] font-black text-slate-400 uppercase tracking-wider">Type</th>
+                                    <th className="pb-3 text-[10px] font-black text-slate-400 uppercase tracking-wider">Source</th>
+                                    <th className="pb-3 text-[10px] font-black text-slate-400 uppercase tracking-wider">Status</th>
+                                    <th className="pb-3 text-[10px] font-black text-slate-400 uppercase tracking-wider">Payment</th>
+                                    <th className="pb-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-right">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {pageData.recent_orders.map((order) => (
+                                    <tr key={order.id} className="hover:bg-slate-50/50 transition-colors group">
+                                        <td className="py-3.5 text-xs font-mono font-bold text-slate-900">
+                                            #{order.order_number}
+                                        </td>
+                                        <td className="py-3.5 text-xs font-bold text-slate-600 capitalize">
+                                            {order.order_type?.replace('_', ' ')}
+                                        </td>
+                                        <td className="py-3.5 text-xs font-bold text-slate-500 capitalize">
+                                            {order.source}
+                                        </td>
+                                        <td className="py-3.5 text-xs">
+                                            <span className={cn(
+                                                "px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider",
+                                                order.status === 'completed' || order.status === 'delivered' || order.status === 'ready'
+                                                    ? 'bg-emerald-50 text-emerald-700'
+                                                    : order.status === 'cancelled'
+                                                    ? 'bg-rose-50 text-rose-700'
+                                                    : 'bg-amber-50 text-amber-700'
+                                            )}>
+                                                {order.status}
+                                            </span>
+                                        </td>
+                                        <td className="py-3.5 text-xs">
+                                            <span className={cn(
+                                                "px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider",
+                                                order.payment_status === 'paid'
+                                                    ? 'bg-emerald-50 text-emerald-700'
+                                                    : order.payment_status === 'refunded'
+                                                    ? 'bg-blue-50 text-blue-700'
+                                                    : 'bg-slate-100 text-slate-600'
+                                            )}>
+                                                {order.payment_status}
+                                            </span>
+                                        </td>
+                                        <td className="py-3.5 text-xs font-black text-slate-900 text-right">
+                                            {fmtCurrency(order.total)}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
             )}
 
             {/* ── Contact & Timeline ───────────────────────────────────── */}
