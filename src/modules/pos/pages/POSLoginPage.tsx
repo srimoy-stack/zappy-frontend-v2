@@ -16,6 +16,9 @@ export const POSLoginPage: React.FC = () => {
     // Store POS fields
     const [username, setUsername] = useState('');
     const [pin, setPin] = useState('');
+    const [staffDropdownOpen, setStaffDropdownOpen] = useState(false);
+    const [staffSearch, setStaffSearch] = useState('');
+    const staffOptions = ['Manager', 'Cashier 1', 'Cashier 2', 'Alex', 'Jane'];
 
     // Call Center fields
     const [email, setEmail] = useState('');
@@ -230,15 +233,50 @@ export const POSLoginPage: React.FC = () => {
                             <div style={{ marginBottom: '24px' }}>
                                 <label style={{ fontSize: '12px', fontWeight: 800, color: 'var(--pos-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px', display: 'block' }}>STAFF NAME (OPTIONAL)</label>
                                 <div style={{ position: 'relative' }}>
-                                    <User size={20} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--pos-text-muted)' }} />
-                                    <input
-                                        type="text"
-                                        value={username}
-                                        onChange={(e) => setUsername(e.target.value)}
-                                        placeholder="Enter staff name..."
+                                    <div
+                                        onClick={() => setStaffDropdownOpen(!staffDropdownOpen)}
                                         className="pos-input"
-                                        style={{ height: '60px', paddingLeft: '52px', background: 'var(--pos-bg-main)', border: 'none' }}
-                                    />
+                                        style={{ height: '60px', paddingLeft: '52px', paddingRight: '40px', background: 'var(--pos-bg-main)', border: 'none', width: '100%', color: username ? 'var(--pos-text-primary)' : 'var(--pos-text-muted)', display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+                                    >
+                                        <User size={20} style={{ position: 'absolute', left: '16px', color: 'var(--pos-text-muted)' }} />
+                                        <span>{username || 'Select staff name...'}</span>
+                                        <div style={{ position: 'absolute', right: '16px', pointerEvents: 'none' }}>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--pos-text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={staffDropdownOpen ? "m18 15-6-6-6 6" : "m6 9 6 6 6-6"}/></svg>
+                                        </div>
+                                    </div>
+                                    
+                                    {staffDropdownOpen && (
+                                        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid var(--pos-border-subtle)', borderRadius: '12px', marginTop: '8px', zIndex: 10, boxShadow: '0 10px 25px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+                                            <div style={{ padding: '12px', borderBottom: '1px solid var(--pos-border-subtle)' }}>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search staff..."
+                                                    value={staffSearch}
+                                                    onChange={(e) => setStaffSearch(e.target.value)}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--pos-border-subtle)', outline: 'none', fontSize: '14px', color: 'var(--pos-text-primary)' }}
+                                                />
+                                            </div>
+                                            <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                                                {staffOptions.filter(opt => opt.toLowerCase().includes(staffSearch.toLowerCase())).map((opt, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        onClick={() => { setUsername(opt); setStaffDropdownOpen(false); setStaffSearch(''); }}
+                                                        style={{ padding: '12px 16px', cursor: 'pointer', fontSize: '14px', borderBottom: '1px solid var(--pos-border-subtle)', background: username === opt ? 'var(--pos-bg-main)' : 'white', color: 'var(--pos-text-primary)' }}
+                                                        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--pos-bg-main)')}
+                                                        onMouseLeave={(e) => (e.currentTarget.style.background = username === opt ? 'var(--pos-bg-main)' : 'white')}
+                                                    >
+                                                        {opt}
+                                                    </div>
+                                                ))}
+                                                {staffOptions.filter(opt => opt.toLowerCase().includes(staffSearch.toLowerCase())).length === 0 && (
+                                                    <div style={{ padding: '16px', textAlign: 'center', color: 'var(--pos-text-muted)', fontSize: '13px' }}>
+                                                        No staff found
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ) : (
