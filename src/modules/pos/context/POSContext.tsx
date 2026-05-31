@@ -1,14 +1,20 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { POSType, OrderChannel, POSSession, POSContextType, POSStore, POSTable, POSCartItem } from '../types/pos';
+import { POSType, OrderChannel, POSSession, POSContextType, POSStore, POSTable, POSCartItem, POSUser } from '../types/pos';
 import { POSCustomer, mockPOSUsers, mockStores, VALID_STORE_PINS, VALID_CALL_CENTER_USERS, mockPOSTables, mockPOSCustomers } from '../mock/posData';
 import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
 import { env } from '@/shared/config/env';
 import { setAccessToken, setRefreshToken } from '@/shared/utils/tokenManager';
+import { openPOSShift } from '@/modules/pos/services/posShiftService';
 
 const POSContext = createContext<POSContextType | undefined>(undefined);
+
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+    value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
+
+const getString = (value: unknown) => typeof value === 'string' && value.trim() ? value : undefined;
 
 export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [session, setSession] = useState<POSSession | null>(null);
@@ -32,6 +38,12 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             localStorage.setItem('pos_session', JSON.stringify(updated));
             return updated;
         });
+    }, []);
+
+    const replaceSession = useCallback((nextSession: POSSession) => {
+        console.log('💾 replaceSession called with session:', nextSession);
+        localStorage.setItem('pos_session', JSON.stringify(nextSession));
+        setSession(nextSession);
     }, []);
 
     // Platform Auto-Login Bridge
@@ -144,7 +156,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     }, [cart]);
 
-    const login = async (type: POSType, credentials: { pin?: string; email?: string; password?: string; deviceId: string }) => {
+    const login = async (type: POSType, credentials: { pin?: string; email?: string; password?: string; deviceId: string; cashierId?: string; cashierName?: string; cashierEmail?: string; storeId?: string }) => {
         // Offline logic
         if (!navigator.onLine) {
             const savedSessionStr = localStorage.getItem('pos_session');
@@ -165,24 +177,43 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         let user: POSUser;
         let accessibleStores: POSStore[] = [];
 
-        if (env.apiMode === 'live') {
-            const loginEmail = type === 'STORE' ? 'sample_cashier@yopmail.com' : credentials.email;
+        const shouldUseBackendStoreLogin = type === 'STORE' && !!credentials.cashierName;
+
+        if (env.apiMode === 'live' || shouldUseBackendStoreLogin) {
+            const loginEmail = type === 'CALL_CENTER' ? credentials.email : undefined;
             const loginPassword = type === 'STORE' ? credentials.pin : credentials.password;
 
-            if (!loginEmail || !loginPassword) {
-                throw new Error('Credentials are required');
+            if (type === 'STORE' && (!credentials.cashierName || !credentials.pin)) {
+                throw new Error('Select cashier and enter PIN');
+            }
+
+            if (type === 'CALL_CENTER' && (!loginEmail || !loginPassword)) {
+                throw new Error(type === 'STORE' ? 'Select cashier and enter PIN' : 'Credentials are required');
             }
 
             try {
                 console.log('--- START POS LOGIN ---', { type, credentials, apiBaseUrl: env.apiBaseUrl });
                 // 1. Authenticate cashier
-                const loginRes = await axios.post(`${env.apiBaseUrl}/pos/cashier_login`, {
-                    email: loginEmail,
-                    password: loginPassword
-                });
+                const loginPayload = type === 'STORE'
+                    ? {
+                        cashier_name: credentials.cashierName,
+                        pin: credentials.pin
+                    }
+                    : {
+                        email: loginEmail,
+                        password: loginPassword
+                    };
+                const loginRes = await axios.post(`${env.apiBaseUrl}/pos/cashier_login`, loginPayload);
                 console.log('loginRes response:', loginRes.status, loginRes.data);
 
-                const { access_token, refresh_token } = loginRes.data;
+                const loginData = asRecord(loginRes.data) || {};
+                const loginStore = asRecord(loginData.store);
+                const loginStoreId = getString(loginStore?.id) || getString(loginStore?.store_id) || getString(loginStore?.storeId);
+                const loginStoreName = getString(loginStore?.name) || getString(loginStore?.store_name) || getString(loginStore?.storeName);
+                const loginStoreAddress = getString(loginStore?.address) || getString(loginStore?.store_address) || getString(loginStore?.storeAddress) || getString(loginStore?.slug);
+
+                const access_token = getString(loginData.access_token);
+                const refresh_token = getString(loginData.refresh_token);
                 if (!access_token) {
                     throw new Error('Auth token not received from server');
                 }
@@ -202,15 +233,16 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     id: String(meData.id),
                     name: meData.full_name || 'Cashier',
                     role: meData.role || 'POS_cashier',
-                    accessibleStores: meData.store_id ? [meData.store_id] : []
+                    accessibleStores: (loginStoreId || meData.store_id || credentials.storeId) ? [loginStoreId || meData.store_id || credentials.storeId] : []
                 };
 
                 // Create POS store object
-                if (meData.store_id) {
+                const resolvedStoreId = loginStoreId || meData.store_id || credentials.storeId;
+                if (resolvedStoreId) {
                     accessibleStores = [{
-                        id: meData.store_id,
-                        name: meData.brand_name || 'Assigned Store',
-                        address: meData.store_slug || 'Store Address'
+                        id: resolvedStoreId,
+                        name: loginStoreName || meData.store_name || meData.brand_name || 'Assigned Store',
+                        address: loginStoreAddress || meData.store_slug || 'Store Address'
                     }];
                 } else {
                     accessibleStores = mockStores; // Fallback
@@ -256,12 +288,13 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             posType: type,
             store: accessibleStores[0]!,
             deviceId: credentials.deviceId,
-            isOffline: false
+            isOffline: false,
+            shift: undefined
         };
 
         setIsSyncing(true);
         setTimeout(() => {
-            updateSession(initialSession);
+            replaceSession(initialSession);
             setIsSyncing(false);
         }, 1500);
 
@@ -485,20 +518,47 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateSession({ deliveryAddress: address || undefined });
     }, [updateSession]);
 
-    const startShift = useCallback((openingCash: number, notes?: string) => {
+    const formatBusinessDate = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const formatLocalDateTimeWithOffset = (date: Date) => {
+        const pad = (value: number) => String(value).padStart(2, '0');
+        const offsetMinutes = -date.getTimezoneOffset();
+        const offsetSign = offsetMinutes >= 0 ? '+' : '-';
+        const absoluteOffset = Math.abs(offsetMinutes);
+        const offsetHours = pad(Math.floor(absoluteOffset / 60));
+        const offsetMins = pad(absoluteOffset % 60);
+
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}${offsetSign}${offsetHours}:${offsetMins}`;
+    };
+
+    const startShift = useCallback(async (openingCash: number, notes?: string) => {
         if (!session) return;
         setIsSyncing(true);
+        const now = new Date();
         const shift = {
-            startTime: new Date().toISOString(),
+            startTime: formatLocalDateTimeWithOffset(now),
             openingCash,
             notes
         };
 
-        // Simulate sync delay
-        setTimeout(() => {
+        try {
+            await openPOSShift({
+                store_id: session.store.id,
+                businessDate: formatBusinessDate(now),
+                systemHandshakeTime: shift.startTime,
+                initialFloatCash: openingCash.toFixed(2),
+                personnelNotes: notes || ''
+            });
+
             updateSession({ ...session, shift });
+        } finally {
             setIsSyncing(false);
-        }, 2000);
+        }
     }, [session, updateSession]);
 
     return (
