@@ -15,8 +15,8 @@ export const SETTINGS_REGISTRY: RegistryNode[] = [
         status: 'active', showInSidebar: true, sidebarGroup: 'system',
     },
     // ── Submodules
-    { id: 'settings.business', label: 'Business Settings', parentId: 'settings', moduleKey: 'settings', level: 'submodule', sortOrder: 1, entitlementKey: 'settings.business', isCore: false, isSystem: true, isBeta: false, isProtected: true, status: 'active', showInSidebar: false },
-    { id: 'settings.stores', label: 'Store Settings', parentId: 'settings', moduleKey: 'settings', level: 'submodule', sortOrder: 2, entitlementKey: 'settings.stores', isCore: false, isSystem: true, isBeta: false, isProtected: true, status: 'active', showInSidebar: false },
+    { id: 'settings.business', label: 'Business Settings', parentId: 'settings', moduleKey: 'settings', level: 'submodule', sortOrder: 1, route: '/backoffice/settings', icon: 'Building2', entitlementKey: 'settings.business', isCore: false, isSystem: true, isBeta: false, isProtected: true, status: 'active', showInSidebar: false },
+    { id: 'settings.stores', label: 'Store Management', parentId: 'settings', moduleKey: 'settings', level: 'submodule', sortOrder: 2, route: '/backoffice/settings/stores', icon: 'Store', entitlementKey: 'settings.stores', isCore: false, isSystem: true, isBeta: false, isProtected: true, status: 'active', showInSidebar: false },
     { id: 'settings.integrations', label: 'Integrations', parentId: 'settings', moduleKey: 'settings', level: 'submodule', sortOrder: 3, entitlementKey: 'settings.integrations', isCore: false, isSystem: false, isBeta: false, status: 'active', showInSidebar: false },
     { id: 'settings.communication', label: 'Communication Config', parentId: 'settings', moduleKey: 'settings', level: 'submodule', sortOrder: 4, entitlementKey: 'settings.communication', isCore: false, isSystem: false, isBeta: false, status: 'active', showInSidebar: false },
     // ── Pages

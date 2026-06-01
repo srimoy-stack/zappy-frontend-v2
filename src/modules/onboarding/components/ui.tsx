@@ -13,12 +13,13 @@ export function FormSectionTitle({ icon: Icon, title }: { icon: any; title: stri
     );
 }
 
-export function InputWrapper({ label, required, children }: { label: string; required?: boolean; children: ReactNode }) {
+export function InputWrapper({ label, required, optional, children }: { label: string; required?: boolean; optional?: boolean; children: ReactNode }) {
     return (
         <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
                 {label}
                 {required && <span className="text-red-500">*</span>}
+                {optional && <span className="text-slate-300 font-medium normal-case tracking-normal">(optional)</span>}
             </label>
             {children}
         </div>

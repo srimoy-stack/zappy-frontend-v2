@@ -55,6 +55,9 @@ export function forceLogout(): void {
     clearAccessToken();
 
     if (typeof window !== 'undefined') {
-        window.location.href = '/login?reason=session_expired';
+        const isPOSRoute = window.location.pathname.startsWith('/pos');
+        window.location.href = isPOSRoute
+            ? '/pos/login?reason=session_expired'
+            : '/login?reason=session_expired';
     }
 }

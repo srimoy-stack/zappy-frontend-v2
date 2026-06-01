@@ -33,6 +33,8 @@ interface ModuleTreeSelectorProps {
     /** Called with updated paths */
     onChange: (paths: string[]) => void;
     isLoading?: boolean;
+    /** When true, all toggles are disabled (brand admin read-only view) */
+    readOnly?: boolean;
 }
 
 export const ModuleTreeSelector: React.FC<ModuleTreeSelectorProps> = ({
@@ -41,6 +43,7 @@ export const ModuleTreeSelector: React.FC<ModuleTreeSelectorProps> = ({
     onChange,
     isLoading,
     comingSoonIds,
+    readOnly = false,
 }) => {
     const [expandedModules, setExpandedModules] = React.useState<string[]>([]);
     const pathSet = React.useMemo(() => new Set(selectedPaths || []), [selectedPaths]);
@@ -69,6 +72,7 @@ export const ModuleTreeSelector: React.FC<ModuleTreeSelectorProps> = ({
      * - Deselecting a parent → deselects all descendants
      */
     const togglePath = (path: string) => {
+        if (readOnly) return;
         const node = getNode(path);
         if (!node) return;
 
@@ -190,10 +194,12 @@ export const ModuleTreeSelector: React.FC<ModuleTreeSelectorProps> = ({
                             ) : (
                                 <button
                                     onClick={() => togglePath(module.id)}
-                                    disabled={module.isCore && moduleSelected}
+                                    disabled={(module.isCore && moduleSelected) || readOnly}
                                     className={cn(
                                         "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all",
-                                        module.isCore && moduleSelected ? "bg-emerald-600 text-white opacity-80 cursor-not-allowed" :
+                                        readOnly
+                                            ? (moduleSelected ? "bg-emerald-100 text-emerald-700 cursor-default" : "bg-slate-100 text-slate-400 cursor-default")
+                                            : module.isCore && moduleSelected ? "bg-emerald-600 text-white opacity-80 cursor-not-allowed" :
                                         moduleSelected 
                                             ? "bg-emerald-600 text-white shadow-lg shadow-emerald-200" 
                                             : partial

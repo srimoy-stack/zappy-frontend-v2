@@ -12,10 +12,18 @@ export const mockItems: Item[] = [
         id: 'item-1',
         productType: 'SINGLE',
         name: 'Veggie Supreme',
+        sku: 'VEGGIE-SUPREME',
+        tags: ['Bestseller', 'Vegetarian'],
         description: 'Loaded with fresh vegetables and mozzarella cheese.',
         imageUrl: 'https://images.unsplash.com/photo-1513104890138-7c749659a591',
         categoryId: 'cat-1',
+        secondaryCategoryIds: [],
+        baseProductPrice: 9.99,
+        dietaryFlags: ['vegetarian'],
+        channelVisibility: ['POS', 'ONLINE'],
+        taxRate: 5.0,
         isAvailable: true,
+        scopeConfig: { scope: 'GLOBAL' as const, targetedStoreIds: [] },
         variantGroups: [
             {
                 id: 'vg-1',

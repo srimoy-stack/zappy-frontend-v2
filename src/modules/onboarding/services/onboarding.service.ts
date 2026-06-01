@@ -19,25 +19,57 @@ import type {
     OnboardingEmailConfig,
     OnboardingSmsConfig,
     OnboardingVapiConfig,
+    OnboardingHostingConfig,
 } from '../types/onboarding.types';
 
 // ─── 1. Create Tenant ────────────────────────────────────────────────────────
 
 export async function createTenant(data: OnboardingBrandData): Promise<{ id: string; slug: string }> {
-    // Call apiClient directly — the adapter's return type doesn't match the backend's {id, slug, name} shape
+    // Backend TenantCreate schema expects snake_case fields:
+    //   name, slug, legal_name, trade_name, address, timezone, currency,
+    //   contact_email, contact_phone, payment_terms, status
+    const slug = data.brandName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+
     const { data: response } = await apiClient.post('/tenants', {
-        brandLegalName: data.brandLegalName,
-        brandName: data.brandName,
-        tradeName: data.tradeName,
-        address: data.addressLine1,
-        timezone: data.timezone,
-        currency: data.currency,
-        contactEmail: data.contactEmail,
-        contactPhone: data.contactPhone,
-        defaultPaymentTerms: data.paymentTermType,
+        name: data.brandName,
+        slug,
+        legal_name: data.brandLegalName || undefined,
+        trade_name: data.tradeName || undefined,
+        address: [data.addressLine1, data.addressLine2].filter(Boolean).join(', ') || undefined,
+        timezone: data.timezone || 'UTC',
+        currency: data.currency || 'CAD',
+        contact_email: data.contactEmail || undefined,
+        contact_phone: data.contactPhone || undefined,
+        payment_terms: data.paymentTermType || undefined,
+        status: 'draft',
     });
 
-    return { id: String(response.id), slug: String(response.slug) };
+    const tenantId = String(response.id);
+
+    // Store extended address/config fields in settings JSON via PATCH
+    // These fields don't have dedicated columns but are needed for the detail view
+    try {
+        await apiClient.patch(`/tenants/${tenantId}`, {
+            settings: {
+                addressLine1: data.addressLine1,
+                addressLine2: data.addressLine2,
+                city: data.city,
+                province: data.province,
+                postalCode: data.postalCode,
+                country: data.country,
+                paymentTermType: data.paymentTermType,
+                netDays: data.netDays,
+            },
+        });
+    } catch {
+        // Non-critical — settings patch failure shouldn't block tenant creation
+        console.warn('[onboarding] Failed to save extended settings for tenant', tenantId);
+    }
+
+    return { id: tenantId, slug: String(response.slug) };
 }
 
 // ─── 2. Enable Modules + Entitlements ────────────────────────────────────────
@@ -127,6 +159,36 @@ export async function configureVapi(
     });
 }
 
+// ─── 5b. Configure Hosting (Online Ordering Domain & DNS) ────────────────────
+//
+// Stores the storefront domain, hosting provider, SSL method, DNS config,
+// and CDN settings in the tenant settings JSON.
+
+export async function configureHosting(
+    tenantId: string,
+    config: OnboardingHostingConfig
+): Promise<void> {
+    const domain = config.customDomain?.trim();
+    if (!domain) return;
+
+    await apiClient.patch(`/tenants/${tenantId}`, {
+        settings: {
+            hosting: {
+                customDomain: domain,
+                hostingProvider: config.hostingProvider,
+                sslMethod: config.sslMethod,
+                dnsVerification: config.dnsVerification,
+                cdnEnabled: config.cdnEnabled,
+                notes: config.notes?.trim() || undefined,
+                ...(config.sslCertPem ? { sslCertPem: config.sslCertPem } : {}),
+                ...(config.sslKeyPem ? { sslKeyPem: config.sslKeyPem } : {}),
+                ...(config.cnameTarget ? { cnameTarget: config.cnameTarget } : {}),
+                ...(config.aRecordIp ? { aRecordIp: config.aRecordIp } : {}),
+            },
+        },
+    });
+}
+
 // ─── 6. Create Tenant Admin ──────────────────────────────────────────────────
 //
 // CRITICAL: The admin MUST be scoped to the tenant.
@@ -146,6 +208,7 @@ export async function createAdminUser(
         email: normalizedEmail,
         phone: data.adminPhone?.trim() || undefined,
         userType: 'BRAND_ADMIN',
+        inviteMethod: data.inviteMethod || 'MAGIC_LINK',
     });
 
     return { id: String(response.user?.id || response.id) };
@@ -153,11 +216,11 @@ export async function createAdminUser(
 
 // ─── 7. Finalize ─────────────────────────────────────────────────────────────
 //
-// Status lifecycle: DRAFT → PROVISIONED → CONFIGURING → OPERATIONAL → SUSPENDED
-// After onboarding wizard completes, tenant moves to PROVISIONED.
-// CONFIGURING happens when tenant admin starts operational setup.
-// OPERATIONAL is set after first successful store + POS configuration.
+// Status lifecycle: DRAFT → ACTIVE → SUSPENDED
+// DRAFT    = tenant created but wizard not completed
+// ACTIVE   = wizard completed — modules, config, and admin user are all set
+// SUSPENDED = suspended by platform admin (billing, violation, etc.)
 
 export async function finalizeOnboarding(tenantId: string): Promise<void> {
-    await api.updateTenant(tenantId, { status: 'provisioned' } as any);
+    await api.updateTenant(tenantId, { status: 'active' } as any);
 }

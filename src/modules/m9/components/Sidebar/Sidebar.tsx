@@ -90,6 +90,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         icon={item.icon}
                         path={item.href}
                         isCollapsed={isCollapsed}
+                        children={item.children}
                     />
                 ))}
             </nav>

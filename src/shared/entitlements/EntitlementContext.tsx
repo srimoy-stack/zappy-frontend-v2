@@ -68,28 +68,31 @@ export function EntitlementProvider({ children }: { children: ReactNode }) {
         [entitlementPaths]
     );
 
+    // ── TEMPORARY: Always entitled (bypass for dev) ──
+    // TODO: REVERT THIS
     const isEntitled = useCallback(
-        (path: string): boolean => {
-            if (isSA) return true;
-            return checkEntitled(path, entitlementPaths);
+        (_path: string): boolean => {
+            return true;
         },
-        [entitlementPaths, isSA]
+        []
     );
 
+    // ── TEMPORARY: All modules enabled (bypass for dev) ──
+    // TODO: REVERT THIS
     const isModuleEnabled = useCallback(
-        (moduleId: string): boolean => {
-            if (isSA) return true;
-            return enabledModules.includes(moduleId);
+        (_moduleId: string): boolean => {
+            return true;
         },
-        [enabledModules, isSA]
+        []
     );
 
+    // ── TEMPORARY: Full access everywhere (bypass for dev) ──
+    // TODO: REVERT THIS
     const getAccessLevel = useCallback(
-        (entitlementKey: string): AccessLevel => {
-            if (!userType) return 'hidden';
-            return resolveAccess(userType, entitlementKey, entitlementPaths);
+        (_entitlementKey: string): AccessLevel => {
+            return 'full';
         },
-        [userType, entitlementPaths]
+        []
     );
 
     const setEntitlementPaths = useCallback((paths: string[]) => {

@@ -6,6 +6,7 @@
  * Dynamic step flow based on entitlement selection:
  *   1. Brand Identity (always)
  *   2. Entitlements — unified module tree (always)
+ *   8. Hosting Details (only if online-ordering enabled)
  *   3. Email Config (only if email-campaigns enabled)
  *   4. SMS Config (only if email-campaigns enabled — optional)
  *   5. AI Call Config (only if ai-call-analytics enabled)
@@ -19,7 +20,7 @@
  *   - No stale drafts: every mount starts with a clean form.
  */
 
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import {
     OnboardingFormData,
     OnboardingStep,
@@ -29,13 +30,15 @@ import {
 import * as onboardingService from '../services/onboarding.service';
 import { logAction } from '@/shared/utils/auditLogger';
 import { AUDIT_ACTIONS, AUDIT_ENTITIES } from '@/shared/types/audit';
+import { apiClient } from '@/shared/api/apiClient';
 
 // ── Modules that trigger conditional steps ──────────────────────────────────
 const EMAIL_MODULES = ['email-campaigns'];
 const SMS_MODULES = ['email-campaigns', 'online-ordering'];
 const VAPI_MODULES = ['ai-call-analytics'];
+const HOSTING_MODULES = ['online-ordering'];
 
-export function useOnboardingFlow() {
+export function useOnboardingFlow(resumeTenantId?: string | null) {
     const [currentStep, setCurrentStep] = useState<OnboardingStep>(1);
     const [formData, setFormData] = useState<OnboardingFormData>(
         () => createInitialFormData()
@@ -47,9 +50,84 @@ export function useOnboardingFlow() {
     const [orchestrationSteps, setOrchestrationSteps] = useState<OrchestrationStepStatus[]>([]);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [stepErrors, setStepErrors] = useState<string[]>([]);
+    const [resumeLoading, setResumeLoading] = useState(!!resumeTenantId);
 
     // Ref to prevent concurrent submissions (survives re-renders)
     const submittingRef = useRef(false);
+
+    // ── Resume draft tenant ──────────────────────────────────────────────────
+    useEffect(() => {
+        if (!resumeTenantId) return;
+        const loadDraft = async () => {
+            setResumeLoading(true);
+            try {
+                const { data } = await apiClient.get(`/tenants/${resumeTenantId}`);
+                const s = data.settings || {};
+
+                // Pre-populate brand from saved data
+                setFormData(prev => ({
+                    ...prev,
+                    brand: {
+                        ...prev.brand,
+                        brandName: data.name || '',
+                        brandLegalName: data.legal_name || '',
+                        tradeName: s.tradeName || data.name || '',
+                        addressLine1: s.addressLine1 || s.address || '',
+                        addressLine2: s.addressLine2 || '',
+                        city: s.city || '',
+                        province: s.province || 'Ontario',
+                        postalCode: s.postalCode || '',
+                        country: s.country || 'Canada',
+                        timezone: data.timezone || 'Eastern Standard Time (EST)',
+                        currency: data.currency || 'CAD ($)',
+                        contactEmail: data.contact_email || '',
+                        contactPhone: data.contact_phone || '',
+                        paymentTermType: s.paymentTermType || 'NET_DAYS',
+                        netDays: s.netDays || 30,
+                    },
+                    // Pre-populate modules
+                    enabledModuleIds: data.enabledModules || [],
+                    selectedEntitlementPaths: (data.enabledModules || []).map((m: string) => m),
+                    // Pre-populate email config if available
+                    email: s.email ? {
+                        provider: s.email.provider || 'smtp',
+                        host: s.email.host || '',
+                        port: s.email.port || 587,
+                        username: s.email.username || '',
+                        password: '',
+                        encryption: s.email.encryption || 'tls',
+                        apiKey: '',
+                        senderEmail: s.email.senderEmail || s.email.from_address || '',
+                        senderName: s.email.senderName || s.email.from_name || '',
+                        replyTo: s.email.replyTo || '',
+                    } : prev.email,
+                    // Pre-populate SMS config if available
+                    sms: s.sms ? {
+                        provider: s.sms.provider || 'inherit',
+                        senderId: s.sms.senderId || s.sms.from || '',
+                        apiKey: '',
+                    } : prev.sms,
+                    // Pre-populate Vapi config
+                    vapi: data.vapi_assistant_id ? {
+                        assistantId: data.vapi_assistant_id || '',
+                        phoneNumber: s.vapi?.phoneNumber || '',
+                    } : prev.vapi,
+                }));
+
+                // Mark tenant as already created — submit pipeline will skip creation
+                setCreatedTenantId(resumeTenantId);
+
+                // Jump to step 2 (modules) since brand is pre-filled
+                // If modules are also filled, stay on step 2 so admin can review
+                setCurrentStep(1);
+            } catch (err) {
+                console.error('Failed to load draft tenant:', err);
+            } finally {
+                setResumeLoading(false);
+            }
+        };
+        loadDraft();
+    }, [resumeTenantId]);
 
     // ── Conditional step visibility ──────────────────────────────────────────
     const needsEmail = useMemo(() => {
@@ -64,18 +142,23 @@ export function useOnboardingFlow() {
         return formData.enabledModuleIds.some(id => VAPI_MODULES.includes(id));
     }, [formData.enabledModuleIds]);
 
+    const needsHosting = useMemo(() => {
+        return formData.enabledModuleIds.some(id => HOSTING_MODULES.includes(id));
+    }, [formData.enabledModuleIds]);
+
     /**
      * Active steps — dynamically computed based on entitlement selection.
      * Steps 3-5 only appear if relevant modules are enabled.
      */
     const activeSteps = useMemo((): OnboardingStep[] => {
         const steps: OnboardingStep[] = [1, 2]; // Brand + Entitlements (always)
+        if (needsHosting) steps.push(8);
         if (needsEmail) steps.push(3);
         if (needsSms) steps.push(4);
         if (needsVapi) steps.push(5);
         steps.push(6, 7); // Admin + Review (always)
         return steps;
-    }, [needsEmail, needsSms, needsVapi]);
+    }, [needsEmail, needsSms, needsVapi, needsHosting]);
 
     const totalSteps = activeSteps.length;
 
@@ -152,11 +235,20 @@ export function useOnboardingFlow() {
                 case 7:
                     // Review — no additional validation
                     break;
+                case 8:
+                    // Hosting — required when online-ordering is enabled
+                    if (needsHosting) {
+                        if (!formData.hosting.customDomain.trim()) errors.push('Custom domain is required for online ordering');
+                        if (formData.hosting.customDomain.trim() && !/^[a-zA-Z0-9][a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.hosting.customDomain.trim())) {
+                            errors.push('Invalid domain format (e.g. order.mybrand.com)');
+                        }
+                    }
+                    break;
             }
 
             return { valid: errors.length === 0, errors };
         },
-        [formData, needsEmail, needsSms, needsVapi]
+        [formData, needsEmail, needsSms, needsVapi, needsHosting]
     );
 
     // ── Step navigation (validates before advancing) ─────────────────────────
@@ -231,6 +323,14 @@ export function useOnboardingFlow() {
         []
     );
 
+    const updateHosting = useCallback(
+        (updates: Partial<OnboardingFormData['hosting']>) => {
+            setFormData((prev) => ({ ...prev, hosting: { ...prev.hosting, ...updates } }));
+            setStepErrors([]);
+        },
+        []
+    );
+
     const updateEnabledModules = useCallback((moduleIds: string[]) => {
         setFormData((prev) => ({
             ...prev,
@@ -287,6 +387,7 @@ export function useOnboardingFlow() {
         const dynamicLabels = [
             'Creating brand',
             'Enabling modules',
+            ...(needsHosting ? ['Configuring hosting'] : []),
             ...(needsEmail ? ['Configuring email'] : []),
             ...(needsSms && formData.sms.provider !== 'inherit' ? ['Configuring SMS'] : []),
             ...(needsVapi ? ['Configuring AI Call Analytics'] : []),
@@ -331,6 +432,14 @@ export function useOnboardingFlow() {
             markStep(stepIdx, 'done');
             formData.enabledModuleIds.forEach((id) => logAction({ action: AUDIT_ACTIONS.MODULE_ENABLED, entity: AUDIT_ENTITIES.MODULE, entityId: id, metadata: { tenantId } }));
             stepIdx++;
+
+            // ─── 2b. Configure hosting (only if online-ordering enabled) ─────
+            if (needsHosting) {
+                markStep(stepIdx, 'running');
+                await onboardingService.configureHosting(tenantId, formData.hosting);
+                markStep(stepIdx, 'done');
+                stepIdx++;
+            }
 
             // ─── 3. Configure email (only if enabled) ────────────────────────
             if (needsEmail) {
@@ -390,7 +499,7 @@ export function useOnboardingFlow() {
             setSubmitting(false);
             submittingRef.current = false;
         }
-    }, [formData, markStep, needsEmail, needsSms, needsVapi, createdTenantId, extractErrorMessage]);
+    }, [formData, markStep, needsEmail, needsSms, needsVapi, needsHosting, createdTenantId, extractErrorMessage]);
 
     const resetDraft = useCallback(() => {
         setFormData(createInitialFormData());
@@ -419,6 +528,7 @@ export function useOnboardingFlow() {
         needsEmail,
         needsSms,
         needsVapi,
+        needsHosting,
 
         // Form data
         formData,
@@ -427,6 +537,7 @@ export function useOnboardingFlow() {
         updateEmail,
         updateSms,
         updateVapi,
+        updateHosting,
         updateEnabledModules,
         updateEntitlementPaths,
 
@@ -442,5 +553,8 @@ export function useOnboardingFlow() {
         validateStep,
         stepErrors,
         resetDraft,
+
+        // Resume
+        resumeLoading,
     };
 }

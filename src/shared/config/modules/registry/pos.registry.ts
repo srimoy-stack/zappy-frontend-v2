@@ -6,12 +6,12 @@ export const POS_REGISTRY: RegistryNode[] = [
         id: 'pos', label: 'Point of Sale', description: 'Full POS terminal operations',
         icon: 'ShoppingCart', parentId: null, moduleKey: 'pos', level: 'module', sortOrder: 1,
         route: '/pos', routePrefix: '/pos', entitlementKey: 'pos',
-        isCore: true, isSystem: false, isBeta: false, isProtected: true,
-        status: 'active', showInSidebar: true, sidebarGroup: 'operations',
+        isCore: false, isSystem: false, isBeta: false, isProtected: true,
+        status: 'active', showInSidebar: false /* Phase 1: hidden */, sidebarGroup: 'operations',
     },
 
     // ── Submodules ───────────────────────────────────────
-    { id: 'pos.terminal', label: 'POS Terminal', parentId: 'pos', moduleKey: 'pos', level: 'submodule', sortOrder: 1, entitlementKey: 'pos.terminal', isCore: true, isSystem: false, isBeta: false, status: 'active', showInSidebar: false },
+    { id: 'pos.terminal', label: 'POS Terminal', parentId: 'pos', moduleKey: 'pos', level: 'submodule', sortOrder: 1, entitlementKey: 'pos.terminal', isCore: false, isSystem: false, isBeta: false, status: 'active', showInSidebar: false },
     { id: 'pos.orders', label: 'Orders', parentId: 'pos', moduleKey: 'pos', level: 'submodule', sortOrder: 2, entitlementKey: 'pos.orders', isCore: false, isSystem: false, isBeta: false, status: 'active', showInSidebar: false },
     { id: 'pos.payments', label: 'Payments', parentId: 'pos', moduleKey: 'pos', level: 'submodule', sortOrder: 3, entitlementKey: 'pos.payments', isCore: false, isSystem: false, isBeta: false, status: 'active', showInSidebar: false },
     { id: 'pos.shifts', label: 'Shift Management', parentId: 'pos', moduleKey: 'pos', level: 'submodule', sortOrder: 4, entitlementKey: 'pos.shifts', isCore: false, isSystem: false, isBeta: false, status: 'active', showInSidebar: false },
@@ -22,7 +22,7 @@ export const POS_REGISTRY: RegistryNode[] = [
     { id: 'pos.park-hold', label: 'Park/Hold Orders', parentId: 'pos', moduleKey: 'pos', level: 'submodule', sortOrder: 9, entitlementKey: 'pos.park-hold', isCore: false, isSystem: false, isBeta: false, status: 'active', showInSidebar: false },
 
     // ── Pages ────────────────────────────────────────────
-    { id: 'pos.terminal.new-sale', label: 'New Sale', parentId: 'pos.terminal', moduleKey: 'pos', level: 'page', sortOrder: 1, route: '/pos', entitlementKey: 'pos.terminal.new-sale', isCore: true, isSystem: false, isBeta: false, status: 'active', showInSidebar: false },
+    { id: 'pos.terminal.new-sale', label: 'New Sale', parentId: 'pos.terminal', moduleKey: 'pos', level: 'page', sortOrder: 1, route: '/pos', entitlementKey: 'pos.terminal.new-sale', isCore: false, isSystem: false, isBeta: false, status: 'active', showInSidebar: false },
     { id: 'pos.orders.active', label: 'Active Orders', parentId: 'pos.orders', moduleKey: 'pos', level: 'page', sortOrder: 1, entitlementKey: 'pos.orders.active', isCore: false, isSystem: false, isBeta: false, status: 'active', showInSidebar: false },
     { id: 'pos.orders.history', label: 'Order History', parentId: 'pos.orders', moduleKey: 'pos', level: 'page', sortOrder: 2, entitlementKey: 'pos.orders.history', isCore: false, isSystem: false, isBeta: false, status: 'active', showInSidebar: false },
     { id: 'pos.payments.processing', label: 'Payment Processing', parentId: 'pos.payments', moduleKey: 'pos', level: 'page', sortOrder: 1, entitlementKey: 'pos.payments.processing', isCore: false, isSystem: false, isBeta: false, status: 'active', showInSidebar: false },

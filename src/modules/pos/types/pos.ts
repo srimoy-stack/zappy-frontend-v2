@@ -69,7 +69,7 @@ export interface POSContextType {
     session: POSSession | null;
     isOffline: boolean;
     deviceId: string;
-    login: (type: POSType, credentials: { pin?: string; email?: string; password?: string; deviceId: string }) => Promise<{ requiresStoreSelection: boolean } | undefined>;
+    login: (type: POSType, credentials: { pin?: string; email?: string; password?: string; deviceId: string; cashierId?: string; cashierName?: string; cashierEmail?: string; storeId?: string }) => Promise<{ requiresStoreSelection: boolean } | undefined>;
     setStore: (store: POSStore) => void;
     setChannel: (channel: OrderChannel) => void;
     setTable: (table: POSTable | null) => void;
@@ -94,7 +94,7 @@ export interface POSContextType {
     updateCustomer: (customerId: string, data: Partial<POSCustomer>) => void;
     addOrderToCustomerHistory: (customerId: string, order: any) => void;
     customers: POSCustomer[];
-    startShift: (openingCash: number, notes?: string) => void;
+    startShift: (openingCash: number, notes?: string) => Promise<void>;
     isSyncing: boolean;
     setSyncing: (syncing: boolean) => void;
     mergeTables: (tableIds: string[]) => void;

@@ -1,0 +1,703 @@
+# ─── Zappy Platform API Endpoints & Payloads ───────────────────
+
+This document defines the request/response payloads, query parameters, and header structures for:
+1. Platform Administration & Stats APIs
+2. Multi-Tenant Onboarding Pipeline (Brand registration, settings, configuration, and tenant-scoped admin creation)
+
+---
+
+## Part 1: Platform Administration & Stats APIs
+
+### 1. GET /api/v1/platform/dashboard-stats?range=30d
+Retrieves high-level platform health, module adoption, campaign statistics, and growth trends.
+
+**Query Parameters:**
+| Parameter | Type | Required | Values | Default | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `range` | string | No | `7d`, `30d`, `90d`, `all` | `30d` | Date filter range for growth statistics and KPIs. |
+
+**Request Headers:**
+```http
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "range": "30d",
+  "totalTenants": 24,
+  "active": 18,
+  "draft": 3,
+  "suspended": 1,
+  "provisioned": 1,
+  "configuring": 1,
+  "newTenants": 4,
+  "totalUsers": 156,
+  "platformUsers": 5,
+  "newUsers": 12,
+  "activeModules": 8,
+  "moduleAdoption": [
+    { "module": "pos", "tenants": 24, "pct": 100 },
+    { "module": "inventory", "tenants": 18, "pct": 75 },
+    { "module": "email-campaigns", "tenants": 10, "pct": 42 },
+    { "module": "ai-call-analytics", "tenants": 6, "pct": 25 },
+    { "module": "crm", "tenants": 4, "pct": 17 }
+  ],
+  "campaignUsage": {
+    "totalCampaigns": 87,
+    "sent": 62,
+    "scheduled": 15,
+    "draft": 10,
+    "totalEmailsSent": 45200,
+    "totalOpened": 28900,
+    "totalClicked": 8700,
+    "tenantsUsingCampaigns": 10
+  },
+  "callUsage": {
+    "totalCalls": 1240,
+    "totalMinutes": 3680,
+    "avgDurationSeconds": 178,
+    "totalCost": 245.50,
+    "inbound": 720,
+    "outbound": 480,
+    "webCall": 40,
+    "tenantsUsingCalls": 6
+  },
+  "growthTrend": [
+    { "date": "May 1", "count": 1 },
+    { "date": "May 5", "count": 3 },
+    { "date": "May 10", "count": 0 },
+    { "date": "May 15", "count": 2 },
+    { "date": "May 20", "count": 1 }
+  ],
+  "topTenants": [
+    {
+      "id": "1",
+      "name": "Acme Pizza Co.",
+      "slug": "acme-pizza",
+      "status": "active",
+      "usersCount": 42,
+      "created": "2025-06-15"
+    },
+    {
+      "id": "2",
+      "name": "QuickBite Foods",
+      "slug": "quickbite",
+      "status": "active",
+      "usersCount": 28,
+      "created": "2025-08-22"
+    }
+  ],
+  "recentActivity": [
+    {
+      "id": "evt-001",
+      "event": "Tenant Created",
+      "detail": "Maple Leaf Burgers registered via onboarding wizard",
+      "time": "2 mins ago",
+      "type": "success"
+    },
+    {
+      "id": "evt-002",
+      "event": "Module Suspended",
+      "detail": "AI Call Analytics disabled for QuickBite Foods",
+      "time": "1 hour ago",
+      "type": "warning"
+    }
+  ],
+  "recentTenants": [
+    {
+      "id": "3",
+      "name": "Maple Leaf Burgers",
+      "slug": "maple-leaf",
+      "status": "configuring",
+      "created": "2026-05-19"
+    }
+  ]
+}
+```
+
+---
+
+## Part 2: Multi-Tenant Onboarding Pipeline APIs
+
+### Step 1: Create Tenant (Draft State)
+Registers the brand's legal entity and basic operations metadata.
+
+**Endpoint:** `POST /tenants`  
+**Request Payload:**
+```json
+{
+  "name": "Maple Leaf Burgers",
+  "slug": "maple-leaf-burgers",
+  "legal_name": "Maple Leaf Burgers Inc.",
+  "trade_name": "Maple Leaf Burgers",
+  "address": "123 Yonge St, Toronto",
+  "timezone": "America/Toronto",
+  "currency": "CAD",
+  "contact_email": "admin@mapleleafburgers.com",
+  "contact_phone": "+14165550199",
+  "payment_terms": "Net 30",
+  "status": "draft"
+}
+```
+
+**Expected Response (201 Created):**
+```json
+{
+  "id": "tenant-87293",
+  "name": "Maple Leaf Burgers",
+  "slug": "maple-leaf-burgers",
+  "legal_name": "Maple Leaf Burgers Inc.",
+  "trade_name": "Maple Leaf Burgers",
+  "address": "123 Yonge St, Toronto",
+  "timezone": "America/Toronto",
+  "currency": "CAD",
+  "contact_email": "admin@mapleleafburgers.com",
+  "contact_phone": "+14165550199",
+  "payment_terms": "Net 30",
+  "status": "draft",
+  "created_at": "2026-05-20T12:00:00Z"
+}
+```
+
+---
+
+### Step 2: Store Extended Settings JSON
+Persists specialized UI settings and metadata not covered by relational columns.
+
+**Endpoint:** `PATCH /tenants/{tenantId}`  
+**Request Payload:**
+```json
+{
+  "settings": {
+    "addressLine1": "123 Yonge St",
+    "addressLine2": "Suite 400",
+    "city": "Toronto",
+    "province": "ON",
+    "postalCode": "M5B 1N8",
+    "country": "Canada",
+    "paymentTermType": "Net 30",
+    "netDays": 30
+  }
+}
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "id": "tenant-87293",
+  "name": "Maple Leaf Burgers",
+  "status": "draft",
+  "settings": {
+    "addressLine1": "123 Yonge St",
+    "addressLine2": "Suite 400",
+    "city": "Toronto",
+    "province": "ON",
+    "postalCode": "M5B 1N8",
+    "country": "Canada",
+    "paymentTermType": "Net 30",
+    "netDays": 30
+  }
+}
+```
+
+---
+
+### Step 3: Configure Module Entitlements
+Enables SaaS platform modules and sets access permissions for the tenant.
+
+**Endpoint:** `POST /tenants/{tenantId}/modules` (Alternative: `PUT /tenants/{tenantId}/modules`)  
+**Request Payload:**
+```json
+{
+  "modules": [
+    { "moduleId": "pos", "purchased": true, "enabled": true },
+    { "moduleId": "inventory", "purchased": true, "enabled": true },
+    { "moduleId": "ai-call-analytics", "purchased": true, "enabled": true }
+  ]
+}
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "tenantId": "tenant-87293",
+  "modules": [
+    { "moduleId": "pos", "purchased": true, "enabled": true },
+    { "moduleId": "inventory", "purchased": true, "enabled": true },
+    { "moduleId": "ai-call-analytics", "purchased": true, "enabled": true }
+  ]
+}
+```
+
+---
+
+### Step 4: Configure Email & SMS Providers
+Sets custom provider settings or switches configs to inherited platform defaults.
+
+**Endpoint:** `POST /tenants/{tenantId}/config`  
+**Request Payload:**
+```json
+{
+  "email": {
+    "provider": "smtp",
+    "host": "smtp.mailgun.org",
+    "port": 587,
+    "username": "postmaster@mapleleafburgers.com",
+    "password": "SecurePassword123!",
+    "encryption": "tls",
+    "senderEmail": "noreply@mapleleafburgers.com",
+    "senderName": "Maple Leaf Burgers Support",
+    "replyTo": "support@mapleleafburgers.com"
+  },
+  "sms": {
+    "provider": "twilio",
+    "accountSid": "ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "apiKey": "SKXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "apiSecret": "SecretKeyText",
+    "senderId": "+18885550199"
+  }
+}
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "tenantId": "tenant-87293",
+  "config": {
+    "email": { "provider": "smtp", "senderEmail": "noreply@mapleleafburgers.com" },
+    "sms": { "provider": "twilio", "senderId": "+18885550199" }
+  }
+}
+```
+
+---
+
+### Step 5: Configure AI Phone Assistant (Optional Vapi Linkage)
+Links a telephone AI assistant identifier column directly for ingestion webhooks.
+
+**Endpoint:** `PATCH /tenants/{tenantId}`  
+**Request Payload:**
+```json
+{
+  "vapi_assistant_id": "vapi-assist-92381-x9a",
+  "settings": {
+    "vapi": {
+      "phoneNumber": "+18885550122",
+      "assistantId": "vapi-assist-92381-x9a"
+    }
+  }
+}
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "id": "tenant-87293",
+  "vapi_assistant_id": "vapi-assist-92381-x9a",
+  "settings": {
+    "vapi": {
+      "phoneNumber": "+18885550122",
+      "assistantId": "vapi-assist-92381-x9a"
+    }
+  }
+}
+```
+
+---
+
+### Step 6: Create Brand Admin User (Scoped Isolation)
+Creates the tenant owner profile scoped entirely within the tenant context.
+
+**Endpoint:** `POST /tenants/{tenantId}/users`  
+**Request Payload:**
+```json
+{
+  "fullName": "Elizabeth Maple",
+  "email": "elizabeth@mapleleafburgers.com",
+  "phone": "+14165550144",
+  "userType": "BRAND_ADMIN",
+  "inviteMethod": "MAGIC_LINK"
+}
+```
+
+**Expected Response (201 Created):**
+```json
+{
+  "id": "usr-92831",
+  "fullName": "Elizabeth Maple",
+  "email": "elizabeth@mapleleafburgers.com",
+  "phone": "+14165550144",
+  "userType": "BRAND_ADMIN",
+  "status": "Pending",
+  "tenantId": "tenant-87293",
+  "createdAt": "2026-05-20T12:05:00Z"
+}
+```
+
+---
+
+### Step 7: Finalize & Activate Tenant
+Completes the onboarding pipeline, making the tenant and admin login runtime active.
+
+**Endpoint:** `PATCH /tenants/{tenantId}`  
+**Request Payload:**
+```json
+{
+  "status": "active"
+}
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "id": "tenant-87293",
+  "name": "Maple Leaf Burgers",
+  "slug": "maple-leaf-burgers",
+  "status": "active"
+}
+```
+
+---
+
+## Part 3: Brand Details Page Tabs & Associated APIs
+
+When viewing a specific Brand/Tenant in the platform administration panel, the dashboard divides operations into 6 tabs. The endpoints, header contexts, request payloads, and expected response payloads for each tab are specified below.
+
+### 1. Overview Tab
+Shows core details of the brand, address, settings, and billing parameters.
+
+**API Call:** `GET /pos/tenants/{tenantId}`
+**Expected Response (200 OK):**
+```json
+{
+  "id": "tenant-87293",
+  "name": "Maple Leaf Burgers",
+  "slug": "maple-leaf-burgers",
+  "legal_name": "Maple Leaf Burgers Inc.",
+  "trade_name": "Maple Leaf Burgers",
+  "address": "123 Yonge St, Toronto, ON",
+  "timezone": "America/Toronto",
+  "currency": "CAD",
+  "contact_email": "admin@mapleleafburgers.com",
+  "contact_phone": "+14165550199",
+  "payment_terms": "Net 30",
+  "status": "active",
+  "vapi_assistant_id": "vapi-assist-92381-x9a",
+  "created_at": "2026-05-20T12:00:00Z",
+  "settings": {
+    "addressLine1": "123 Yonge St",
+    "addressLine2": "Suite 400",
+    "city": "Toronto",
+    "province": "ON",
+    "postalCode": "M5B 1N8",
+    "country": "Canada",
+    "paymentTermType": "Net 30",
+    "netDays": 30
+  }
+}
+```
+
+---
+
+### 2. Stores Tab
+Lists and manages physical/operational locations under the brand.
+
+#### A. Fetch Locations/Stores list
+**API Call:** `GET /pos/stores/`
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `tenant_id` | string | Yes | ID of the tenant whose stores are being requested. |
+
+**Expected Response (200 OK):**
+```json
+[
+  {
+    "id": "store-101",
+    "tenant_id": "tenant-87293",
+    "name": "Downtown Toronto Store",
+    "phone": "+14165550100",
+    "address_line_1": "100 Yonge St",
+    "city": "Toronto",
+    "province": "ON",
+    "postal_code": "M5B 1H1",
+    "is_active": true,
+    "created_at": "2026-05-20T12:10:00Z"
+  }
+]
+```
+
+#### B. Create New Store/Location
+**API Call:** `POST /pos/stores/`
+**Request Payload:**
+```json
+{
+  "tenant_id": "tenant-87293",
+  "name": "Midtown Toronto Store",
+  "phone": "+14165550102",
+  "address_line_1": "456 Yonge St",
+  "city": "Toronto",
+  "province": "ON",
+  "postal_code": "M4Y 1W9"
+}
+```
+**Expected Response (201 Created):**
+```json
+{
+  "id": "store-102",
+  "tenant_id": "tenant-87293",
+  "name": "Midtown Toronto Store",
+  "phone": "+14165550102",
+  "address_line_1": "456 Yonge St",
+  "city": "Toronto",
+  "province": "ON",
+  "postal_code": "M4Y 1W9",
+  "is_active": true,
+  "created_at": "2026-05-20T12:15:00Z"
+}
+```
+
+#### C. Toggle Store Status (Deactivate / Suspend / Reactivate)
+**API Call:** `PATCH /pos/stores/{storeId}`
+**Request Payload:**
+```json
+{
+  "status": "Inactive"
+}
+```
+**Expected Response (200 OK):**
+```json
+{
+  "id": "store-102",
+  "name": "Midtown Toronto Store",
+  "is_active": false
+}
+```
+
+---
+
+### 3. Users Tab
+Lists, invites, and configures users scoped to the tenant.
+
+**Headers Required (Tenant isolation context):**
+```http
+X-Tenant-ID: tenant-87293
+```
+
+#### A. Fetch Tenant Users
+**API Call:** `GET /api/users`
+**Expected Response (200 OK):**
+```json
+{
+  "data": [
+    {
+      "id": "usr-92831",
+      "name": "Elizabeth Maple",
+      "email": "elizabeth@mapleleafburgers.com",
+      "phone": "+14165550144",
+      "userType": "BRAND_ADMIN",
+      "role": {
+        "id": "role-admin",
+        "name": "Brand Admin"
+      },
+      "storeIds": [],
+      "status": "Active",
+      "lastLogin": "2026-05-20T12:30:00Z",
+      "createdAt": "2026-05-20T12:05:00Z"
+    }
+  ],
+  "page": 1,
+  "pageSize": 50,
+  "total": 1
+}
+```
+
+#### B. Create/Invite Scoped User
+**API Call:** `POST /api/users/` (or `POST /tenants/{tenantId}/users`)
+**Request Payload:**
+```json
+{
+  "fullName": "John Doe",
+  "email": "john.doe@mapleleafburgers.com",
+  "phone": "+14165550105",
+  "userType": "POS_USER",
+  "roleId": "role-cashier-123",
+  "assignedStoreIds": ["store-101"]
+}
+```
+**Expected Response (201 Created):**
+```json
+{
+  "id": "usr-92832",
+  "name": "John Doe",
+  "email": "john.doe@mapleleafburgers.com",
+  "phone": "+14165550105",
+  "userType": "POS_USER",
+  "role": {
+    "id": "role-cashier-123",
+    "name": "Cashier"
+  },
+  "storeIds": ["store-101"],
+  "status": "Pending",
+  "createdAt": "2026-05-20T12:20:00Z"
+}
+```
+
+---
+
+### 4. Roles Tab
+Defines the access hierarchy and maps permissions for user roles.
+
+**Headers Required (Tenant isolation context):**
+```http
+X-Tenant-ID: tenant-87293
+```
+
+#### A. Fetch Tenant Custom Roles
+**API Call:** `GET /api/roles/`
+**Expected Response (200 OK):**
+```json
+[
+  {
+    "id": "role-cashier-123",
+    "name": "Cashier",
+    "description": "Standard point-of-sale checkout operator",
+    "permissions": ["pos:checkout", "orders:create"],
+    "isSystem": false,
+    "createdAt": "2026-05-20T12:12:00Z"
+  }
+]
+```
+
+#### B. Create Custom Role
+**API Call:** `POST /api/roles/`
+**Request Payload:**
+```json
+{
+  "name": "Store Manager Plus",
+  "description": "Store management with elevated refund options",
+  "permissions": ["pos:checkout", "orders:create", "orders:refund", "reports:view"]
+}
+```
+**Expected Response (201 Created):**
+```json
+{
+  "id": "role-manager-456",
+  "name": "Store Manager Plus",
+  "description": "Store management with elevated refund options",
+  "permissions": ["pos:checkout", "orders:create", "orders:refund", "reports:view"],
+  "isSystem": false,
+  "createdAt": "2026-05-20T12:25:00Z"
+}
+```
+
+---
+
+### 5. Modules Tab
+Manages which modules are enabled/purchased for the tenant, adjusting application runtime capabilities.
+
+#### A. Fetch Tenant Enabled Modules
+**API Call:** `GET /tenants/{tenantId}/modules`
+**Expected Response (200 OK):**
+```json
+[
+  {
+    "moduleId": "pos",
+    "name": "Point of Sale",
+    "purchased": true,
+    "enabled": true
+  },
+  {
+    "moduleId": "inventory",
+    "name": "Inventory Management",
+    "purchased": true,
+    "enabled": true
+  },
+  {
+    "moduleId": "ai-call-analytics",
+    "name": "AI Voice Assistant & Logs",
+    "purchased": true,
+    "enabled": true
+  }
+]
+```
+
+#### B. Modify Tenant Modules configuration
+**API Call:** `POST /tenants/{tenantId}/modules`
+**Request Payload:**
+```json
+{
+  "modules": [
+    { "moduleId": "pos", "purchased": true, "enabled": true },
+    { "moduleId": "inventory", "purchased": true, "enabled": false },
+    { "moduleId": "ai-call-analytics", "purchased": false, "enabled": false }
+  ]
+}
+```
+**Expected Response (200 OK):**
+```json
+[
+  { "moduleId": "pos", "purchased": true, "enabled": true },
+  { "moduleId": "inventory", "purchased": true, "enabled": false },
+  { "moduleId": "ai-call-analytics", "purchased": false, "enabled": false }
+]
+```
+
+---
+
+### 6. Communication Tab
+Governs SMTP, API keys, SMS, and webhook analytics integration for brand-level channels.
+
+#### A. Fetch Tenant Communication Config
+**API Call:** `GET /tenants/{tenantId}/config`
+**Expected Response (200 OK):**
+```json
+{
+  "email": {
+    "provider": "smtp",
+    "host": "smtp.mailgun.org",
+    "port": 587,
+    "username": "postmaster@mapleleafburgers.com",
+    "senderEmail": "noreply@mapleleafburgers.com",
+    "senderName": "Maple Leaf Burgers Support"
+  },
+  "sms": {
+    "provider": "twilio",
+    "senderId": "+18885550199"
+  }
+}
+```
+
+#### B. Save Config modifications
+**API Call:** `POST /tenants/{tenantId}/config`
+**Request Payload:**
+```json
+{
+  "email": {
+    "provider": "smtp",
+    "host": "smtp.mailgun.org",
+    "port": 587,
+    "username": "postmaster@mapleleafburgers.com",
+    "password": "SecurePassword123!",
+    "encryption": "tls",
+    "senderEmail": "noreply@mapleleafburgers.com",
+    "senderName": "Maple Leaf Burgers Support",
+    "replyTo": "support@mapleleafburgers.com"
+  }
+}
+```
+**Expected Response (200 OK):**
+```json
+{
+  "email": {
+    "provider": "smtp",
+    "host": "smtp.mailgun.org",
+    "port": 587,
+    "username": "postmaster@mapleleafburgers.com",
+    "senderEmail": "noreply@mapleleafburgers.com",
+    "senderName": "Maple Leaf Burgers Support"
+  }
+}
+```

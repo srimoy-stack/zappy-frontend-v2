@@ -1,6 +1,10 @@
 import axios from 'axios';
 import { getSession } from 'next-auth/react';
 
+type SessionUserWithToken = {
+    accessToken?: string;
+};
+
 const axiosInstance = axios.create({
     baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api',
     headers: {
@@ -17,7 +21,7 @@ axiosInstance.interceptors.request.use(
         if (typeof window !== 'undefined') {
             try {
                 const session = await getSession();
-                const token = (session?.user as any)?.accessToken;
+                const token = (session?.user as SessionUserWithToken | undefined)?.accessToken;
                 if (token) {
                     config.headers.Authorization = `Bearer ${token}`;
                 }
@@ -42,7 +46,7 @@ axiosInstance.interceptors.response.use(
             const currentPath = window.location.pathname;
             if (!currentPath.includes('/login')) {
                 console.warn('[axios] 401 Unauthorized — redirecting to login');
-                window.location.href = '/login';
+                window.location.href = currentPath.startsWith('/pos') ? '/pos/login' : '/login';
             }
         }
         return Promise.reject(error);

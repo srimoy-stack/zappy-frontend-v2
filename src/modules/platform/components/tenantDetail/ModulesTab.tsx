@@ -1,33 +1,47 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ModuleTreeSelector } from '../tenants/ModuleTreeSelector';
-import { MODULE_REGISTRY } from '@/shared/config/modules';
-import { LayoutGrid, Save, RotateCcw } from 'lucide-react';
+import { getModuleNodes } from '@/shared/config/modules';
+import { LayoutGrid, Save, RotateCcw, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { apiClient } from '@/shared/api/apiClient';
 
 interface ModulesTabProps {
     tenantId: string;
     initialPaths: string[];
+    /** When true, modules are displayed but cannot be toggled (brand admin view) */
+    readOnly?: boolean;
 }
 
-export function ModulesTab({ tenantId, initialPaths }: ModulesTabProps) {
+export function ModulesTab({ tenantId, initialPaths, readOnly = false }: ModulesTabProps) {
     const [selectedPaths, setSelectedPaths] = useState<string[]>(initialPaths);
     const [isDirty, setIsDirty] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(false);
 
     const handleChange = (paths: string[]) => {
+        if (readOnly) return;
         setSelectedPaths(paths);
         setIsDirty(true);
+        setSaveSuccess(false);
     };
 
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            // TODO: API call — PUT /tenants/{tenantId}/entitlements
-            await new Promise(r => setTimeout(r, 1000));
+            const modules = selectedPaths.map(id => ({
+                moduleId: id,
+                purchased: true,
+                enabled: true,
+            }));
+            // API call — PUT /tenants/{tenantId}/modules
+            await apiClient.put(`/tenants/${tenantId}/modules`, { modules });
             setIsDirty(false);
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 3000);
         } catch (err) {
-            alert('Failed to update entitlements');
+            console.error('[ModulesTab] Save failed:', err);
+            alert('Failed to update entitlements. Changes were not saved.');
         } finally {
             setIsSaving(false);
         }
@@ -36,7 +50,16 @@ export function ModulesTab({ tenantId, initialPaths }: ModulesTabProps) {
     const handleReset = () => {
         setSelectedPaths(initialPaths);
         setIsDirty(false);
+        setSaveSuccess(false);
     };
+
+    const moduleNodes = getModuleNodes();
+    const configurableModules = moduleNodes.filter(
+        (node) => !node.isSystem && node.status === 'active'
+    );
+
+    const enabledCount = selectedPaths.length;
+    const totalAvailable = configurableModules.length;
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -48,33 +71,54 @@ export function ModulesTab({ tenantId, initialPaths }: ModulesTabProps) {
                         Module Entitlements
                     </h3>
                     <p className="text-xs text-slate-500 font-medium mt-1">
-                        Enable or disable modules for this tenant. Changes affect navigation, API access, and route guards.
+                        {enabledCount} of {totalAvailable} modules enabled{readOnly ? ' — configured by platform admin (read-only)' : ' — synced with onboarding entitlements step'}.
                     </p>
                 </div>
-                {isDirty && (
+                {!readOnly && (
                     <div className="flex items-center gap-3">
-                        <button
-                            onClick={handleReset}
-                            className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-50 transition-all"
-                        >
-                            <RotateCcw size={14} /> Revert
-                        </button>
-                        <button
-                            onClick={handleSave}
-                            disabled={isSaving}
-                            className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black hover:bg-slate-800 transition-all disabled:opacity-50"
-                        >
-                            <Save size={14} /> {isSaving ? 'Saving...' : 'Save Changes'}
-                        </button>
+                        {saveSuccess && (
+                            <span className="flex items-center gap-1.5 text-xs font-black text-emerald-600 animate-in fade-in slide-in-from-right-2 duration-300">
+                                <CheckCircle2 size={14} /> Saved
+                            </span>
+                        )}
+                        {isDirty && (
+                            <>
+                                <button onClick={handleReset}
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-50 transition-all">
+                                    <RotateCcw size={14} /> Revert
+                                </button>
+                                <button onClick={handleSave} disabled={isSaving}
+                                    className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black hover:bg-slate-800 transition-all disabled:opacity-50">
+                                    <Save size={14} /> {isSaving ? 'Saving...' : 'Save Changes'}
+                                </button>
+                            </>
+                        )}
                     </div>
                 )}
             </div>
 
-            {/* Tree Selector */}
+            {/* Entitlement Stats */}
+            <div className="grid grid-cols-3 gap-4">
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm text-center">
+                    <span className="text-2xl font-black text-emerald-600">{enabledCount}</span>
+                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Enabled</span>
+                </div>
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm text-center">
+                    <span className="text-2xl font-black text-slate-400">{totalAvailable - enabledCount}</span>
+                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Available</span>
+                </div>
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm text-center">
+                    <span className="text-2xl font-black text-slate-900">{totalAvailable}</span>
+                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Total Modules</span>
+                </div>
+            </div>
+
+            {/* Tree Selector — uses same getModuleNodes() as onboarding */}
             <ModuleTreeSelector
-                modules={MODULE_REGISTRY}
+                modules={configurableModules}
                 selectedPaths={selectedPaths}
                 onChange={handleChange}
+                readOnly={readOnly}
             />
         </div>
     );

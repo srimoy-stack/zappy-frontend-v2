@@ -1,0 +1,553 @@
+Zyappy POS — Catalog Intelligence / Items Module 
+Final Developer Handoff Document (Complete Version) 
+Module: 
+M1 – Catalog Intelligence / Menu Engine / Item Management 
+Purpose 
+This module powers Zyappy’s complete menu architecture across: 
+•POS 
+•Online Ordering 
+•Kiosk 
+•KDS 
+•Uber / Delivery Channels 
+•Future marketplace integrations 
+This document defines complete frontend behavior, backend structure, APIs, runtime rules, store 
+permissions, publishing lifecycle, conflict resolution, and operational recovery requirements. 
+This follows Zyappy’s pizza-first architecture where menu logic is centralized and reused across 
+channels. 
+ 
+1. Catalog Architecture 
+Tenant 
+ └── Brand 
+      └── Store 
+            └── Catalog Intelligence 
+                   ├── Inventory List 
+                   ├── Taxonomies 
+                   ├── Modifier Pools 
+                   ├── Rule Engine 
+                   ├── Publishing System 
+ 
+                   └── Runtime Sync Layer 
+Item Structure: 
+Item 
+ ├── General 
+ ├── Variants 
+ ├── Modifiers 
+ ├── Dynamic Pricing 
+ ├── Recipe/BOM 
+ ├── Availability 
+ ├── Store Permissions 
+ ├── Publishing 
+ └── Audit Logs 
+Global Fields: 
+Field 
+tenant_id 
+store_id 
+created_by 
+updated_by 
+created_at 
+updated_at 
+status 
+Store-level changes should not modify master records. 
+ 
+2. Inventory List 
+API: 
+GET /items 
+Search: 
+search 
+sku 
+status 
+category 
+store 
+channel 
+Columns: 
+Field 
+item_id 
+display_image 
+merchant_display_name 
+sku 
+item_type 
+variant_count 
+modifier_count 
+base_price 
+max_price 
+menu_star 
+status 
+Actions: 
+View 
+Edit 
+Duplicate 
+Delete 
+Archive 
+Delete blocked when: 
+•sales exist 
+•linked with combo 
+•linked with recipe 
+•linked with offers 
+Archive should be used instead. 
+ 
+3. Taxonomies 
+Purpose: 
+Organization only. 
+No pricing logic. 
+Fields: 
+Field 
+category_id 
+category_name 
+subtitle 
+description 
+icon 
+connected_skus 
+store_visibility 
+status 
+Examples: 
+Signature Pizza 
+Traditional Pizza 
+Combos 
+Drinks 
+Sides 
+Desserts 
+Actions: 
+Edit 
+Delete 
+Archive 
+ 
+4. Modifier Pools 
+Reusable modifier definitions. 
+Cannot create modifiers from item screen. 
+Fields: 
+Field 
+modifier_group_id 
+group_name 
+description 
+min_selection 
+max_selection 
+required 
+half_half_enabled 
+premium_rules_enabled 
+linked_items_count 
+Examples: 
+Pizza Toppings 
+Cheese Level 
+Crust Addons 
+Dips 
+Actions: 
+Edit 
+Delete 
+Duplicate 
+Archive 
+ 
+5. Item Setup Tabs 
+General 
+Variants 
+Modifiers 
+Dynamic Pricing 
+Recipe 
+Availability 
+Store Permission 
+Publishing 
+Audit Log 
+ 
+6. General Tab 
+Fields: 
+Field 
+Required 
+merchant_display_name 
+Yes 
+internal_name 
+Yes 
+Field 
+Required 
+sku 
+Yes 
+barcode 
+No 
+category_id 
+Yes 
+item_type 
+Yes 
+description 
+No 
+public_story 
+No 
+display_image 
+No 
+Item Types: 
+Pizza 
+Side 
+Drink 
+Dessert 
+Combo 
+Retail 
+Service 
+Flags: 
+Featured 
+Menu Star 
+Allow Notes 
+Taxable 
+Contains Alcohol 
+Age Restricted 
+ 
+7. Store Visibility 
+Dropdown: 
+Store Visibility 
+Options: 
+All Stores 
+Selected Stores 
+If Selected: 
+store_ids[] 
+Examples: 
+Pizza available only in: 
+ 
+Store A 
+Store B 
+Store C 
+ 
+8. Store Edit Permissions 
+Purpose: 
+Control local edits. 
+Fields: 
+Field 
+allow_store_edit 
+approval_required 
+allowed_edit_fields 
+Allowed: 
+Price 
+Availability 
+Description 
+Images 
+Modifier Availability 
+Dynamic Pricing 
+Recipe 
+Rules: 
+Brand creates master item. 
+Store edits create local overrides only. 
+ 
+9. Variants 
+Supported: 
+Size 
+Crust 
+Flavor 
+Protein 
+Temperature 
+Custom 
+Group Fields: 
+Field 
+group_name 
+mandatory 
+min_selection 
+max_selection 
+Option Fields: 
+Field 
+option_name 
+Field 
+price_adjustment 
+default_selected 
+Examples: 
+SIZE 
+Medium +0 
+Large +3 
+XL +7 
+CRUST 
+Thin +0 
+Pan +2 
+Gluten Free +3.5 
+ 
+10. Modifiers 
+Attach reusable pools. 
+Fields: 
+Field 
+modifier_group 
+required 
+min_selection 
+max_selection 
+free_count 
+Types: 
+TOPPING 
+PREMIUM_TOPPING 
+DIP 
+CAN 
+ADDON 
+EXTRA 
+Classification enforcement required. 
+ 
+11. Half / Half Rules 
+Regular Full =1 
+Regular Half=.5 
+ 
+Premium Full=2 
+Premium Half=1 
+Formula: 
+equivalency × portion 
+ 
+12. Premium Equivalency Rule Engine 
+Purpose: 
+Allow premium ingredients to count as multiple toppings. 
+Examples: 
+Paneer=2 
+Chicken=2 
+Steak=2 
+Butter Chicken=2 
+Fields: 
+Field 
+modifier_type 
+Field 
+equivalency_count 
+charge_multiplier 
+apply_to_offers 
+Example: 
+Offer: 
+3 toppings included 
+Selection: 
+Paneer + Mushroom 
+Calculation: 
+2+1=3 
+Selection: 
+Paneer + Chicken + Mushroom 
+Calculation: 
+2+2+1=5 
+Result: 
+Extra charges apply 
+No hardcoded values. 
+ 
+13. Combo Builder 
+Supports: 
+3 Pizza 
+3 toppings 
+2 dips 
+1 coke 
+Structure: 
+Combo 
+ ├── Pizza1 
+ ├── Pizza2 
+ ├── Pizza3 
+ ├── Dips 
+ └── Coke 
+Fields: 
+Field 
+combo_name 
+combo_sku 
+combo_type 
+base_price 
+Component Fields: 
+Field 
+component_type 
+quantity 
+required 
+modifier_groups 
+Rules: 
+Each pizza behaves independently. 
+Modifier rules remain isolated. 
+ 
+14. Dynamic Pricing 
+Fields: 
+Field 
+Field 
+rule_name 
+scope 
+adjustment_type 
+adjustment_value 
+start_date 
+end_date 
+days 
+time 
+channels 
+Scope: 
+Tenant 
+Store 
+Applies To: 
+Product 
+Variant 
+Modifier 
+Channels: 
+POS 
+Online 
+Kiosk 
+Uber 
+DoorDash 
+Delivery 
+Rules should remain configurable. 
+ 
+15. Recipe/BOM 
+Fields: 
+Field 
+inventory_item 
+quantity 
+unit 
+waste_percentage 
+Units: 
+grams 
+ml 
+units 
+oz 
+Recipe-driven inventory deduction required. 
+ 
+16. Availability 
+Channels: 
+POS 
+ONLINE 
+KIOSK 
+UBER 
+DOORDASH 
+SKIP 
+Schedule: 
+Field 
+day 
+Field 
+start_time 
+end_time 
+Status: 
+Available 
+Unavailable 
+Sold Out 
+Temporarily Paused 
+Scheduled Pause 
+ 
+17. Publishing Lifecycle 
+Menu changes must not go live immediately. 
+States: 
+Draft 
+Published 
+Scheduled 
+Archived 
+Rolled Back 
+Flow: 
+Edit 
+→ Save Draft 
+→ Preview 
+→ Publish/Schedule 
+→ Push to Channels 
+Fields: 
+Field 
+Field 
+menu_version_id 
+publish_status 
+published_by 
+published_at 
+rollback_version 
+channel_scope 
+Rules: 
+Draft changes do not affect live channels. 
+Publish creates immutable version. 
+Rollback restores previous version. 
+ 
+18. Runtime Sync 
+Channels: 
+POS 
+Online 
+Kiosk 
+KDS 
+Uber 
+Statuses: 
+Pending 
+Syncing 
+Synced 
+Failed 
+Partial Sync 
+Retrying 
+Fields: 
+Field 
+channel 
+sync_status 
+last_synced_at 
+error_message 
+retry_count 
+ 
+ 
+ 
+19. Override Priority 
+Resolution: 
+Base Menu 
+→ Brand Rules 
+→ Store Override 
+→ Channel Override 
+→ Dynamic Pricing 
+→ Offer Rule 
+Highest rule wins. 
+ 
+20. Bulk Operations 
+Add: 
+Bulk Activate 
+Bulk Disable 
+Bulk Publish 
+Bulk Assign Stores 
+Bulk Archive 
+Bulk Price Update 
+Bulk Channel Update 
+All actions audit logged. 
+ 
+21. Historical Menu Snapshot 
+Order stores: 
+menu_version_id 
+item_snapshot 
+variant_snapshot 
+modifier_snapshot 
+price_snapshot 
+tax_snapshot 
+offer_snapshot 
+Historical receipts never change. 
+ 
+22. Concurrent Edit Handling 
+Scenario: 
+User A edits 
+User B saves 
+User A saves older data 
+System: 
+Compare 
+Reload Latest 
+Save New Draft 
+Discard 
+Fields: 
+record_version 
+updated_at 
+updated_by 
+Use optimistic locking. 
+ 
+23. Recovery / Retry 
+If publish sync fails: 
+Retry automatic 
+Manual retry 
+Notify admin 
+Show failed channel 
+Keep previous menu active 
+Rule: 
+Failed publish should never break ordering. 
+ 
+24. APIs 
+GET /items 
+POST /items 
+PUT /items/{id} 
+ 
+GET /modifier-pools 
+POST /modifier-pools 
+ 
+GET /taxonomies 
+ 
+POST /pricing-rules 
+ 
+POST /recipes 
+ 
+GET /audit-log 
+ 
+POST /publish 
+ 
+POST /rollback 
+ 
+Final Acceptance Criteria 
+✔ Draft changes isolated​
+✔ Publish creates versions​
+✔ Rollback works​
+✔ Historical orders preserve snapshots​
+✔ Combo builder works​
+✔ Premium toppings supported​
+✔ Paneer/Chicken equivalency works​
+✔ Store visibility supported​
+✔ Store permissions supported​
+✔ Conflict handling implemented​
+✔ Sync retry supported​
+✔ Failed sync never breaks live ordering​
+✔ Bulk actions available​
+✔ POS/Online/Kiosk/Uber use same engine​
+✔ No hardcoded logic 
+This should now be treated as the final implementation source for the Zyappy Catalog 
+Intelligence system. 
+ 

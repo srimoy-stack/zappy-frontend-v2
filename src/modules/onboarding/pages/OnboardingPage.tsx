@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Check, ChevronRight, Loader2, Rocket, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useOnboardingFlow } from '../hooks/useOnboardingFlow';
 import { STEP_CONFIG } from '../types/onboarding.types';
@@ -10,6 +10,7 @@ import { ModuleStep } from '../components/ModuleStep';
 import { EmailConfigStep } from '../components/EmailConfigStep';
 import { SmsConfigStep } from '../components/SmsConfigStep';
 import { VapiConfigStep } from '../components/VapiConfigStep';
+import { HostingConfigStep } from '../components/HostingConfigStep';
 import { AdminStep } from '../components/AdminStep';
 import { ReviewStep } from '../components/ReviewStep';
 
@@ -17,19 +18,34 @@ import { ReviewStep } from '../components/ReviewStep';
  * Dynamic step wizard:
  *   1. Brand Identity (always)
  *   2. Entitlements (always)
+ *   8. Hosting Details (only if online-ordering enabled)
  *   3. Email Config (only if email-campaigns enabled)
  *   4. SMS Config (only if email-campaigns enabled — optional)
  *   5. AI Call Config (only if ai-call-analytics enabled)
  *   6. Tenant Admin (always)
  *   7. Review (always)
  *
- * Steps 3–5 auto-skip if the brand doesn't need them.
+ * Steps 3–8 auto-skip if the brand doesn’t need them.
  * Validation is enforced before advancing to the next step.
  */
 
 export function OnboardingPage() {
     const router = useRouter();
-    const flow = useOnboardingFlow();
+    const searchParams = useSearchParams();
+    const resumeId = searchParams.get('resume');
+    const flow = useOnboardingFlow(resumeId);
+
+    // Show loading while resuming a draft tenant
+    if (flow.resumeLoading) {
+        return (
+            <div className="min-h-screen bg-slate-50/50 flex items-center justify-center p-6">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 border-4 border-slate-100 border-t-slate-900 rounded-full animate-spin" />
+                    <span className="text-sm font-black text-slate-500">Loading draft tenant data...</span>
+                </div>
+            </div>
+        );
+    }
 
     // Active step config for progress bar
     const activeStepConfig = STEP_CONFIG.filter(s => flow.activeSteps.includes(s.id));
@@ -222,6 +238,12 @@ export function OnboardingPage() {
                             onUpdate={flow.updateVapi}
                         />
                     )}
+                    {flow.currentStep === 8 && flow.needsHosting && (
+                        <HostingConfigStep
+                            hosting={flow.formData.hosting}
+                            onUpdate={flow.updateHosting}
+                        />
+                    )}
                     {flow.currentStep === 6 && <AdminStep data={flow.formData.admin} onChange={flow.updateAdmin} />}
                     {flow.currentStep === 7 && (
                         <ReviewStep
@@ -230,6 +252,7 @@ export function OnboardingPage() {
                             needsEmail={flow.needsEmail}
                             needsSms={flow.needsSms}
                             needsVapi={flow.needsVapi}
+                            needsHosting={flow.needsHosting}
                         />
                     )}
 

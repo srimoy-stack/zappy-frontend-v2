@@ -8,11 +8,11 @@ export const ShiftOpeningModal: React.FC = () => {
     const { session, startShift, isSyncing } = usePOS();
     const [openingCash, setOpeningCash] = useState<string>('');
     const [notes, setNotes] = useState('');
-    const [currentTime, setCurrentTime] = useState<string | null>(null);
+    const [currentTime, setCurrentTime] = useState(() => new Date().toLocaleString());
+    const [error, setError] = useState('');
 
     // Update clock every minute
     useEffect(() => {
-        setCurrentTime(new Date().toLocaleString());
         const timer = setInterval(() => {
             setCurrentTime(new Date().toLocaleString());
         }, 60000);
@@ -23,11 +23,19 @@ export const ShiftOpeningModal: React.FC = () => {
         return null;
     }
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError('');
         const cash = parseFloat(openingCash);
         if (isNaN(cash) || cash < 0) return;
-        startShift(cash, notes);
+        try {
+            await startShift(cash, notes);
+        } catch (err: unknown) {
+            const message = err && typeof err === 'object' && 'message' in err
+                ? String((err as { message?: string }).message)
+                : 'Unable to open shift';
+            setError(message);
+        }
     };
 
     return (
@@ -185,6 +193,12 @@ export const ShiftOpeningModal: React.FC = () => {
                                 />
                             </div>
                         </div>
+
+                        {error && (
+                            <div style={{ padding: '12px', background: 'var(--pos-state-error)', color: 'white', borderRadius: '12px', fontSize: '13px', fontWeight: 800, textAlign: 'center' }}>
+                                {error}
+                            </div>
+                        )}
 
                         <button
                             type="submit"

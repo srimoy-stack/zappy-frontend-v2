@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable react-refresh/only-export-components */
+
 /**
  * AuthContext — Shared authentication context.
  *
@@ -9,6 +11,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useSession } from 'next-auth/react';
+import { usePathname } from 'next/navigation';
 import { useTenant } from './TenantContext';
 import { useStore } from './StoreContext';
 import { useModules } from './ModuleContext';
@@ -55,6 +58,23 @@ interface AuthContextValue {
     accessToken: string | null;
 }
 
+interface SessionUserFallback {
+    id?: string;
+    email?: string;
+    name?: string;
+    role?: string;
+    accessToken?: string;
+    tenantId?: string;
+    storeIds?: string[];
+    permissions?: string[];
+}
+
+interface BackendStoreRef {
+    id: string;
+    name?: string;
+    code?: string;
+}
+
 const AuthContext = createContext<AuthContextValue>({
     user: null,
     isAuthenticated: false,
@@ -80,6 +100,7 @@ const getApiUrl = () => (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:80
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: session, status } = useSession();
+    const pathname = usePathname();
     const { setTenantId, setTenantName } = useTenant();
     const { setStores } = useStore();
     const { setEnabledModules } = useModules();
@@ -89,7 +110,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const sessionLoading = status === 'loading';
     const isAuthenticated = status === 'authenticated' && !!session?.user;
-    const sessionUser = session?.user as any;
+    const isPublicPOSLogin = pathname === '/pos/login';
+    const sessionUser = session?.user as SessionUserFallback | undefined;
     const sessionIdentity = sessionUser?.id || sessionUser?.email || '';
 
     useEffect(() => {
@@ -99,6 +121,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // ── Fetch /me ────────────────────────────────────────────────────────────
     useEffect(() => {
+        if (isPublicPOSLogin) {
+            setMeData(null);
+            setMeLoaded(true);
+            return;
+        }
+
         if (!isAuthenticated || meLoaded) return;
 
         let cancelled = false;
@@ -109,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     throw new Error('Missing access token for auth/me');
                 }
 
-                const meRes = await fetch(`${getApiUrl()}/auth/me`, {
+                const meRes = await fetch(`${getApiUrl()}/api/auth/me`, {
                     headers: {
                         Authorization: `Bearer ${accessToken}`,
                         'Content-Type': 'application/json',
@@ -150,7 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     role: roleRef,
                     tenantId: data.tenant?.id || data.tenant_id || sessionUser?.tenantId,
                     tenantName: data.tenant?.name,
-                    storeIds: data.stores?.map((s: any) => s.id) || data.store_ids || sessionUser?.storeIds || [],
+                    storeIds: data.stores?.map((s: BackendStoreRef) => s.id) || data.store_ids || sessionUser?.storeIds || [],
                     stores: data.stores || [],
                     enabledModules: data.enabledModules || [],
                     entitlementPaths: data.entitlementPaths || [],
@@ -198,7 +226,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isAuthenticated, meLoaded]);
+    }, [isAuthenticated, isPublicPOSLogin, meLoaded]);
 
     // ── Derive values ────────────────────────────────────────────────────────
     const userType = meData?.userType || null;
@@ -214,7 +242,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const value: AuthContextValue = {
         user: meData,
         isAuthenticated,
-        isLoading: sessionLoading || (isAuthenticated && !meLoaded),
+        isLoading: isPublicPOSLogin ? false : sessionLoading || (isAuthenticated && !meLoaded),
         userType,
         roleName,
         permissions,

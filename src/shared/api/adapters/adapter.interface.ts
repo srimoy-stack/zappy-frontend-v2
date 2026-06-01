@@ -6,9 +6,9 @@
  */
 
 import { MeResponse, PaginatedResponse } from '@/shared/types/api';
-import { User, CreateUserDTO } from '@/shared/types/user';
+import { User, CreateUserDTO, UpdateUserDTO } from '@/shared/types/user';
 import { Brand, CreateTenantDTO } from '@/shared/types/tenant';
-import { Store, CreateStoreDTO } from '@/shared/types/store';
+import { Store, CreateStoreDTO, StoreDetailConfig, StoreUser, StorePageData } from '@/shared/types/store';
 import { Role, CreateRoleDTO } from '@/shared/types/role';
 import { UserType } from '@/shared/types/auth';
 import { TenantModule } from '@/shared/types/module';
@@ -32,12 +32,21 @@ export interface ApiAdapter {
     getStore(tenantId: string, storeId: string): Promise<Store>;
     createStore(tenantId: string, data: CreateStoreDTO): Promise<Store>;
     updateStore(tenantId: string, storeId: string, data: Partial<CreateStoreDTO>): Promise<Store>;
+    suspendStore(tenantId: string, storeId: string): Promise<Store>;
+    activateStore(tenantId: string, storeId: string): Promise<Store>;
+    deleteStore(tenantId: string, storeId: string): Promise<void>;
+    getStoreConfig(tenantId: string, storeId: string): Promise<StoreDetailConfig>;
+    updateStoreConfig(tenantId: string, storeId: string, config: Partial<StoreDetailConfig>): Promise<StoreDetailConfig>;
+    getStorePageData(tenantId: string, storeId: string): Promise<StorePageData>;
+    getStoreUsers(tenantId: string, storeId: string): Promise<StoreUser[]>;
+    assignStoreManager(tenantId: string, storeId: string, userId: string): Promise<void>;
+    createStoreUser(tenantId: string, storeId: string, user: { name: string; email: string; phone?: string; role: string; status: string; isManager: boolean }): Promise<StoreUser>;
 
     // ─── Users ───────────────────────────────────────────
     getUsers(params?: { page?: number; pageSize?: number; userType?: UserType; roleId?: string; status?: string }): Promise<PaginatedResponse<User>>;
     getUser(id: string): Promise<User>;
     createUser(data: CreateUserDTO): Promise<User>;
-    updateUser(id: string, data: Partial<CreateUserDTO>): Promise<User>;
+    updateUser(id: string, data: UpdateUserDTO): Promise<User>;
     deleteUser(id: string): Promise<void>;
 
     // ─── Roles ───────────────────────────────────────────

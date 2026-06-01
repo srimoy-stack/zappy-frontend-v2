@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { ShieldAlert, Loader2, CheckCircle2 } from 'lucide-react';
 import { useImpersonation } from '@/app/providers/ImpersonationProvider';
 import { useAuth } from '@/app/providers/AuthProvider';
-import { UserRole } from '@/shared/types/auth';
+import { UserType } from '@/shared/types/auth';
 
 // ─── Mock Brand Name Resolver ────────────────────────────────────────────────────
 // In production, resolve this from your API using the tenantId from the URL.
@@ -57,7 +57,7 @@ export default function ImpersonatePage() {
         if (!tenantId) return;
 
         // Guard: only SUPER_ADMIN may impersonate
-        if (role !== UserRole.SUPER_ADMIN) {
+        if (role !== UserType.PLATFORM_SUPER_ADMIN) {
             setPhase('denied');
             return;
         }

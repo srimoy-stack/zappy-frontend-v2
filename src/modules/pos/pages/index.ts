@@ -24,3 +24,6 @@ export { RefundPage } from './RefundPage';
 export { OrderHistoryPage } from './OrderHistoryPage';
 export { POSCustomerScreen } from './POSCustomerScreen';
 export { TableSelectionPage } from './TableSelectionPage';
+export { POSProductConfigurator } from './POSProductConfigurator';
+export { CashierOrdersPage } from './CashierOrdersPage';
+

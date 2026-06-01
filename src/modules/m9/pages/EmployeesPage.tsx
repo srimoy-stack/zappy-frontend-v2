@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/shared/contexts/AuthContext';
 import { UserType, isSuperAdmin as checkIsSuperAdmin } from '@/shared/types/auth';
 import { useTenantStore } from '@/app/providers/TenantStoreProvider';
+import { useRouteAccess } from '@/shared/hooks/useRouteAccess';
 import { Plus, Search, ChevronDown, Calendar, Download } from 'lucide-react';
 import { EmployeesTabs } from '../components/Employees/EmployeesTabs';
 import { EmployeesTable } from '../components/Employees/EmployeesTable';
@@ -20,6 +21,8 @@ import { Employee, Shift } from '../types/employees';
 export const EmployeesPage: React.FC = () => {
     const { userType, isSuperAdmin } = useAuth();
     const { store, tenant } = useTenantStore();
+    const { getManagedStoreIds } = useRouteAccess();
+    const managedStoreIds = getManagedStoreIds();
 
     // Data State (Management for demo)
     const [employees, setEmployees] = useState<Employee[]>(MOCK_EMPLOYEES);
@@ -153,7 +156,13 @@ export const EmployeesPage: React.FC = () => {
         const matchesSearch = e.name.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesType = roleFilter === 'all' || e.userType === roleFilter;
         const matchesStatus = statusFilter === 'all' || e.status === statusFilter;
-        const matchesStore = storeFilter === 'all' || e.storeIds.includes(storeFilter);
+        
+        // Enforce store-scoped isolation if managedStoreIds is restricted
+        const allowedStoreIds = managedStoreIds === 'all' ? null : managedStoreIds;
+        const matchesStore = storeFilter === 'all'
+            ? (allowedStoreIds ? e.storeIds.some(sid => allowedStoreIds.includes(sid)) : true)
+            : e.storeIds.includes(storeFilter);
+
         const matchesFilters = matchesSearch && matchesType && matchesStatus && matchesStore;
 
         if (isManager && store) {
@@ -171,7 +180,12 @@ export const EmployeesPage: React.FC = () => {
 
         const matchesDate = !shiftDateFilter || s.date.includes(shiftDateFilter);
         const matchesUser = shiftUserFilter === 'all' || s.userId === shiftUserFilter;
-        const matchesStoreFilter = storeFilter === 'all' || s.storeName === storeFilter;
+        
+        // Enforce store-scoped isolation for shifts
+        const allowedStoreNames = managedStoreIds === 'all' ? null : (store ? [store.name] : []);
+        const matchesStoreFilter = storeFilter === 'all'
+            ? (allowedStoreNames ? allowedStoreNames.includes(s.storeName) : true)
+            : s.storeName === storeFilter;
 
         const matchesFilters = matchesSearch && matchesDate && matchesUser && matchesStoreFilter;
 
@@ -279,7 +293,7 @@ export const EmployeesPage: React.FC = () => {
                                             ]}
                                         />
 
-                                        {isAdmin && (
+                                        {managedStoreIds === 'all' ? (
                                             <FilterSelect
                                                 value={storeFilter}
                                                 onChange={setStoreFilter}
@@ -288,6 +302,17 @@ export const EmployeesPage: React.FC = () => {
                                                     ...Array.from(new Set(employees.flatMap(e => e.storeIds))).map(s => ({ value: s, label: s }))
                                                 ]}
                                             />
+                                        ) : (
+                                            Array.isArray(managedStoreIds) && managedStoreIds.length > 1 && (
+                                                <FilterSelect
+                                                    value={storeFilter}
+                                                    onChange={setStoreFilter}
+                                                    options={[
+                                                        { value: 'all', label: 'All Stores' },
+                                                        ...managedStoreIds.map(s => ({ value: s, label: s }))
+                                                    ]}
+                                                />
+                                            )
                                         )}
                                     </div>
                                 </div>
@@ -369,16 +394,27 @@ export const EmployeesPage: React.FC = () => {
                                                 />
                                             </>
                                         )}
-                                        {isAdmin && (
-                                            <FilterSelect
-                                                value={storeFilter}
-                                                onChange={setStoreFilter}
-                                                options={[
-                                                    { value: 'all', label: 'All Stores' },
-                                                    ...Array.from(new Set(employees.flatMap(e => e.storeIds))).map(s => ({ value: s, label: s }))
-                                                ]}
-                                            />
-                                        )}
+                                         {managedStoreIds === 'all' ? (
+                                             <FilterSelect
+                                                 value={storeFilter}
+                                                 onChange={setStoreFilter}
+                                                 options={[
+                                                     { value: 'all', label: 'All Stores' },
+                                                     ...Array.from(new Set(employees.flatMap(e => e.storeIds))).map(s => ({ value: s, label: s }))
+                                                 ]}
+                                             />
+                                         ) : (
+                                             Array.isArray(managedStoreIds) && managedStoreIds.length > 1 && (
+                                                 <FilterSelect
+                                                     value={storeFilter}
+                                                     onChange={setStoreFilter}
+                                                     options={[
+                                                         { value: 'all', label: 'All Stores' },
+                                                         ...managedStoreIds.map(s => ({ value: s, label: s }))
+                                                     ]}
+                                                 />
+                                             )
+                                         )}
                                         <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 transition-all">
                                             <Download className="w-4 h-4" />
                                         </button>

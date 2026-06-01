@@ -25,6 +25,8 @@ export interface OnboardingBrandData {
     darkLogo: string | null;
     paymentTermType: 'PREPAID' | 'NET_DAYS' | 'DUE_ON_RECEIPT';
     netDays: number;
+    storeStrategy: 'SINGLE_STORE' | 'FRANCHISE';
+    maxStores?: number;
 }
 
 // ─── Tenant Admin ────────────────────────────────────────────────────────────
@@ -70,6 +72,31 @@ export interface OnboardingVapiConfig {
     phoneNumber: string;
 }
 
+// ─── Online Ordering Hosting Configuration ───────────────────────────────────
+
+export interface OnboardingHostingConfig {
+    /** Primary custom domain for the storefront (e.g. order.mybrand.com) */
+    customDomain: string;
+    /** Hosting provider type */
+    hostingProvider: 'zyappy-managed' | 'custom' | 'cloudflare';
+    /** SSL certificate provisioning method */
+    sslMethod: 'auto-letsencrypt' | 'custom-cert' | 'cloudflare-origin';
+    /** DNS verification method */
+    dnsVerification: 'cname' | 'a-record' | 'ns-delegation';
+    /** CNAME target for DNS verification (auto-generated after provisioning) */
+    cnameTarget?: string;
+    /** A-record IP for direct DNS pointing */
+    aRecordIp?: string;
+    /** Custom SSL certificate PEM (only when sslMethod = 'custom-cert') */
+    sslCertPem?: string;
+    /** Custom SSL private key PEM (only when sslMethod = 'custom-cert') */
+    sslKeyPem?: string;
+    /** Enable CDN caching for static assets */
+    cdnEnabled: boolean;
+    /** Notes / special requirements */
+    notes?: string;
+}
+
 // ─── Module Entitlement (used by ModuleStep for display only) ───────────────
 
 export interface OnboardingModuleData {
@@ -112,6 +139,7 @@ export interface OnboardingFormData {
     email: OnboardingEmailConfig;
     sms: OnboardingSmsConfig;
     vapi: OnboardingVapiConfig;
+    hosting: OnboardingHostingConfig;
     /** IDs of enabled modules (e.g. ['email-campaigns', 'ai-call-analytics']) */
     enabledModuleIds: string[];
     /** Hierarchical dot-notated paths (e.g. ['email-campaigns.campaigns.analytics']) */
@@ -120,7 +148,7 @@ export interface OnboardingFormData {
 
 // ─── Step Configuration ─────────────────────────────────────────────────────
 
-export type OnboardingStep = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type OnboardingStep = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 export interface OrchestrationStepStatus {
     label: string;
@@ -129,12 +157,13 @@ export interface OrchestrationStepStatus {
 }
 
 /**
- * 7-step wizard (dynamic — steps 3-5 conditionally shown)
+ * 8-step wizard (dynamic — steps 3–8 conditionally shown)
  *
  * 1. Brand Identity (always)
  * 2. Entitlements (always)
+ * 8. Hosting Details (if online-ordering enabled)
  * 3. Email Config (if email-campaigns enabled)
- * 4. SMS Config (if email-campaigns enabled — optional, can skip)
+ * 4. SMS Config (if email-campaigns enabled — optional)
  * 5. AI Call Config (if ai-call-analytics enabled)
  * 6. Tenant Admin (always)
  * 7. Review & Deploy (always)
@@ -142,6 +171,7 @@ export interface OrchestrationStepStatus {
 export const STEP_CONFIG = [
     { id: 1 as OnboardingStep, title: 'Brand Identity', description: 'Core identity & localization' },
     { id: 2 as OnboardingStep, title: 'Entitlements', description: 'Module & page access' },
+    { id: 8 as OnboardingStep, title: 'Hosting', description: 'Domain & DNS setup' },
     { id: 3 as OnboardingStep, title: 'Email', description: 'Email service configuration' },
     { id: 4 as OnboardingStep, title: 'SMS', description: 'SMS gateway (optional)' },
     { id: 5 as OnboardingStep, title: 'AI Calls', description: 'Vapi assistant config' },
@@ -193,6 +223,8 @@ export function createInitialFormData(): OnboardingFormData {
             darkLogo: null,
             paymentTermType: 'NET_DAYS',
             netDays: 30,
+            storeStrategy: 'SINGLE_STORE',
+            maxStores: 1,
         },
         admin: {
             adminName: '',
@@ -219,8 +251,15 @@ export function createInitialFormData(): OnboardingFormData {
             assistantId: '',
             phoneNumber: '',
         },
-        enabledModuleIds: ['pos'],
-        selectedEntitlementPaths: ['pos'],
+        hosting: {
+            customDomain: '',
+            hostingProvider: 'zyappy-managed',
+            sslMethod: 'auto-letsencrypt',
+            dnsVerification: 'cname',
+            cdnEnabled: true,
+            notes: '',
+        },
+        enabledModuleIds: [],
+        selectedEntitlementPaths: [],
     };
 }
-

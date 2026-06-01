@@ -97,21 +97,51 @@ export function normalizeRole(raw: any): Role {
 
 // ─── Store ──────────────────────────────────────────────────────────────────
 
+function mapStoreStatus(status: string | undefined, isActive?: boolean): Store['status'] {
+    if (status) {
+        const lower = status.toLowerCase();
+        if (lower === 'active') return 'Active';
+        if (lower === 'inactive') return 'Inactive';
+        if (lower === 'draft') return 'Draft';
+        if (lower === 'pending') return 'Pending';
+        if (lower === 'coming_soon' || lower === 'comingsoon') return 'ComingSoon';
+        if (lower === 'temporarily_closed') return 'TemporarilyClosed';
+    }
+    // Fallback to is_active boolean
+    if (isActive !== undefined) return isActive ? 'Active' : 'Inactive';
+    return 'Draft';
+}
+
 export function normalizeStore(raw: any): Store {
     return {
         id: String(raw.id),
         name: raw.name || '',
-        code: raw.id ? String(raw.id).substring(0, 8).toUpperCase() : '',
+        code: raw.store_code || (raw.id ? String(raw.id).substring(0, 8).toUpperCase() : ''),
         tenantId: raw.tenant_id ? String(raw.tenant_id) : '',
-        timezone: '',
+        timezone: raw.timezone || 'America/Toronto',
         city: raw.city || '',
         province: raw.province || '',
         postalCode: raw.postal_code || undefined,
+        country: raw.country || undefined,
+        address: raw.address || raw.address_line_1 || undefined,
         phone: raw.phone || undefined,
-        status: raw.is_active ? 'Active' : 'Inactive',
-        paymentTerms: '',
-        taxProfile: 'Inherit',
-        logoStatus: 'Default',
+        secondaryPhone: raw.secondary_phone || undefined,
+        email: raw.email || undefined,
+        website: raw.website || undefined,
+        status: mapStoreStatus(raw.status, raw.is_active),
+        businessType: raw.business_type || undefined,
+        storeNumber: raw.store_number || undefined,
+        language: raw.language || undefined,
+        currency: raw.currency || undefined,
+        paymentTerms: raw.payment_terms || '',
+        taxProfile: raw.tax_override_enabled ? 'Override' : 'Inherit',
+        taxScheme: raw.tax_config?.rules?.[0]?.name || undefined,
+        taxRate: raw.tax_config?.rules?.[0]?.rate || undefined,
+        logoStatus: raw.logo ? 'Set' : 'Default',
+        deliveryRadiusKm: raw.delivery_radius_km || undefined,
+        latitude: raw.latitude || undefined,
+        longitude: raw.longitude || undefined,
+        createdAt: raw.created_at || raw.createdAt || '',
     };
 }
 

@@ -7,7 +7,7 @@ export default function POSRoot() {
     const router = useRouter();
 
     useEffect(() => {
-        router.push('/pos/login');
+        router.push('/pos/dashboard');
     }, [router]);
 
     return (

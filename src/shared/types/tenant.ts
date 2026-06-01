@@ -82,6 +82,8 @@ export interface Brand {
     lastActivity?: string;
     onboardingProgress?: number; // 0-100
     communicationConfig?: BrandCommunicationConfig;
+    storeStrategy?: 'SINGLE_STORE' | 'FRANCHISE';
+    maxStores?: number;
 }
 
 /** DTO for POST /tenants */

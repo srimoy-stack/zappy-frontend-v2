@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { Building2, MapPin, Globe, ImageIcon, Upload, Mail, Phone, Coins } from 'lucide-react';
+import React, { useRef, useCallback } from 'react';
+import { Building2, MapPin, Globe, ImageIcon, Upload, Mail, Phone, Coins, X } from 'lucide-react';
 import { FormSectionTitle, InputWrapper, INPUT_CLASS, SELECT_CLASS } from './ui';
 import type { OnboardingBrandData } from '../types/onboarding.types';
 
@@ -11,6 +11,45 @@ interface BrandStepProps {
 }
 
 export function BrandStep({ data, onChange }: BrandStepProps) {
+    const lightLogoRef = useRef<HTMLInputElement>(null);
+    const darkLogoRef = useRef<HTMLInputElement>(null);
+
+    const handleFileUpload = useCallback((file: File, field: 'lightLogo' | 'darkLogo') => {
+        if (!file) return;
+
+        // Validate file type
+        const validTypes = ['image/png', 'image/svg+xml', 'image/jpeg', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            alert('Please upload a PNG, SVG, JPEG, or WebP image.');
+            return;
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size must be under 5MB.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const dataUrl = e.target?.result as string;
+            onChange({ [field]: dataUrl });
+        };
+        reader.readAsDataURL(file);
+    }, [onChange]);
+
+    const handleDrop = useCallback((e: React.DragEvent, field: 'lightLogo' | 'darkLogo') => {
+        e.preventDefault();
+        e.stopPropagation();
+        const file = e.dataTransfer.files[0];
+        if (file) handleFileUpload(file, field);
+    }, [handleFileUpload]);
+
+    const handleDragOver = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+    }, []);
+
     return (
         <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Identity */}
@@ -62,6 +101,47 @@ export function BrandStep({ data, onChange }: BrandStepProps) {
                 </div>
             </section>
 
+            {/* Store Architecture */}
+            <section className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-8">
+                <FormSectionTitle icon={Building2} title="Store Architecture" />
+                <div className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                        {(['SINGLE_STORE', 'FRANCHISE'] as const).map((strategy) => (
+                            <button
+                                key={strategy}
+                                type="button"
+                                onClick={() => onChange({ storeStrategy: strategy })}
+                                className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border transition-all ${
+                                    data.storeStrategy === strategy
+                                        ? 'bg-slate-900 border-slate-900 text-white shadow-xl shadow-slate-200 scale-[1.02]'
+                                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                                }`}
+                            >
+                                <span className="text-[11px] font-black uppercase tracking-widest">
+                                    {strategy === 'SINGLE_STORE' ? 'Single Store' : 'Franchise (Multi-Store)'}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                    {data.storeStrategy === 'FRANCHISE' && (
+                        <div className="p-8 bg-slate-50 border border-slate-100 rounded-3xl animate-in slide-in-from-top-2 duration-300">
+                            <InputWrapper label="Max Allowed Stores">
+                                <div className="flex items-center gap-4">
+                                    <input
+                                        type="number"
+                                        value={data.maxStores}
+                                        onChange={(e) => onChange({ maxStores: parseInt(e.target.value) || 1 })}
+                                        className="w-32 px-4 py-4 bg-white border border-slate-200 rounded-2xl text-center text-lg font-black text-slate-900 focus:outline-none focus:ring-4 focus:ring-slate-900/5 transition-all"
+                                        min="2"
+                                    />
+                                    <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Stores Limit</span>
+                                </div>
+                            </InputWrapper>
+                        </div>
+                    )}
+                </div>
+            </section>
+
             {/* Operational Config */}
             <section className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-8">
                 <FormSectionTitle icon={Globe} title="Operational Config" />
@@ -95,19 +175,100 @@ export function BrandStep({ data, onChange }: BrandStepProps) {
             <section className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-8">
                 <FormSectionTitle icon={ImageIcon} title="Identity Assets" />
                 <div className="grid grid-cols-2 gap-8">
+                    {/* Light Logo */}
                     <div className="space-y-4">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Brand Logo (Light Mode)</p>
-                        <div className="aspect-[3/1] rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 flex flex-col items-center justify-center group hover:border-slate-900 hover:bg-slate-50 cursor-pointer transition-all">
-                            <Upload className="w-6 h-6 text-slate-400 mb-2 group-hover:text-slate-900 transition-colors" />
-                            <span className="text-[10px] font-black text-slate-400 group-hover:text-slate-900 uppercase tracking-widest">Upload PNG/SVG</span>
-                        </div>
+                        <input
+                            ref={lightLogoRef}
+                            type="file"
+                            accept="image/png,image/svg+xml,image/jpeg,image/webp"
+                            className="hidden"
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleFileUpload(file, 'lightLogo');
+                                e.target.value = '';
+                            }}
+                        />
+                        {data.lightLogo ? (
+                            <div className="relative aspect-[3/1] rounded-2xl border border-slate-200 bg-slate-50/50 overflow-hidden group">
+                                <img src={data.lightLogo} alt="Light logo" className="w-full h-full object-contain p-4" />
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                    <button
+                                        type="button"
+                                        onClick={() => onChange({ lightLogo: null })}
+                                        className="p-2 bg-red-500 rounded-xl text-white shadow-lg hover:bg-red-600 transition-colors"
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => lightLogoRef.current?.click()}
+                                        className="p-2 bg-white rounded-xl text-slate-900 shadow-lg hover:bg-slate-100 transition-colors ml-2"
+                                    >
+                                        <Upload size={18} />
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div
+                                onClick={() => lightLogoRef.current?.click()}
+                                onDrop={(e) => handleDrop(e, 'lightLogo')}
+                                onDragOver={handleDragOver}
+                                className="aspect-[3/1] rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 flex flex-col items-center justify-center group hover:border-slate-900 hover:bg-slate-50 cursor-pointer transition-all"
+                            >
+                                <Upload className="w-6 h-6 text-slate-400 mb-2 group-hover:text-slate-900 transition-colors" />
+                                <span className="text-[10px] font-black text-slate-400 group-hover:text-slate-900 uppercase tracking-widest">Upload PNG/SVG</span>
+                                <span className="text-[9px] text-slate-300 mt-1">or drag & drop • max 5MB</span>
+                            </div>
+                        )}
                     </div>
+
+                    {/* Dark Logo */}
                     <div className="space-y-4">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Brand Logo (Dark Mode – Optional)</p>
-                        <div className="aspect-[3/1] rounded-2xl border-2 border-dashed border-slate-800 bg-slate-900 flex flex-col items-center justify-center group hover:border-slate-700 cursor-pointer transition-all">
-                            <Upload className="w-6 h-6 text-slate-500 mb-2 group-hover:text-white transition-colors" />
-                            <span className="text-[10px] font-black text-slate-500 group-hover:text-white uppercase tracking-widest">Upload PNG/SVG</span>
-                        </div>
+                        <input
+                            ref={darkLogoRef}
+                            type="file"
+                            accept="image/png,image/svg+xml,image/jpeg,image/webp"
+                            className="hidden"
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleFileUpload(file, 'darkLogo');
+                                e.target.value = '';
+                            }}
+                        />
+                        {data.darkLogo ? (
+                            <div className="relative aspect-[3/1] rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden group">
+                                <img src={data.darkLogo} alt="Dark logo" className="w-full h-full object-contain p-4" />
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                    <button
+                                        type="button"
+                                        onClick={() => onChange({ darkLogo: null })}
+                                        className="p-2 bg-red-500 rounded-xl text-white shadow-lg hover:bg-red-600 transition-colors"
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => darkLogoRef.current?.click()}
+                                        className="p-2 bg-white rounded-xl text-slate-900 shadow-lg hover:bg-slate-100 transition-colors ml-2"
+                                    >
+                                        <Upload size={18} />
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div
+                                onClick={() => darkLogoRef.current?.click()}
+                                onDrop={(e) => handleDrop(e, 'darkLogo')}
+                                onDragOver={handleDragOver}
+                                className="aspect-[3/1] rounded-2xl border-2 border-dashed border-slate-800 bg-slate-900 flex flex-col items-center justify-center group hover:border-slate-700 cursor-pointer transition-all"
+                            >
+                                <Upload className="w-6 h-6 text-slate-500 mb-2 group-hover:text-white transition-colors" />
+                                <span className="text-[10px] font-black text-slate-500 group-hover:text-white uppercase tracking-widest">Upload PNG/SVG</span>
+                                <span className="text-[9px] text-slate-600 mt-1">or drag & drop • max 5MB</span>
+                            </div>
+                        )}
                     </div>
                 </div>
             </section>
