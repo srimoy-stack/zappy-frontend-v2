@@ -5,8 +5,19 @@ type SessionUserWithToken = {
     accessToken?: string;
 };
 
+const isServer = typeof window === 'undefined';
+const isProxyMode = process.env.NEXT_PUBLIC_API_PROXY_MODE === 'true';
+
+// Target URL for direct backend access (used on server, or client when proxy is disabled)
+const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+
+// Base URL: relative proxy URL for client under proxy mode, absolute url for server or normal mode
+const baseURL = (isProxyMode && !isServer)
+    ? '/api/proxy'
+    : backendUrl;
+
 const axiosInstance = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api',
+    baseURL,
     headers: {
         'Content-Type': 'application/json',
     },
