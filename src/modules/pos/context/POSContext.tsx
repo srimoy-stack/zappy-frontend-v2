@@ -223,7 +223,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 setRefreshToken(refresh_token || null);
 
                 // 3. Fetch user profile
-                const meRes = await axios.get(`${env.apiBaseUrl}/api/auth/me`, {
+                const meRes = await axios.get(`${env.apiBaseUrl}/auth/me`, {
                     headers: { Authorization: `Bearer ${access_token}` }
                 });
                 console.log('meRes response:', meRes.status, meRes.data);

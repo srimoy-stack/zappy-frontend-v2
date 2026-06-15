@@ -21,7 +21,7 @@ export async function refreshToken(): Promise<{ accessToken: string; refreshToke
 
     try {
         const { data } = await axios.post(
-            `${env.apiBaseUrl}/api/auth/refresh`,
+            `${env.apiBaseUrl}/auth/refresh`,
             { refresh_token: currentRefreshToken }
         );
 
@@ -52,7 +52,7 @@ export async function serverLogout(): Promise<void> {
 
     try {
         await axios.post(
-            `${env.apiBaseUrl}/api/auth/logout`,
+            `${env.apiBaseUrl}/auth/logout`,
             { refresh_token: currentRefreshToken }
         );
     } catch {

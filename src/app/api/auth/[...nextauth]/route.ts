@@ -18,7 +18,7 @@ const handler = NextAuth({
                 try {
                     const apiUrl = getApiUrl();
                     console.log("[NextAuth] getApiUrl():", apiUrl);
-                    const loginUrl = `${apiUrl}/api/auth/login`;
+                    const loginUrl = `${apiUrl}/auth/login`;
                     console.log("[NextAuth] loginUrl:", loginUrl);
 
                     // Step 1: Login → get tokens
@@ -45,7 +45,7 @@ const handler = NextAuth({
                     }
 
                     // Step 2: Fetch /me with the access token to get user info
-                    const meRes = await fetch(`${apiUrl}/api/auth/me`, {
+                    const meRes = await fetch(`${apiUrl}/auth/me`, {
                         headers: {
                             'Authorization': `Bearer ${tokens.access_token}`,
                             'Content-Type': 'application/json',
